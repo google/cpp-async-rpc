@@ -335,6 +335,7 @@ using element_type_t = typename element_type<i, T>::type;
 /// \brief Convert an integer sequence value into a tuple value.
 /// The result is a `std::tuple` with as many elements as the input sequence,
 /// all of them of type `T`, set to the values of `Ints...`.
+/// \return An appropriate tuple type, containing the values of `Ints...`.
 template <typename T, T ...Ints>
 constexpr auto as_tuple(integer_sequence<T, Ints...>)
 -> decltype(std::make_tuple(Ints...)) {
@@ -348,6 +349,7 @@ constexpr auto as_tuple(integer_sequence<T, Ints...>)
 /// instantiate (like abstract base classes, for instance), so generating values
 /// of such a `std::tuple` type would be impossible. Consider using `wrap` and
 /// `wrap_type` if needed in such a situation.
+/// \return An appropriate tuple type, default-initialized.
 template <typename ...T>
 constexpr std::tuple<T...>
 as_tuple(pack<T...>) {
@@ -369,6 +371,7 @@ struct as_tuple_type<pack<T...>> {
 /// \brief Convert a tuple value into a `pack` value.
 /// The result is a `pack` with as many elements as the input `std::tuple`,
 /// every one of the same type as the same-index element of the `std::tuple`.
+/// \return An appropriate `pack` type with the types in the tuple.
 template <typename ...T>
 constexpr pack<T...>
 as_pack(std::tuple<T...>) {
@@ -378,6 +381,7 @@ as_pack(std::tuple<T...>) {
 /// The result is a `pack` with as many elements as the input `integer_sequence`,
 /// every one of the same type, which is the common type of the `integer_sequence`
 /// elements.
+/// \return An appropriate `pack` type with all elements of the integer type in the sequence.
 template <typename T, T ...Ints>
 constexpr auto as_pack(integer_sequence<T, Ints...>)
 -> decltype(as_pack(std::make_tuple(Ints...))) {
@@ -388,6 +392,8 @@ constexpr auto as_pack(integer_sequence<T, Ints...>)
 /// This returns a `wrap_type` object wrapping the type
 /// at index `i` in the `pack` type.
 /// \param i The index to retrieve from the `pack` type sequence.
+/// \param t The sequence from which to extract an element.
+/// \return A `wrap_type` object for the type at index `i`.
 template <std::size_t i, typename ...T>
 constexpr wrap_type<element_type_t<i, pack<T...>>>
 at(pack<T...>) {
@@ -397,6 +403,8 @@ at(pack<T...>) {
 /// This returns a value of the `i`th element of the
 /// tuple, of the corresponding type.
 /// \param i The index to retrieve within the `std::tuple` object.
+/// \param t The sequence from which to extract an element.
+/// \return The element at index `i`.
 template <std::size_t i, typename ...T>
 constexpr element_type_t<i, std::tuple<T...>>&
 at(std::tuple<T...>& t) {
@@ -406,6 +414,8 @@ at(std::tuple<T...>& t) {
 /// This returns a value of the `i`th element of the
 /// tuple, of the corresponding type.
 /// \param i The index to retrieve within the `std::tuple` object.
+/// \param t The sequence from which to extract an element.
+/// \return The element at index `i`.
 template <std::size_t i, typename ...T>
 constexpr element_type_t<i, std::tuple<T...>> const&
 at(const std::tuple<T...>& t) {
@@ -415,6 +425,8 @@ at(const std::tuple<T...>& t) {
 /// This returns a value of the `i`th element of the
 /// tuple, of the corresponding type.
 /// \param i The index to retrieve within the `std::tuple` object.
+/// \param t The sequence from which to extract an element.
+/// \return The element at index `i`.
 template <std::size_t i, typename ...T>
 constexpr element_type_t<i, std::tuple<T...>>&&
 at(std::tuple<T...>&& t) {
@@ -424,6 +436,8 @@ at(std::tuple<T...>&& t) {
 /// This returns a value of the `i`th element of the
 /// `integer_sequence`, of the sequence's integer type.
 /// \param i The index to retrieve within the `integer_sequence` object.
+/// \param is The sequence from which to extract an element.
+/// \return The element at index `i`.
 template <std::size_t i, typename T, T ...Nums>
 constexpr T
 at(integer_sequence<T, Nums...> is) {
@@ -524,6 +538,7 @@ void for_each(T&& v, F f, Args&& ...args) {
 /// \param v The sequence over which to iterate.
 /// \param f The functor to call on every element.
 /// \param args... Further arguments to forward to the functor call.
+/// \return A `std::tuple` of appropriate type to contain the results of every call.
 template <typename T, typename F, typename ...Args>
 constexpr auto
 transform(T&& v, F f, Args&& ...args)
@@ -539,57 +554,75 @@ transform(T&& v, F f, Args&& ...args)
 			std::forward_as_tuple(std::forward<Args>(args)...));
 }
 
-// Return a new tuple containing a subset of the fields as
-// determined by the passed index sequence.
+/// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...Idx The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the indices.
 template <typename ...T, std::size_t ...Idx>
 constexpr std::tuple<typename std::tuple_element<Idx, std::tuple<T...>>::type...>
 subset(std::tuple<T...>&t, index_sequence<Idx...>) {
 	return std::make_tuple(at<Idx>(t)...);
 }
-
+/// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...Idx The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the indices.
 template <typename ...T, std::size_t ...Idx>
 constexpr std::tuple<typename std::tuple_element<Idx, const std::tuple<T...>>::type...>
 subset(const std::tuple<T...>&t, index_sequence<Idx...>) {
 	return std::make_tuple(at<Idx>(t)...);
 }
-
+/// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...Idx The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the indices.
 template <typename ...T, std::size_t ...Idx>
 constexpr std::tuple<typename std::tuple_element<Idx, const std::tuple<T...>>::type...>
 subset(std::tuple<T...>&&t, index_sequence<Idx...>) {
 	return std::make_tuple(at<Idx>(t)...);
 }
-
-// Return a new pack containing a subset of the types as
-// determined by the passed index sequence.
+/// Return a new pack containing a subset of the types as determined by the passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...Idx The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the indices.
 template <typename ...T, std::size_t ...Idx>
 constexpr pack<element_type_t<Idx, pack<T...>>...>
 subset(pack<T...>, index_sequence<Idx...>) {
 	return {};
 }
-
-// Return a new integer sequence containing a subset of the integers
-// determined by the passed index sequence.
+/// Return a new integer sequence containing a subset of the integers determined by the passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...Idx The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the indices.
 template <typename T, T ...Nums, std::size_t ...Idx>
 constexpr integer_sequence<T, at<Idx>(integer_sequence<T, Nums...>{})...>
 subset(integer_sequence<T, Nums...>, index_sequence<Idx...>) {
 	return {};
 }
 
-// Get a range of something.
+/// Return a subsequence based on a semi-open index range.
+/// \param t The sequence from which to extract a range.
+/// \param Begin The first index to extract.
+/// \param End The index following the last one to extract.
+/// \return A sliced sequence containing just the elements in the range `Begin .. End`.
 template <std::size_t Begin, std::size_t End, typename T>
 constexpr auto range(T&& t)
 -> decltype(subset(std::forward<T>(t), make_index_sequence<(End - Begin)>{} + make_constant_index_sequence<(End - Begin), Begin>{})) {
 	return subset(std::forward<T>(t), make_index_sequence<(End - Begin)>{} + make_constant_index_sequence<(End - Begin), Begin>{});
 }
 
-// Get the head of something.
+/// Return the head element of a sequence.
+/// \param t The sequence from which to extract the head element.
+/// \return The result of calling `at<0>` over the sequence.
 template <typename T>
 constexpr auto head(T&& t)
 -> decltype(at<0>(std::forward<T>(t))) {
 	return at<0>(std::forward<T>(t));
 }
 
-// Get the tail of something.
+/// Return the tail subsequence of a sequence.
+/// \param t The sequence from which to remove the head element.
+/// \return The original sequence with the head removed.
 template <typename T>
 constexpr auto tail(T&& t)
 -> decltype(range<1, size<T>::value>(t)) {
