@@ -89,15 +89,6 @@ static_assert(
 		static constexpr bool value = type::value; \
 	};
 
-/// Check whether a class has a `Ret serialize(Args...)` method.
-ASH_DEFINE_HAS_METHOD_CHECKER(serialize);
-
-/// Check whether a class has a `Ret save(Args...) const` method.
-ASH_DEFINE_HAS_CONST_METHOD_CHECKER(save);
-
-/// Check whether a class has a `Ret load(Args...)` method.
-ASH_DEFINE_HAS_METHOD_CHECKER(load);
-
 /// Enable type `R` if `T` evaluates to a type.
 ///
 /// \param T the expression to check.
@@ -119,12 +110,6 @@ struct enable_if_type {
 		struct has_ ## TYPE_NAME < \
 			T, typename ::ash::traits::enable_if_type<typename T:: TYPE_NAME >::type> \
 			: public std::true_type {};
-
-/// Check for an inner `class_descriptor` type.
-ASH_DEFINE_HAS_INNER_TYPE_CHECKER(class_descriptor);
-
-/// Check for an inner `interface_descriptor` type.
-ASH_DEFINE_HAS_INNER_TYPE_CHECKER(interface_descriptor);
 
 /// \brief Check wether `T` is a POD scalar that can be serialized by serializing its memory as-is.
 ///
@@ -205,6 +190,33 @@ struct has_static_size: public std::false_type {
 template<typename T, std::size_t size>
 struct has_static_size<std::array<T, size>> : public std::true_type {
 };
+
+// Support for object serialization.
+/// Check for an inner `field_descriptors` type.
+ASH_DEFINE_HAS_INNER_TYPE_CHECKER(field_descriptors);
+
+/// Check for an inner `base_classes` type.
+ASH_DEFINE_HAS_INNER_TYPE_CHECKER(base_classes);
+
+/// Check whether a class has a `Ret save(Args...) const` method.
+ASH_DEFINE_HAS_CONST_METHOD_CHECKER(save);
+
+/// Check whether a class has a `Ret load(Args...)` method.
+ASH_DEFINE_HAS_METHOD_CHECKER(load);
+
+/// \brief Check if a type `T` can be saved into a codec `S`.
+/// The result is `true` if the type either has field descriptors defined or
+/// it implements a suitable `save` method.
+template <typename T, typename S>
+struct can_be_saved : std::integral_constant<bool,
+	has_field_descriptors<T>::value || has_save<T, void (S&)>::value> {};
+
+/// \brief Check if a type `T` can be loaded from a codec `S`.
+/// The result is `true` if the type either has field descriptors defined or
+/// it implements a suitable `load` method.
+template <typename T, typename S>
+struct can_be_loaded : std::integral_constant<bool,
+	has_field_descriptors<T>::value || has_load<T, void (S&)>::value> {};
 
 }  // namespace traits
 

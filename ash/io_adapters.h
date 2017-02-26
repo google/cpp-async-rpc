@@ -36,8 +36,8 @@ public:
 
 std::size_t InputAdapter::read(char* p, std::size_t l) {
 	int c;
-	int r = 0;
-	while (r < l && (c = getc()) != eof) {
+	std::size_t r = 0;
+	while (r < l && (c = getc() != eof)) {
 		r++;
 		*p++ = c;
 	}

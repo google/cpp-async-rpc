@@ -69,26 +69,13 @@ public:
 		writeSequence(&a[0], N);
 	}
 
-	// Serializable objects.
-	template<typename T>
-	typename std::enable_if<
-			traits::has_serialize<T, void(BinaryEncoder&)>::value, void>::type operator()(
-			T& o) {
-		o.serialize(*this);
-	}
-
 	// Saveable objects.
 	template<typename T>
-	typename std::enable_if<traits::has_save<T, void(BinaryEncoder&)>::value,
+	typename std::enable_if<traits::can_be_saved<T, BinaryEncoder>::value,
 			void>::type operator()(const T& o) {
-		o.save(*this);
-	}
-
-	// Descriptor-driven objects.
-	template<typename T>
-	typename std::enable_if<traits::has_class_descriptor<T>::value, void>::type operator()(
-			const T& o) {
-		T::class_descriptor::save(*this, o);
+		saveBaseClasses(o);
+		saveFields(o);
+		invokeSave(o);
 	}
 
 private:
@@ -98,6 +85,57 @@ private:
 			s(v);
 		}
 	};
+
+	// Save base classes, if they exist.
+	struct BaseClassSaver {
+		template <typename T, typename B, typename S>
+		void operator()(mpt::wrap_type<B>, const T& o, S& s) {
+			const B& base = dynamic_cast<const B&>(o);
+			s(base);
+		}
+	};
+
+	template<typename T>
+	typename std::enable_if<traits::has_base_classes<T>::value, void>::type saveBaseClasses(
+			const T& o) {
+		mpt::for_each(typename T::base_classes{}, BaseClassSaver{}, o, *this);
+	}
+
+	template<typename T>
+	typename std::enable_if<!traits::has_base_classes<T>::value, void>::type saveBaseClasses(
+			const T& o) {
+	}
+
+	// Save fields from field_descriptors, if present.
+	struct FieldSaver {
+		template <typename T, typename FD, typename S>
+		void operator()(mpt::wrap_type<FD>, const T& o, S& s) {
+			s(o.*(FD::member_pointer));
+		}
+	};
+
+	template<typename T>
+	typename std::enable_if<traits::has_field_descriptors<T>::value, void>::type saveFields(
+			const T& o) {
+		mpt::for_each(typename T::field_descriptors{}, FieldSaver{}, o, *this);
+	}
+
+	template<typename T>
+	typename std::enable_if<!traits::has_field_descriptors<T>::value, void>::type saveFields(
+			const T& o) {
+	}
+
+	// Invoke the save method, if present.
+	template<typename T>
+	typename std::enable_if<traits::has_save<T, void(BinaryEncoder&)>::value, void>::type invokeSave(
+			const T& o) {
+		o.save(*this);
+	}
+
+	template<typename T>
+	typename std::enable_if<!traits::has_save<T, void(BinaryEncoder&)>::value, void>::type invokeSave(
+			const T& o) {
+	}
 
 	// Write some container's size... or not (if it's known at compile time).
 	template<typename T>
@@ -269,26 +307,13 @@ public:
 		readSequence(&a[0], N);
 	}
 
-	// Serializable objects.
-	template<typename T>
-	typename std::enable_if<
-			traits::has_serialize<T, void(BinaryDecoder&)>::value, void>::type operator()(
-			T& o) {
-		o.serialize(*this);
-	}
-
 	// Loadable objects.
 	template<typename T>
-	typename std::enable_if<traits::has_load<T, void(BinaryDecoder&)>::value,
+	typename std::enable_if<traits::can_be_loaded<T, BinaryDecoder>::value,
 			void>::type operator()(T& o) {
-		o.load(*this);
-	}
-
-	// Descriptor-driven objects.
-	template<typename T>
-	typename std::enable_if<traits::has_class_descriptor<T>::value, void>::type operator()(
-			T& o) {
-		T::class_descriptor::load(*this, o);
+		loadBaseClasses(o);
+		loadFields(o);
+		invokeLoad(o);
 	}
 
 private:
@@ -298,6 +323,57 @@ private:
 			s(v);
 		}
 	};
+
+	// Load base classes, if they exist.
+	struct BaseClassLoader {
+		template <typename T, typename B, typename S>
+		void operator()(mpt::wrap_type<B>, T& o, S& s) {
+			B& base = dynamic_cast<B&>(o);
+			s(base);
+		}
+	};
+
+	template<typename T>
+	typename std::enable_if<traits::has_base_classes<T>::value, void>::type loadBaseClasses(
+			T& o) {
+		mpt::for_each(typename T::base_classes{}, BaseClassLoader{}, o, *this);
+	}
+
+	template<typename T>
+	typename std::enable_if<!traits::has_base_classes<T>::value, void>::type loadBaseClasses(
+			T& o) {
+	}
+
+	// Load fields from field_descriptors, if present.
+	struct FieldLoader {
+		template <typename T, typename FD, typename S>
+		void operator()(mpt::wrap_type<FD>, T& o, S& s) {
+			s(o.*(FD::member_pointer));
+		}
+	};
+
+	template<typename T>
+	typename std::enable_if<traits::has_field_descriptors<T>::value, void>::type loadFields(
+			T& o) {
+		mpt::for_each(typename T::field_descriptors{}, FieldLoader{}, o, *this);
+	}
+
+	template<typename T>
+	typename std::enable_if<!traits::has_field_descriptors<T>::value, void>::type loadFields(
+			T& o) {
+	}
+
+	// Invoke the load method, if present.
+	template<typename T>
+	typename std::enable_if<traits::has_load<T, void(BinaryDecoder&)>::value, void>::type invokeLoad(
+			T& o) {
+		o.load(*this);
+	}
+
+	template<typename T>
+	typename std::enable_if<!traits::has_load<T, void(BinaryDecoder&)>::value, void>::type invokeLoad(
+			T& o) {
+	}
 
 	// Reserve space in a container that supports a reserve method.
 	template<typename T>
@@ -374,11 +450,11 @@ private:
 	InputAdapter& in_;
 };
 
-using NonPortableBinaryEncoder = BinaryEncoder<false>;
+using NativeBinaryEncoder = BinaryEncoder<false>;
 using LittleEndianBinaryEncoder = BinaryEncoder<!traits::target_is_little_endian>;
 using BigEndianBinaryEncoder = BinaryEncoder<!traits::target_is_big_endian>;
 
-using NonPortableBinaryDecoder = BinaryDecoder<false>;
+using NativeBinaryDecoder = BinaryDecoder<false>;
 using LittleEndianBinaryDecoder = BinaryDecoder<!traits::target_is_little_endian>;
 using BigEndianBinaryDecoder = BinaryDecoder<!traits::target_is_big_endian>;
 

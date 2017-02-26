@@ -11,6 +11,13 @@ namespace ash {
 /// Type-based meta-programming toolkit.
 namespace mpt {
 
+/// Backport `constexpr` version of `std::forward_as_tuple` to c++11.
+template< class... Types >
+constexpr std::tuple<Types&&...> forward_as_tuple( Types&&... args )
+{
+	return std::tuple<Types&&...>{std::forward<Types>(args)...};
+}
+
 /// Backport of `std::conditional_t` to c++11.
 template< bool B, class T, class F >
 using conditional_t = typename std::conditional<B,T,F>::type;
@@ -77,7 +84,7 @@ struct disjunction<B1, Bn...>
 struct NAME { \
 	template <typename T> \
 	constexpr auto operator()(T v) \
-	-> decltype(OP v) \
+	-> decltype(OP std::declval<T>()) \
 	{ return OP v; } \
 };
 /// Define binary arithmetic operation functors on arbitrary types.
@@ -85,7 +92,7 @@ struct NAME { \
 struct NAME { \
 	template <typename T, typename U> \
 	constexpr auto operator()(T v, U w) \
-	-> decltype(v OP w) \
+	-> decltype(std::declval<T>() OP std::declval<U>()) \
 	{ return v OP w; } \
 };
 /// Create a complete set of arithmetic operation functors on arbitrary types.
@@ -445,7 +452,6 @@ at(integer_sequence<T, Nums...> is) {
 }
 
 namespace detail {
-
 template <typename Val, typename F, typename ...Args, std::size_t ...Ints>
 static constexpr auto
 transform_one(Val&& v, F f, std::tuple<Args...>&& t, index_sequence<Ints...>)
@@ -475,13 +481,12 @@ static constexpr auto transform(T&& v, index_sequence<Ints...>, F f, std::tuple<
 				std::forward<std::tuple<Args...>>(a),
 				make_index_sequence<sizeof...(Args)>{})...
 )) {
-	return {
+	return std::make_tuple(
 		transform_one(
 				at<Ints>(std::forward<T>(v)),
 				f,
 				std::forward<std::tuple<Args...>>(a),
-				make_index_sequence<sizeof...(Args)>{})...
-	};
+				make_index_sequence<sizeof...(Args)>{})...);
 }
 }  // namespace detail
 
@@ -517,7 +522,7 @@ void for_each(T&& v, F f, Args&& ...args) {
 			std::forward<T>(v),
 			make_index_sequence<size<T>::value>{},
 			f,
-			std::forward_as_tuple(std::forward<Args>(args)...));
+			forward_as_tuple(std::forward<Args>(args)...));
 }
 
 /// \brief Run a functor for each element in a sequence type and return the results.
@@ -546,12 +551,12 @@ transform(T&& v, F f, Args&& ...args)
 		std::forward<T>(v),
 		make_index_sequence<size<T>::value>{},
 		f,
-		std::forward_as_tuple(std::forward<Args>(args)...))) {
+		forward_as_tuple(std::forward<Args>(args)...))) {
 	return detail::transform(
 			std::forward<T>(v),
 			make_index_sequence<size<T>::value>{},
 			f,
-			std::forward_as_tuple(std::forward<Args>(args)...));
+			forward_as_tuple(std::forward<Args>(args)...));
 }
 
 /// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
