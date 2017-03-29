@@ -506,16 +506,6 @@ static constexpr auto transform(T&& v, index_sequence<Ints...>, F f, std::tuple<
 /// \param v The sequence over which to iterate.
 /// \param f The functor to call on every element.
 /// \param args... Further arguments to forward to the functor call.
-//
-// For this other call:
-//  map(pack<Types...>{}, functor, args...);
-//
-// A std::tuple with the return values is returned, but that
-// requires the functor to have a non-void return type in each
-// case.
-//
-// Variants taking tuples work the same way, but the tuple element
-// value is passed to the functor instead of a tagging pack type.
 template <typename T, typename F, typename ...Args>
 void for_each(T&& v, F f, Args&& ...args) {
 	detail::for_each(
