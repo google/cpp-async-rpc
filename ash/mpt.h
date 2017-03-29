@@ -754,8 +754,8 @@ struct index_cat {
 	typename std::enable_if<
 		O{}(Current{}),
 		pack<
-					decltype(cat(typename element_type<0, Prev>::type{}, pack<void>{})),
-					decltype(cat(typename element_type<1, Prev>::type{}, make_constant_index_sequence<1, size<typename element_type<0, Prev>::type>::value>{}))>
+					index_sequence<(1 + at<0>(typename element_type<0, Prev>::type{}))>,
+					decltype(cat(typename element_type<1, Prev>::type{}, index_sequence<(at<0>(typename element_type<0, Prev>::type{}))>{}))>
 	>::type
 	{
 		return {};
@@ -767,7 +767,7 @@ struct index_cat {
 	typename std::enable_if<
 		!O{}(Current{}),
 		pack<
-					decltype(cat(typename element_type<0, Prev>::type{}, pack<void>{})),
+					index_sequence<(1 + at<0>(typename element_type<0, Prev>::type{}))>,
 					typename element_type<1, Prev>::type>
 	>::type
 	{
@@ -780,7 +780,7 @@ struct index_cat {
 /// Get the indexes of the elements that meet a condition.
 template <typename T, typename O>
 constexpr auto find_if(T&& t, O o)
--> typename element_type<1, decltype(accumulate(pack<pack<>, make_index_sequence<0>>{}, std::forward<T>(t), detail::index_cat<O>{}))>::type {
+-> typename element_type<1, decltype(accumulate(pack<index_sequence<0>, index_sequence<>>{}, std::forward<T>(t), detail::index_cat<O>{}))>::type {
 	return {};
 }
 
