@@ -27,7 +27,7 @@ public:
 		if (is_.get(c)) {
 			return c;
 		}
-		return eof;
+		return ASH_EOF;
 	}
 
 private:

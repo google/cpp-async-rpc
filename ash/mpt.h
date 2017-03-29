@@ -736,7 +736,7 @@ constexpr auto cat(Args... args)
 
 // Check whether the passed wrapped type is T.
 template <typename T>
-struct is_wrapped {
+struct is {
 	constexpr bool operator()(wrap_type<T>) {
 		return true;
 	}
@@ -744,6 +744,56 @@ struct is_wrapped {
 		return false;
 	}
 };
+
+namespace detail {
+template <typename O>
+struct index_cat {
+	template<typename Prev, typename Current>
+	constexpr auto
+	operator()(Prev, Current) ->
+	typename std::enable_if<
+		O{}(Current{}),
+		pack<
+					decltype(cat(typename element_type<0, Prev>::type{}, pack<void>{})),
+					decltype(cat(typename element_type<1, Prev>::type{}, make_constant_index_sequence<1, size<typename element_type<0, Prev>::type>::value>{}))>
+	>::type
+	{
+		return {};
+	}
+
+	template<typename Prev, typename Current>
+	constexpr auto
+	operator()(Prev, Current) ->
+	typename std::enable_if<
+		!O{}(Current{}),
+		pack<
+					decltype(cat(typename element_type<0, Prev>::type{}, pack<void>{})),
+					typename element_type<1, Prev>::type>
+	>::type
+	{
+		return {};
+	}
+};
+
+}  // namespace_detail
+
+/// Get the indexes of the elements that meet a condition.
+template <typename T, typename O>
+constexpr auto find_if(T&& t, O o)
+-> typename element_type<1, decltype(accumulate(pack<pack<>, make_index_sequence<0>>{}, std::forward<T>(t), detail::index_cat<O>{}))>::type {
+	return {};
+}
+
+template <typename T, typename O>
+constexpr auto filter_if(T&& t, O o)
+-> decltype(subset(t, find_if(std::forward<T>(t), O{}))) {
+	return subset(t, find_if(std::forward<T>(t), O{}));
+}
+
+template <typename T, typename O>
+constexpr std::size_t count_if(T&& t, O o) {
+	return size<decltype(find_if(std::forward<T>(t), O{}))>::value;
+}
 
 }  // namespace mpt
 

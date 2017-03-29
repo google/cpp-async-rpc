@@ -1,9 +1,9 @@
-#ifndef ASH_ASH_STATIC_OBJECT_H_
-#define ASH_ASH_STATIC_OBJECT_H_
+#ifndef ASH_STATIC_OBJECT_H_
+#define ASH_STATIC_OBJECT_H_
 
 namespace ash {
 
-// Brought from Cereal Serialization Library.
+// Brought in from the Cereal Serialization Library.
 #ifdef _MSC_VER
 #   define ASH_DLL_EXPORT __declspec(dllexport)
 #   define ASH_USED
@@ -17,8 +17,7 @@ class ASH_DLL_EXPORT StaticObject {
 public:
 	static T& get() ASH_USED {
 		static T t;
-		std::cerr << "Hello from: " << __PRETTY_FUNCTION__ << std::endl;
-		instance;  // Force cyclic reference?
+		instance;  // Force a cyclic reference?
 		return t;
 	}
 private:
@@ -31,4 +30,4 @@ template<typename T> T& StaticObject<T>::instance = get();
 
 }  // namespace ash
 
-#endif /* ASH_ASH_STATIC_OBJECT_H_ */
+#endif /* ASH_STATIC_OBJECT_H_ */

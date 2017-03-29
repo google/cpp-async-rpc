@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <tuple>
@@ -14,10 +15,10 @@
 namespace ash {
 
 // Binary encoder.
-template<bool reverse_bytes>
+template<typename Adapter, bool reverse_bytes>
 class BinaryEncoder {
 public:
-	BinaryEncoder(OutputAdapter& out) :
+	BinaryEncoder(Adapter out) :
 			out_(out) {
 	}
 
@@ -71,16 +72,26 @@ public:
 
 	// Saveable objects.
 	template<typename T>
-	typename std::enable_if<traits::can_be_saved<T, BinaryEncoder>::value,
-			void>::type operator()(const T& o) {
+	typename std::enable_if<traits::can_be_saved<T, BinaryEncoder>::value, void>::type operator()(
+			const T& o) {
 		saveBaseClasses(o);
 		saveFields(o);
 		invokeSave(o);
 	}
 
+	// Unique pointers.
+	template<typename T, typename Deleter>
+	void operator()(const std::unique_ptr<T, Deleter>& p) {
+		bool present = (p != nullptr);
+		(*this)(present);
+		if (present) {
+			(*this)(*p);
+		}
+	}
+
 private:
 	struct TupleElementSaver {
-		template <typename T, typename S>
+		template<typename T, typename S>
 		void operator()(const T& v, S& s) {
 			s(v);
 		}
@@ -88,7 +99,7 @@ private:
 
 	// Save base classes, if they exist.
 	struct BaseClassSaver {
-		template <typename T, typename B, typename S>
+		template<typename T, typename B, typename S>
 		void operator()(mpt::wrap_type<B>, const T& o, S& s) {
 			const B& base = dynamic_cast<const B&>(o);
 			s(base);
@@ -98,7 +109,8 @@ private:
 	template<typename T>
 	typename std::enable_if<traits::has_base_classes<T>::value, void>::type saveBaseClasses(
 			const T& o) {
-		mpt::for_each(typename T::base_classes{}, BaseClassSaver{}, o, *this);
+		mpt::for_each(typename T::base_classes { }, BaseClassSaver { }, o,
+				*this);
 	}
 
 	template<typename T>
@@ -108,7 +120,7 @@ private:
 
 	// Save fields from field_descriptors, if present.
 	struct FieldSaver {
-		template <typename T, typename FD, typename S>
+		template<typename T, typename FD, typename S>
 		void operator()(mpt::wrap_type<FD>, const T& o, S& s) {
 			s(o.*(FD::member_pointer));
 		}
@@ -117,7 +129,8 @@ private:
 	template<typename T>
 	typename std::enable_if<traits::has_field_descriptors<T>::value, void>::type saveFields(
 			const T& o) {
-		mpt::for_each(typename T::field_descriptors{}, FieldSaver{}, o, *this);
+		mpt::for_each(typename T::field_descriptors { }, FieldSaver { }, o,
+				*this);
 	}
 
 	template<typename T>
@@ -127,14 +140,14 @@ private:
 
 	// Invoke the save method, if present.
 	template<typename T>
-	typename std::enable_if<traits::has_save<T, void(BinaryEncoder&)>::value, void>::type invokeSave(
-			const T& o) {
+	typename std::enable_if<traits::has_save<T, void(BinaryEncoder&)>::value,
+			void>::type invokeSave(const T& o) {
 		o.save(*this);
 	}
 
 	template<typename T>
-	typename std::enable_if<!traits::has_save<T, void(BinaryEncoder&)>::value, void>::type invokeSave(
-			const T& o) {
+	typename std::enable_if<!traits::has_save<T, void(BinaryEncoder&)>::value,
+			void>::type invokeSave(const T& o) {
 	}
 
 	// Write some container's size... or not (if it's known at compile time).
@@ -205,14 +218,15 @@ private:
 		out_.write(reinterpret_cast<const char*>(p), l * sizeof(T));
 	}
 
-	OutputAdapter& out_;
+protected:
+	Adapter out_;
 };
 
 // Binary decoder.
-template<bool reverse_bytes>
+template<typename Adapter, bool reverse_bytes>
 class BinaryDecoder {
 public:
-	BinaryDecoder(InputAdapter& in) :
+	BinaryDecoder(Adapter in) :
 			in_(in) {
 	}
 
@@ -309,16 +323,29 @@ public:
 
 	// Loadable objects.
 	template<typename T>
-	typename std::enable_if<traits::can_be_loaded<T, BinaryDecoder>::value,
-			void>::type operator()(T& o) {
+	typename std::enable_if<traits::can_be_loaded<T, BinaryDecoder>::value, void>::type operator()(
+			T& o) {
 		loadBaseClasses(o);
 		loadFields(o);
 		invokeLoad(o);
 	}
 
+	// Unique pointers.
+	template<typename T, typename Deleter>
+	void operator()(std::unique_ptr<T, Deleter>& p) {
+		bool present;
+		(*this)(present);
+		if (present) {
+			p.reset(new T());
+			(*this)(*p);
+		} else {
+			p.reset();
+		}
+	}
+
 private:
 	struct TupleElementLoader {
-		template <typename T, typename S>
+		template<typename T, typename S>
 		void operator()(T& v, S& s) {
 			s(v);
 		}
@@ -326,7 +353,7 @@ private:
 
 	// Load base classes, if they exist.
 	struct BaseClassLoader {
-		template <typename T, typename B, typename S>
+		template<typename T, typename B, typename S>
 		void operator()(mpt::wrap_type<B>, T& o, S& s) {
 			B& base = dynamic_cast<B&>(o);
 			s(base);
@@ -336,7 +363,8 @@ private:
 	template<typename T>
 	typename std::enable_if<traits::has_base_classes<T>::value, void>::type loadBaseClasses(
 			T& o) {
-		mpt::for_each(typename T::base_classes{}, BaseClassLoader{}, o, *this);
+		mpt::for_each(typename T::base_classes { }, BaseClassLoader { }, o,
+				*this);
 	}
 
 	template<typename T>
@@ -346,7 +374,7 @@ private:
 
 	// Load fields from field_descriptors, if present.
 	struct FieldLoader {
-		template <typename T, typename FD, typename S>
+		template<typename T, typename FD, typename S>
 		void operator()(mpt::wrap_type<FD>, T& o, S& s) {
 			s(o.*(FD::member_pointer));
 		}
@@ -355,7 +383,8 @@ private:
 	template<typename T>
 	typename std::enable_if<traits::has_field_descriptors<T>::value, void>::type loadFields(
 			T& o) {
-		mpt::for_each(typename T::field_descriptors{}, FieldLoader{}, o, *this);
+		mpt::for_each(typename T::field_descriptors { }, FieldLoader { }, o,
+				*this);
 	}
 
 	template<typename T>
@@ -365,14 +394,14 @@ private:
 
 	// Invoke the load method, if present.
 	template<typename T>
-	typename std::enable_if<traits::has_load<T, void(BinaryDecoder&)>::value, void>::type invokeLoad(
-			T& o) {
+	typename std::enable_if<traits::has_load<T, void(BinaryDecoder&)>::value,
+			void>::type invokeLoad(T& o) {
 		o.load(*this);
 	}
 
 	template<typename T>
-	typename std::enable_if<!traits::has_load<T, void(BinaryDecoder&)>::value, void>::type invokeLoad(
-			T& o) {
+	typename std::enable_if<!traits::has_load<T, void(BinaryDecoder&)>::value,
+			void>::type invokeLoad(T& o) {
 	}
 
 	// Reserve space in a container that supports a reserve method.
@@ -447,16 +476,35 @@ private:
 		in_.read(reinterpret_cast<char*>(p), l * sizeof(T));
 	}
 
-	InputAdapter& in_;
+protected:
+	Adapter in_;
 };
 
-using NativeBinaryEncoder = BinaryEncoder<false>;
-using LittleEndianBinaryEncoder = BinaryEncoder<!traits::target_is_little_endian>;
-using BigEndianBinaryEncoder = BinaryEncoder<!traits::target_is_big_endian>;
+// Sizing OutputEncoder
+class BinarySizer: public BinaryEncoder<OutputSizerAdapter, false> {
+public:
+	BinarySizer() :
+			BinaryEncoder<OutputSizerAdapter, false>(OutputSizerAdapter()) {
+	}
 
-using NativeBinaryDecoder = BinaryDecoder<false>;
-using LittleEndianBinaryDecoder = BinaryDecoder<!traits::target_is_little_endian>;
-using BigEndianBinaryDecoder = BinaryDecoder<!traits::target_is_big_endian>;
+	// Get the total number of bytes written so far.
+	std::size_t size() {
+		return out_.size();
+	}
+
+	// Reset the byte count so that we can reuse the object.
+	void reset() {
+		out_.reset();
+	}
+};
+
+using NativeBinaryEncoder = BinaryEncoder<DelegatingOutputAdapter, false>;
+using LittleEndianBinaryEncoder = BinaryEncoder<DelegatingOutputAdapter, !traits::target_is_little_endian>;
+using BigEndianBinaryEncoder = BinaryEncoder<DelegatingOutputAdapter, !traits::target_is_big_endian>;
+
+using NativeBinaryDecoder = BinaryDecoder<DelegatingInputAdapter, false>;
+using LittleEndianBinaryDecoder = BinaryDecoder<DelegatingOutputAdapter, !traits::target_is_little_endian>;
+using BigEndianBinaryDecoder = BinaryDecoder<DelegatingOutputAdapter, !traits::target_is_big_endian>;
 
 }  // namespace ash
 

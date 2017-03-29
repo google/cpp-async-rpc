@@ -5,15 +5,14 @@
 #include <stdexcept>
 
 namespace ash {
-
 // Adapter classes for I/O.
+
+constexpr int ASH_EOF = -1;
 
 // Input adapter base. Implementations should override at least one of
 // read or getc and delegate the other. Throw exceptions for I/O errors.
 class InputAdapter {
 public:
-	static constexpr int eof = -1;
-
 	// Read up to l chars into the buffer pointed at by p. Return the
 	// actual amount of bytes read, which could be fewer than l if hitting
 	// EOF.
@@ -37,7 +36,7 @@ public:
 std::size_t InputAdapter::read(char* p, std::size_t l) {
 	int c;
 	std::size_t r = 0;
-	while (r < l && (c = getc() != eof)) {
+	while (r < l && (c = getc() != ASH_EOF)) {
 		r++;
 		*p++ = c;
 	}
@@ -47,10 +46,32 @@ std::size_t InputAdapter::read(char* p, std::size_t l) {
 int InputAdapter::getc() {
 	char c;
 	if (read(&c, 1) < 1) {
-		return eof;
+		return ASH_EOF;
 	}
 	return c;
 }
+
+class DelegatingInputAdapter {
+public:
+	DelegatingInputAdapter(InputAdapter& in) :
+			in_(in) {
+	}
+
+	std::size_t read(char* p, std::size_t l) {
+		return in_.read(p, l);
+	}
+
+	void readFully(char* p, std::size_t l) {
+		in_.readFully(p, l);
+	}
+
+	int getc() {
+		return in_.getc();
+	}
+
+private:
+	InputAdapter& in_;
+};
 
 // Output adapter base. Implementations should override at least one of
 // write or putc and delegate the other. Throw exceptions for I/O errors.
@@ -76,8 +97,25 @@ void OutputAdapter::putc(char c) {
 	write(&c, 1);
 }
 
+class DelegatingOutputAdapter {
+public:
+	DelegatingOutputAdapter(OutputAdapter& out) :
+			out_(out) {
+	}
+
+	void write(const char* p, std::size_t l) {
+		out_.write(p, l);
+	}
+
+	void putc(char c) {
+		out_.putc(c);
+	}
+private:
+	OutputAdapter& out_;
+};
+
 // Output sizer.
-class OutputSizer: public OutputAdapter {
+class OutputSizerAdapter {
 public:
 	// Get the total number of bytes written so far.
 	std::size_t size() {
@@ -90,12 +128,12 @@ public:
 	}
 
 	// Write l chars out.
-	void write(const char* p, std::size_t l) override {
+	void write(const char* p, std::size_t l) {
 		size_ += l;
 	}
 
 	// Write c out.
-	void putc(char c) override {
+	void putc(char c) {
 		size_++;
 	}
 
