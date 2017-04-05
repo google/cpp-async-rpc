@@ -17,43 +17,54 @@ namespace ash {
 
 namespace registry {
 /*
-template <typename T>
-class EncoderRegisterer {
-private:
-	template <typename S>
-	struct BaseRegisterer {
-		template <typename B>
-		void operator()(mpt::wrap_type<B>, const char* name) {
-			auto& registry = StaticObject<EncoderRegistry<S, B>>::get();
-			registry.template registerClass<T>(name);
-		}
-	};
+ template <typename T>
+ class EncoderRegisterer {
+ private:
+ template <typename S>
+ struct BaseRegisterer {
+ template <typename B>
+ void operator()(mpt::wrap_type<B>, const char* name) {
+ auto& registry = StaticObject<EncoderRegistry<S, B>>::get();
+ registry.template registerClass<T>(name);
+ }
+ };
 
-	struct Registerer {
-		template <typename S>
-		void operator()(mpt::wrap_type<S>, const char* name) {
-			mpt::for_each(metadata::DynamicBaseClasses<T>{}, BaseRegisterer<S>{}, name);
-		}
-	};
+ struct Registerer {
+ template <typename S>
+ void operator()(mpt::wrap_type<S>, const char* name) {
+ mpt::for_each(metadata::DynamicBaseClasses<T>{}, BaseRegisterer<S>{}, name);
+ }
+ };
 
-public:
-	EncoderRegisterer(const char* name) {
-		mpt::for_each(config::AllEncoders{}, Registerer{}, name);
-	}
-	virtual ~EncoderRegisterer() {
-		// Nothing.
-	}
-};
-*/
+ public:
+ EncoderRegisterer(const char* name) {
+ mpt::for_each(config::AllEncoders{}, Registerer{}, name);
+ }
+ virtual ~EncoderRegisterer() {
+ // Nothing.
+ }
+ };
+ */
 
+/*
 #define ASH_CONCAT(x, y) ASH__DO__CONCAT(x, y)
 #define ASH__DO__CONCAT(x, y) x ## y
 
+template<typename T>
+class Registerer {
+public:
+	Registerer(const char* name) {
+		::ash::metadata::DynamicClassDescriptor<T>::class_name = name;
+	}
+	~Registerer() {
+	}
+};
+
 #define ASH_REGISTER_CLASS(NAME, ...) \
 namespace { \
-/*::ash::registry::EncoderRegisterer<__VA_ARGS__> ASH_CONCAT(ash_encoder_registerer, __COUNTER__)(NAME);*/ \
+	::ash::registry::Registerer< __VA_ARGS__ > registerer3 (NAME); \
 }
-
+*/
 }  // namespace registry
 
 }  // namespace ash

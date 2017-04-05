@@ -10,17 +10,20 @@
 #include "ash/registration.h"
 #include "ash/iostream_adapters.h"
 
-ASH_STRUCT(V) {
+ASH_STRUCT(V, ash::metadata::Public<ash::DynamicClass>) {
+ASH_DYNAMIC_STRUCT
+
 	int a = 64;
 
 	//virtual void f(){};
 
 	ASH_FIELDS(V, ASH_FIELD(a));
 };
+ASH_REGISTER(V);
 
-ASH_REGISTER_CLASS("V", V);
+ASH_STRUCT(X, ash::metadata::Public<V>) {
+ASH_DYNAMIC_STRUCT
 
-ASH_STRUCT(X, ash::metadata::PublicVirtual<V>) {
 	int x = 1, y = 2;
 	std::string z = "pasta";
 
@@ -31,17 +34,23 @@ ASH_STRUCT(X, ash::metadata::PublicVirtual<V>) {
 	);
 };
 
-ASH_REGISTER_CLASS("X", X);
+ASH_REGISTER(X);
 
-ASH_STRUCT(Y, ash::metadata::PublicVirtual<V>) {
+ASH_STRUCT(Y, ash::metadata::Public<V>) {
+ASH_DYNAMIC_STRUCT
 };
 
-ASH_REGISTER_CLASS("Y", Y);
+ASH_REGISTER(Y);
 
-ASH_STRUCT(Z, ash::metadata::Public<X>, ash::metadata::Public<Y>) {
+namespace z {
+
+ASH_STRUCT(Z, ash::metadata::Public<X>) {
+ASH_DYNAMIC_STRUCT
 };
 
-ASH_REGISTER_CLASS("Z", Z);
+ASH_REGISTER(Z);
+
+}
 
 template<typename T>
 void f(T) {
@@ -49,23 +58,34 @@ void f(T) {
 }
 
 int main() {
-	using pp = ash::mpt::pack<double, int, double>;
-	f(ash::mpt::find_if(pp{}, ash::mpt::is<double>{}));
+	ash::registry::DynamicObjectFactory::get().registerClass<z::Z>("Z");
+	ash::registry::DynamicObjectFactory::get().registerClass<Y>("Y");
+	ash::registry::DynamicObjectFactory::get().registerClass<V>("V");
+	std::unique_ptr<z::Z> z1(ash::registry::DynamicObjectFactory::get().create<z::Z>("Z"));
+	std::unique_ptr<V> v1(ash::registry::DynamicObjectFactory::get().create<V>("Z"));
+	std::unique_ptr<Y> y1(ash::registry::DynamicObjectFactory::get().create<Y>("V"));
 
-	f(ash::metadata::DynamicBaseClasses<V>{});
-	f(ash::metadata::DynamicBaseClasses<X>{});
-	f(ash::metadata::DynamicBaseClasses<Z>{});
-	std::unique_ptr<X> x(new X());
+	std::cerr << z1->getPortableClassName() << std::endl;
+	std::cerr << v1->getPortableClassName() << std::endl;
+	std::cerr << y1->getPortableClassName() << std::endl;
+
+	using pp = ash::mpt::pack<double, int, double>;
+	constexpr auto rrrrr = ash::mpt::count_if(pp { }, ash::mpt::is<double> { });
+	f(ash::mpt::filter_if(pp { }, ash::mpt::is<double> { }));
+	f(ash::mpt::find_if(pp { }, ash::mpt::is<double> { }));
+	std::unique_ptr < X > x(new X());
 	x->x = 44;
 	x->a = 88;
-	std::unique_ptr<X> y;
+	std::unique_ptr < X > y;
 
-	f(X::base_classes{});
-	f(X::public_base_classes{});
-	f(X::protected_base_classes{});
-	f(X::private_base_classes{});
+	f(X::base_classes { });
+	f(X::public_base_classes { });
+	f(X::protected_base_classes { });
+	f(X::private_base_classes { });
 
-	std::cerr << ash::traits::can_be_saved<decltype(*x), ash::NativeBinaryEncoder>::value << std::endl;
+	std::cerr
+			<< ash::traits::can_be_saved<decltype(*x), ash::NativeBinaryEncoder>::value
+			<< std::endl;
 
 	ash::BinarySizer bs;
 	bs(x);

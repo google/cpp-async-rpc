@@ -1,16 +1,15 @@
 #ifndef ASH_REGISTRY_H_
 #define ASH_REGISTRY_H_
 
-#include <cstdint>
-#include <memory>
-#include <stdexcept>
-#include <typeinfo>
-#include <typeindex>
-#include <type_traits>
-#include <unordered_map>
-#include <utility>
+#include <cassert>
+#include <cstring>
+#include <map>
+#include <set>
 
 #include <iostream>
+
+#include "ash/dynamic_class.h"
+#include "ash/singleton.h"
 
 /*
  * unique, non-polymorphic
@@ -79,159 +78,67 @@ namespace ash {
 
 namespace registry {
 
-/*
-class ObjectRegistry {
-public:
-	using id_type = uint32_t;
-	static constexpr id_type already_seen_marker = (static_cast<id_type>(1)) << 31;
-
-private:
-	class EntryBase {
-	public:
-		virtual ~EntryBase() {
-		}
-	};
-
-	template<typename B>
-	class Entry: public EntryBase {
-	public:
-		Entry(std::shared_ptr<B> ptr) :
-				ptr_(ptr) {
-		}
-
-		std::shared_ptr<B> get() {
-			return ptr_;
-		}
-	private:
-		std::shared_ptr<B> ptr_;
-	};
-
-	std::unordered_map<std::pair<std::type_index, id_type>,
-			std::unique_ptr<EntryBase>> objects_;
-
-public:
-	template<typename B>
-	void registerObject(id_type id, std::shared_ptr<B> ptr) {
-		objects_[std::make_pair(std::type_index(typeid(T)), id)].reset(
-				new Entry<B>(ptr));
-	}
-
-	template<typename B>
-	std::shared_ptr<B> getObject(id_type id, std::shared_ptr<B> ptr) const {
-		auto it = objects_.find(std::make_pair(std::type_index(typeid(T)), id));
-		if (it == objects_.end()) {
-			throw std::runtime_error("Unknown object.");
-		}
-		return std::static_pointer_cast<const Entry<B>>(it->second)->get();
+namespace detail {
+struct ConstCharPtrCompare {
+	bool operator()(const char* a, const char* b) const {
+		return std::strcmp(a, b) < 0;
 	}
 };
-*/
+}  // namespace detail
 
-template<typename S>
-class EncoderClassRegistry {
-private:
-	class EntryBase {
-	public:
-		// Get the portable name of the class.
-		virtual const char* class_name() const = 0;
-
-		// Save an object given a const void pointer to the most-derived class.
-		virtual void save(S& s, const void* o) const = 0;
-	};
-
-	template<typename T>
-	class Entry: public EntryBase {
-	public:
-		Entry(const char* name) :
-				name_(name) {
-			std::cerr << __PRETTY_FUNCTION__ << std::endl;
-		}
-
-		// Get the portable name of the class.
-		const char* class_name() const override {
-			return name_;
-		}
-
-		// Save an object given a reference to the base class.
-		void save(S& s, const void* o) const override {
-			const T* ptr = static_cast<const T*>(o);
-			s(*ptr);
-		}
-
-	private:
-		const char* name_;
-	};
-
-	std::unordered_map<std::type_index, std::unique_ptr<EntryBase>> classes_;
-
-	const EntryBase& entry(const std::type_index& type) {
-		auto it = classes_.find(type);
-		if (it == classes_.end()) {
-			throw std::runtime_error("Unknown type.");
-		}
-		return *(it->second);
-	}
-
+template<typename T>
+class DynamicSubclassRegistry: public Singleton<DynamicSubclassRegistry<T>> {
 public:
-	template<typename T>
-	void registerClass(const char* name) {
-		classes_[std::type_index(typeid(T))].reset(new Entry<T>(name));
+	void registerSubclass(const char* class_name);
+	bool isSubclass(const char* class_name) {
+		return dynamic_subclass_set_.count(class_name) == 1;
 	}
-
-	template<typename T>
-	const char* class_name(const T& o) const {
-		return entry(std::type_index(typeid(o))).name();
-	}
-
-	template<typename T>
-	void save(S& s, const T& o) const {
-		return entry(std::type_index(typeid(o))).save(s,
-				dynamic_cast<const void*>(&o));
-	}
+private:
+	std::set<const char*, detail::ConstCharPtrCompare> dynamic_subclass_set_;
 };
 
-template<typename S>
-class DecoderClassRegistry {
-private:
-	class EntryBase {
-	public:
-		//virtual void construct_register_and_load(S& s, ObjectRegistry& object_registry, const char* class_name, ObjectRegistry::id_type id) const = 0;
-		virtual void construct_and_load(S& s, const char* class_name) const = 0;
-	};
-
+namespace detail {
+struct RegisterSubclass {
 	template<typename T>
-	class Entry: public EntryBase {
-	public:
-		//void construct_register_and_load(S& s, ObjectRegistry& object_registry, const char* class_name, ObjectRegistry::id_type id) const override {}
-		void construct_and_load(S& s, const char* class_name) const override {}
-	};
-
-	std::unordered_map<std::type_index, std::unique_ptr<EntryBase>> classes_;
-
-	const EntryBase& entry(const std::type_index& type) {
-		auto it = classes_.find(type);
-		if (it == classes_.end()) {
-			throw std::runtime_error("Unknown type.");
-		}
-		return *(it->second);
+	void operator()(mpt::wrap_type<T>, const char* class_name) {
+		DynamicSubclassRegistry<T>::get().registerSubclass(class_name);
 	}
+};
+}  // namespace detail
 
+template<typename T>
+void DynamicSubclassRegistry<T>::registerSubclass(const char* class_name) {
+	std::cerr << "REGISTER: " << __PRETTY_FUNCTION__ << ": " << class_name
+			<< std::endl;
+	dynamic_subclass_set_.insert(class_name);
+	mpt::for_each(typename T::dynamic_base_classes { },
+			detail::RegisterSubclass { }, class_name);
+}
+
+class DynamicObjectFactory: public Singleton<DynamicObjectFactory> {
 public:
 	template<typename T>
-	void registerClass(const char* name) {
-		classes_[std::type_index(typeid(T))].reset(new Entry<T>(name));
+	void registerClass(const char* class_name) {
+		factory_function_type f =
+				[]() {return static_cast<::ash::DynamicClass*>(new T());};
+		assert(factory_function_map_.emplace(class_name, f).second);
+		DynamicSubclassRegistry<T>::get().registerSubclass(class_name);
 	}
 
+	// Returns nullptr in case of errors.
 	template<typename T>
-	const char* name(const T& o) const {
-		return entry(std::type_index(typeid(o))).name();
+	T* create(const char* class_name) const {
+		if (!DynamicSubclassRegistry<T>::get().isSubclass(class_name))
+			return nullptr;
+		const auto it = factory_function_map_.find(class_name);
+		if (it == factory_function_map_.end())
+			return nullptr;
+		return static_cast<T*>(it->second());
 	}
 
-	template<typename T>
-	void save(S& s, const T& o) const {
-		return entry(std::type_index(typeid(o))).save(s,
-				dynamic_cast<const void*>(&o));
-	}
+private:
+	using factory_function_type = ::ash::DynamicClass* (*)();
+	std::map<const char*, factory_function_type, detail::ConstCharPtrCompare> factory_function_map_;
 };
 
 }  // namespace registry

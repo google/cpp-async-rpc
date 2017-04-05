@@ -636,7 +636,7 @@ struct accumulate_helper {
 template <>
 struct accumulate_helper<0> {
 	template <typename I, typename T, typename O>
-	static constexpr auto	accumulate_internal(I&& a, T&& t, O o)
+	static constexpr auto accumulate_internal(I&& a, T&& t, O o)
 	-> I {
 		return a;
 	}
@@ -776,13 +776,13 @@ constexpr auto find_if(T&& t, O o)
 
 template <typename T, typename O>
 constexpr auto filter_if(T&& t, O o)
--> decltype(subset(t, find_if(std::forward<T>(t), O{}))) {
-	return subset(t, find_if(std::forward<T>(t), O{}));
+-> decltype(subset(t, find_if(std::forward<T>(t), o))) {
+	return subset(t, find_if(std::forward<T>(t), o));
 }
 
 template <typename T, typename O>
 constexpr std::size_t count_if(T&& t, O o) {
-	return size<decltype(find_if(std::forward<T>(t), O{}))>::value;
+	return size<decltype(find_if(std::forward<T>(t), o))>::value;
 }
 
 }  // namespace mpt
