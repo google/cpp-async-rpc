@@ -3,6 +3,7 @@
 
 namespace ash {
 
+/// Singleton class; useful as a base class too.
 template <typename T>
 struct singleton {
 	static T& get() {
