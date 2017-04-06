@@ -5,8 +5,10 @@
 #include <cassert>
 
 #include "ash/dynamic_class.h"
+#include "ash/preprocessor.h"
 #include "ash/mpt.h"
 #include "ash/traits.h"
+#include "ash/registry.h"
 
 namespace ash {
 
@@ -135,13 +137,13 @@ struct BaseClassHelper {
 			IsDynamicClass { }) > 0);
 };
 
-template<bool Dynamic, typename PublicBases, typename PublicVirtualBases,
+template<bool Dynamic, typename OwnType, typename PublicBases, typename PublicVirtualBases,
 		typename ProtectedBases, typename ProtectedVirtualBases,
 		typename PrivateBases, typename PrivateVirtualBases> class MetadataBase;
-template<typename ...PublicBases, typename ...PublicVirtualBases,
+template<typename OwnType, typename ...PublicBases, typename ...PublicVirtualBases,
 		typename ...ProtectedBases, typename ...ProtectedVirtualBases,
 		typename ...PrivateBases, typename ...PrivateVirtualBases>
-class MetadataBase<false, mpt::pack<PublicBases...>,
+class MetadataBase<false, OwnType, mpt::pack<PublicBases...>,
 		mpt::pack<PublicVirtualBases...>, mpt::pack<ProtectedBases...>,
 		mpt::pack<ProtectedVirtualBases...>, mpt::pack<PrivateBases...>,
 		mpt::pack<PrivateVirtualBases...>> : public PublicBases...,
@@ -151,6 +153,7 @@ class MetadataBase<false, mpt::pack<PublicBases...>,
 		private PrivateBases...,
 		private virtual PrivateVirtualBases... {
 public:
+	using own_type = OwnType;
 	using public_base_classes = mpt::pack<PublicBases...>;
 	using public_virtual_base_classes = mpt::pack<PublicVirtualBases...>;
 	using protected_base_classes = mpt::pack<ProtectedBases...>;
@@ -169,24 +172,29 @@ public:
 	void load(S& s) = delete;
 	using field_descriptors = mpt::pack<>;
 };
-template<typename ...PublicBases, typename ...PublicVirtualBases,
+template<typename OwnType, typename ...PublicBases, typename ...PublicVirtualBases,
 		typename ...ProtectedBases, typename ...ProtectedVirtualBases,
 		typename ...PrivateBases, typename ...PrivateVirtualBases>
-class MetadataBase<true, mpt::pack<PublicBases...>,
+class MetadataBase<true, OwnType, mpt::pack<PublicBases...>,
 		mpt::pack<PublicVirtualBases...>, mpt::pack<ProtectedBases...>,
 		mpt::pack<ProtectedVirtualBases...>, mpt::pack<PrivateBases...>,
-		mpt::pack<PrivateVirtualBases...>> : public MetadataBase<false,
+		mpt::pack<PrivateVirtualBases...>> : public MetadataBase<false, OwnType,
 		mpt::pack<PublicBases...>, mpt::pack<PublicVirtualBases...>,
 		mpt::pack<ProtectedBases...>, mpt::pack<ProtectedVirtualBases...>,
 		mpt::pack<PrivateBases...>, mpt::pack<PrivateVirtualBases...>> {
 private:
-	// Ensure the class becomes abstract if we don't include ASH_DYNAMIC_{CLASS,STRUCT} in it.
-	const char *portableClassName() const override = 0;
+	// Implement the virtual function that returns the name of our type.
+	const char *portableClassName() const override {
+		using Descriptor = ash::metadata::detail::DynamicClassDescriptor<OwnType>;
+		assert(Descriptor::class_name != nullptr);
+		return Descriptor::class_name;
+    }
 };
 
-template<typename ...Bases>
+template<typename OwnType, typename ...Bases>
 using MetadataBaseGen = MetadataBase<
 BaseClassHelper<Bases...>::is_dynamic,
+OwnType,
 typename BaseClassHelper<Bases...>::public_bases,
 typename BaseClassHelper<Bases...>::public_virtual_bases,
 typename BaseClassHelper<Bases...>::protected_bases,
@@ -194,11 +202,14 @@ typename BaseClassHelper<Bases...>::protected_virtual_bases,
 typename BaseClassHelper<Bases...>::private_bases,
 typename BaseClassHelper<Bases...>::private_virtual_bases>;
 
-#define ASH_CLASS(CLASS_NAME, ...) class CLASS_NAME : public ::ash::metadata::MetadataBaseGen<__VA_ARGS__ >
-#define ASH_STRUCT(STRUCT_NAME, ...) struct STRUCT_NAME : public ::ash::metadata::MetadataBaseGen<__VA_ARGS__ >
-#define ASH_PUBLIC(...) ::ash::metadata::Public( __VA_ARGS__ )
-#define ASH_PROTECTED(...) ::ash::metadata::Protected( __VA_ARGS__ )
-#define ASH_PRIVATE(...) ::ash::metadata::Private( __VA_ARGS__ )
+template<typename OwnType, typename ...Bases>
+using MetadataDynamicBaseGen = mpt::conditional_t<BaseClassHelper<Bases...>::is_dynamic, MetadataBaseGen<OwnType, Bases...>, MetadataBaseGen<OwnType, ::ash::metadata::Public< ::ash::DynamicClass >, Bases...> >;
+
+#define ASH_PUBLIC(...) ::ash::metadata::Public< __VA_ARGS__ >
+#define ASH_PROTECTED(...) ::ash::metadata::Protected< __VA_ARGS__ >
+#define ASH_PRIVATE(...) ::ash::metadata::Private< __VA_ARGS__ >
+#define ASH_SERIALIZABLE(...) public ::ash::metadata::MetadataBaseGen< __VA_ARGS__ >
+#define ASH_DYNAMIC(...) public ::ash::metadata::MetadataDynamicBaseGen< __VA_ARGS__ >
 #define ASH_DYNAMIC_IMPL \
 private: \
 	const char* portableClassName() const override { \
@@ -231,22 +242,22 @@ template<typename T> struct RemoveParens<void (T)> {
 };
 }  // namespace detail
 
-#define ASH_REMOVE_PARENS(...) typename ::ash::metadata::detail::RemoveParens<void( __VA_ARGS__ )>::type;
-
 /// Define a `FieldDescriptor` type for a member field named `NAME`.
 #define ASH_FIELD(NAME) ::ash::metadata::FieldDescriptor<decltype(&own_type::NAME), &own_type::NAME>
+#define ASH_FIELD_SEP() ,
+
+/// Needed to find our own type in template classes, as the base class is dependent.
+#define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
+
 /// Define the list of `FieldDescriptor` elements for the current class.
-#define ASH_FIELDS(CLASS_TYPE, ...) \
-	using own_type = ASH_REMOVE_PARENS(CLASS_TYPE); \
-	using field_descriptors = ash::mpt::pack<__VA_ARGS__>
+#define ASH_FIELDS(...) \
+	using field_descriptors = ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>
 
 #define ASH_REGISTER(...) \
-template <> \
-const char* ::ash::metadata::detail::DynamicClassDescriptor< __VA_ARGS__ >::class_name = #__VA_ARGS__;
+template <> const char* ::ash::metadata::detail::DynamicClassDescriptor< __VA_ARGS__ >::class_name = ::ash::registry::DynamicObjectFactory::get().registerClass< __VA_ARGS__ >(#__VA_ARGS__)
 
 #define ASH_REGISTER_WITH_NAME(NAME, ...) \
-template <> \
-const char* ::ash::metadata::detail::DynamicClassDescriptor< __VA_ARGS__ >::class_name = NAME;
+template <> const char* ::ash::metadata::detail::DynamicClassDescriptor< __VA_ARGS__ >::class_name = ::ash::registry::DynamicObjectFactory::get().registerClass< __VA_ARGS__ >(NAME)
 
 }  // namespace metadata
 

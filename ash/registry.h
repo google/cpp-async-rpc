@@ -118,11 +118,12 @@ void DynamicSubclassRegistry<T>::registerSubclass(const char* class_name) {
 class DynamicObjectFactory: public Singleton<DynamicObjectFactory> {
 public:
 	template<typename T>
-	void registerClass(const char* class_name) {
+	const char* registerClass(const char* class_name) {
 		factory_function_type f =
 				[]() {return static_cast<::ash::DynamicClass*>(new T());};
 		assert(factory_function_map_.emplace(class_name, f).second);
 		DynamicSubclassRegistry<T>::get().registerSubclass(class_name);
+		return class_name;
 	}
 
 	// Returns nullptr in case of errors.
@@ -139,6 +140,16 @@ public:
 private:
 	using factory_function_type = ::ash::DynamicClass* (*)();
 	std::map<const char*, factory_function_type, detail::ConstCharPtrCompare> factory_function_map_;
+};
+
+template<typename T>
+struct ClassRegisterer {
+	ClassRegisterer() :
+			registered(false) {
+		DynamicObjectFactory::get().registerClass<T>();
+		registered = true;
+	}
+	bool registered;
 };
 
 }  // namespace registry

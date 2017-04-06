@@ -10,46 +10,39 @@
 #include "ash/registration.h"
 #include "ash/iostream_adapters.h"
 
-ASH_STRUCT(V, ash::metadata::Public<ash::DynamicClass>) {
-ASH_DYNAMIC_STRUCT
+template <typename R>
+struct K : ASH_SERIALIZABLE(K<R>) {
+	R x = 1, y = 2;
+	std::string z = "pasta";
 
+	// Needed in template classes as the one in ASH_SERIALIZABLE isn't
+	// visible without qualification. Bah.
+	ASH_OWN_TYPE(K<R>);
+	ASH_FIELDS(x, y, z);
+};
+
+struct V : ASH_DYNAMIC(V) {
 	int a = 64;
-
-	//virtual void f(){};
-
-	ASH_FIELDS(V, ASH_FIELD(a));
+	ASH_FIELDS(a);
 };
 ASH_REGISTER(V);
 
-ASH_STRUCT(X, ash::metadata::Public<V>) {
-ASH_DYNAMIC_STRUCT
-
+struct X : ASH_DYNAMIC(X, ASH_PUBLIC(V)) {
 	int x = 1, y = 2;
 	std::string z = "pasta";
 
-	ASH_FIELDS(X,
-			ASH_FIELD(x),
-			ASH_FIELD(y),
-			ASH_FIELD(z)
-	);
+	ASH_FIELDS(x, y, z);
 };
-
 ASH_REGISTER(X);
 
-ASH_STRUCT(Y, ash::metadata::Public<V>) {
-ASH_DYNAMIC_STRUCT
+struct Y : ASH_DYNAMIC(Y, ASH_PUBLIC(V)) {
 };
-
 ASH_REGISTER(Y);
 
 namespace z {
-
-ASH_STRUCT(Z, ash::metadata::Public<X>) {
-ASH_DYNAMIC_STRUCT
+struct Z : ASH_DYNAMIC(Z, ASH_PUBLIC(X)) {
 };
-
-ASH_REGISTER(Z);
-
+ASH_REGISTER(z::Z);
 }
 
 template<typename T>
@@ -58,16 +51,16 @@ void f(T) {
 }
 
 int main() {
-	ash::registry::DynamicObjectFactory::get().registerClass<z::Z>("Z");
-	ash::registry::DynamicObjectFactory::get().registerClass<Y>("Y");
-	ash::registry::DynamicObjectFactory::get().registerClass<V>("V");
-	std::unique_ptr<z::Z> z1(ash::registry::DynamicObjectFactory::get().create<z::Z>("Z"));
-	std::unique_ptr<V> v1(ash::registry::DynamicObjectFactory::get().create<V>("Z"));
+	z::Z z2;
+	std::unique_ptr<z::Z> z1(ash::registry::DynamicObjectFactory::get().create<z::Z>("z::Z"));
+	std::unique_ptr<V> v1(ash::registry::DynamicObjectFactory::get().create<V>("z::Z"));
 	std::unique_ptr<Y> y1(ash::registry::DynamicObjectFactory::get().create<Y>("V"));
 
+	std::cerr << z2.getPortableClassName() << std::endl;
 	std::cerr << z1->getPortableClassName() << std::endl;
 	std::cerr << v1->getPortableClassName() << std::endl;
-	std::cerr << y1->getPortableClassName() << std::endl;
+	std::cerr << (y1 == nullptr) << std::endl;
+	//std::cerr << y1->getPortableClassName() << std::endl;
 
 	using pp = ash::mpt::pack<double, int, double>;
 	constexpr auto rrrrr = ash::mpt::count_if(pp { }, ash::mpt::is<double> { });
