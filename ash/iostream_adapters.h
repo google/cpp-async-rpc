@@ -10,9 +10,9 @@
 
 namespace ash {
 
-class IStreamAdapter: public InputAdapter {
+class istream_input_stream: public input_stream {
 public:
-	IStreamAdapter(std::istream& is) :
+	istream_input_stream(std::istream& is) :
 			is_(is) {
 		is_.exceptions(std::istream::badbit);
 	}
@@ -34,9 +34,9 @@ private:
 	std::istream& is_;
 };
 
-class OStreamAdapter: public OutputAdapter {
+class ostream_output_stream: public output_stream {
 public:
-	OStreamAdapter(std::ostream& os) :
+	ostream_output_stream(std::ostream& os) :
 			os_(os) {
 		os_.exceptions(std::istream::badbit);
 	}

@@ -8,17 +8,18 @@ namespace ash {
 
 namespace config {
 
-using AllEncoders = mpt::pack<
-		ash::BigEndianBinaryEncoder,
-		ash::LittleEndianBinaryEncoder>;
+using all_encoders = mpt::pack<
+ash::big_endian_binary_encoder,
+ash::little_endian_binary_encoder
+>;
 
-using AllDecoders = mpt::pack<
-		ash::BigEndianBinaryDecoder,
-		ash::LittleEndianBinaryDecoder>;
+using all_decoders = mpt::pack<
+ash::big_endian_binary_decoder,
+ash::little_endian_binary_decoder
+>;
 
 }  // namespace config
 
 }  // namespace ash
-
 
 #endif /* ASH_CONFIG_H_ */

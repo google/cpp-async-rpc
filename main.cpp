@@ -1,33 +1,29 @@
 #include <iostream>
 #include <sstream>
-#include <cstring>
 #include <memory>
 #include <string>
-#include <tuple>
-//#include <unordered_map>
+
 #include "ash.h"
 #include "ash/mpt.h"
-#include "ash/registration.h"
+#include "ash/serializable.h"
 #include "ash/iostream_adapters.h"
 
 template <typename R>
-struct K : ASH_SERIALIZABLE(K<R>) {
+struct K : ash::serializable<K<R>> {
 	R x = 1, y = 2;
 	std::string z = "pasta";
 
-	// Needed in template classes as the one in ASH_SERIALIZABLE isn't
-	// visible without qualification. Bah.
 	ASH_OWN_TYPE(K<R>);
 	ASH_FIELDS(x, y, z);
 };
 
-struct V : ASH_DYNAMIC(V) {
+struct V : ash::dynamic<V> {
 	int a = 64;
 	ASH_FIELDS(a);
 };
 ASH_REGISTER(V);
 
-struct X : ASH_DYNAMIC(X, ASH_PUBLIC(V)) {
+struct X : ash::dynamic<X, V> {
 	int x = 1, y = 2;
 	std::string z = "pasta";
 
@@ -35,12 +31,12 @@ struct X : ASH_DYNAMIC(X, ASH_PUBLIC(V)) {
 };
 ASH_REGISTER(X);
 
-struct Y : ASH_DYNAMIC(Y, ASH_PUBLIC(V)) {
+struct Y : ash::dynamic<Y, V> {
 };
 ASH_REGISTER(Y);
 
 namespace z {
-struct Z : ASH_DYNAMIC(Z, ASH_PUBLIC(X)) {
+struct Z : ash::dynamic<Z, X> {
 };
 ASH_REGISTER(z::Z);
 }
@@ -52,15 +48,15 @@ void f(T) {
 
 int main() {
 	z::Z z2;
-	std::unique_ptr<z::Z> z1(ash::registry::DynamicObjectFactory::get().create<z::Z>("z::Z"));
-	std::unique_ptr<V> v1(ash::registry::DynamicObjectFactory::get().create<V>("z::Z"));
-	std::unique_ptr<Y> y1(ash::registry::DynamicObjectFactory::get().create<Y>("V"));
+	std::unique_ptr<z::Z> z1(ash::registry::dynamic_object_factory::get().create<z::Z>("z::Z"));
+	std::unique_ptr<V> v1(ash::registry::dynamic_object_factory::get().create<V>("z::Z"));
+	std::unique_ptr<Y> y1(ash::registry::dynamic_object_factory::get().create<Y>("V"));
 
-	std::cerr << z2.getPortableClassName() << std::endl;
-	std::cerr << z1->getPortableClassName() << std::endl;
-	std::cerr << v1->getPortableClassName() << std::endl;
+	std::cerr << z2.portable_class_name() << std::endl;
+	std::cerr << z1->portable_class_name() << std::endl;
+	std::cerr << v1->portable_class_name() << std::endl;
 	std::cerr << (y1 == nullptr) << std::endl;
-	//std::cerr << y1->getPortableClassName() << std::endl;
+	//std::cerr << y1->portable_class_name() << std::endl;
 
 	using pp = ash::mpt::pack<double, int, double>;
 	constexpr auto rrrrr = ash::mpt::count_if(pp { }, ash::mpt::is<double> { });
@@ -72,28 +68,25 @@ int main() {
 	std::unique_ptr < X > y;
 
 	f(X::base_classes { });
-	f(X::public_base_classes { });
-	f(X::protected_base_classes { });
-	f(X::private_base_classes { });
 
 	std::cerr
-			<< ash::traits::can_be_saved<decltype(*x), ash::NativeBinaryEncoder>::value
+			<< ash::traits::can_be_saved<decltype(*x), ash::native_binary_encoder>::value
 			<< std::endl;
 
-	ash::BinarySizer bs;
+	ash::binary_sizer bs;
 	bs(x);
 	bs(y);
 	std::cerr << "SIZE: " << bs.size() << std::endl;
 
 	std::ostringstream oss;
-	ash::OStreamAdapter osa(oss);
-	ash::NativeBinaryEncoder nbe(osa);
+	ash::ostream_output_stream osa(oss);
+	ash::native_binary_encoder nbe(osa);
 	nbe(x);
 	nbe(y);
 
 	std::istringstream iss(oss.str());
-	ash::IStreamAdapter isa(iss);
-	ash::NativeBinaryDecoder nbd(isa);
+	ash::istream_input_stream isa(iss);
+	ash::native_binary_decoder nbd(isa);
 
 	std::unique_ptr<X> x2, y2;
 

@@ -4,7 +4,7 @@
 namespace ash {
 
 template <typename T>
-struct Singleton {
+struct singleton {
 	static T& get() {
 		static T instance;
 		return instance;

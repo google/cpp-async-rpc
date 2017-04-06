@@ -11,7 +11,7 @@ constexpr int ASH_EOF = -1;
 
 // Input adapter base. Implementations should override at least one of
 // read or getc and delegate the other. Throw exceptions for I/O errors.
-class InputAdapter {
+class input_stream {
 public:
 	// Read up to l chars into the buffer pointed at by p. Return the
 	// actual amount of bytes read, which could be fewer than l if hitting
@@ -19,7 +19,7 @@ public:
 	virtual std::size_t read(char* p, std::size_t l) = 0;
 
 	// Ensure that l chars are read, or throw.
-	void readFully(char* p, std::size_t l) {
+	void read_fully(char* p, std::size_t l) {
 		auto r = read(p, l);
 		if (r < l) {
 			throw std::runtime_error("EOF before full read.");
@@ -29,11 +29,11 @@ public:
 	// Read one char out, or -1 on EOF.
 	virtual int getc() = 0;
 
-	virtual ~InputAdapter() {
+	virtual ~input_stream() {
 	}
 };
 
-std::size_t InputAdapter::read(char* p, std::size_t l) {
+std::size_t input_stream::read(char* p, std::size_t l) {
 	int c;
 	std::size_t r = 0;
 	while (r < l && (c = getc() != ASH_EOF)) {
@@ -43,7 +43,7 @@ std::size_t InputAdapter::read(char* p, std::size_t l) {
 	return r;
 }
 
-int InputAdapter::getc() {
+int input_stream::getc() {
 	char c;
 	if (read(&c, 1) < 1) {
 		return ASH_EOF;
@@ -51,9 +51,9 @@ int InputAdapter::getc() {
 	return c;
 }
 
-class DelegatingInputAdapter {
+class input_adapter {
 public:
-	DelegatingInputAdapter(InputAdapter& in) :
+	input_adapter(input_stream& in) :
 			in_(in) {
 	}
 
@@ -62,7 +62,7 @@ public:
 	}
 
 	void readFully(char* p, std::size_t l) {
-		in_.readFully(p, l);
+		in_.read_fully(p, l);
 	}
 
 	int getc() {
@@ -70,12 +70,12 @@ public:
 	}
 
 private:
-	InputAdapter& in_;
+	input_stream& in_;
 };
 
 // Output adapter base. Implementations should override at least one of
 // write or putc and delegate the other. Throw exceptions for I/O errors.
-class OutputAdapter {
+class output_stream {
 public:
 	// Write l chars out.
 	virtual void write(const char* p, std::size_t l) = 0;
@@ -83,23 +83,23 @@ public:
 	// Write c out.
 	virtual void putc(char c) = 0;
 
-	virtual ~OutputAdapter() {
+	virtual ~output_stream() {
 	}
 };
 
-void OutputAdapter::write(const char* p, std::size_t l) {
+void output_stream::write(const char* p, std::size_t l) {
 	while (l-- > 0) {
 		putc(*p++);
 	}
 }
 
-void OutputAdapter::putc(char c) {
+void output_stream::putc(char c) {
 	write(&c, 1);
 }
 
-class DelegatingOutputAdapter {
+class output_adapter {
 public:
-	DelegatingOutputAdapter(OutputAdapter& out) :
+	output_adapter(output_stream& out) :
 			out_(out) {
 	}
 
@@ -111,11 +111,11 @@ public:
 		out_.putc(c);
 	}
 private:
-	OutputAdapter& out_;
+	output_stream& out_;
 };
 
 // Output sizer.
-class OutputSizerAdapter {
+class output_sizer {
 public:
 	// Get the total number of bytes written so far.
 	std::size_t size() {

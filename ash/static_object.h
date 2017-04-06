@@ -13,7 +13,7 @@ namespace ash {
 #endif
 
 template <typename T>
-class ASH_DLL_EXPORT StaticObject {
+class ASH_DLL_EXPORT static_object {
 public:
 	static T& get() ASH_USED {
 		static T t;
@@ -21,12 +21,12 @@ public:
 		return t;
 	}
 private:
-	template <T&()> struct InstantiateFunction{};
-	using unused = InstantiateFunction<get>;
+	template <T&()> struct instantiate_function{};
+	using unused = instantiate_function<get>;
 	static T& instance;
 };
 
-template<typename T> T& StaticObject<T>::instance = get();
+template<typename T> T& static_object<T>::instance = get();
 
 }  // namespace ash
 

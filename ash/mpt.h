@@ -99,35 +99,35 @@ struct NAME { \
 ASH_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(ASH_CREATE_UNARY_OPERATOR, ASH_CREATE_BINARY_OPERATOR);
 
 /// \brief Types representing sequences of homogeneously typed integers.
-/// An `integer_sequence<T, Ints...>` type represents a compile-time sequence of
-/// a variable number of integers (given by `Ints...`), all of the same type `T`.
+/// An `integer_sequence<T, ints...>` type represents a compile-time sequence of
+/// a variable number of integers (given by `ints...`), all of the same type `T`.
 /// \param T The type of all the integers.
-/// \param Ints... The list of `T`-typed integers to encode in the type.
-template<typename T, T ...Ints>
+/// \param ints... The list of `T`-typed integers to encode in the type.
+template<typename T, T ...ints>
 struct integer_sequence {
 	/// The type's own type.
-	using type = integer_sequence<T, Ints...>;
+	using type = integer_sequence<T, ints...>;
 
 	/// The type of the integers in the sequence.
 	using value_type = T;
 
 	/// The number of integers in the sequence.
-	static constexpr std::size_t size = sizeof...(Ints);
+	static constexpr std::size_t size = sizeof...(ints);
 
 private:
 	template <typename O>
 	struct unary_op{
 		using result_type = typename std::remove_const<decltype(O()(T()))>::type;
-		using type = integer_sequence<result_type, (O()(Ints))...>;
+		using type = integer_sequence<result_type, (O()(ints))...>;
 	};
 
 	template <typename U, typename O>
 	struct binary_op;
 
-	template <typename U, U ...IntsU, typename O>
-	struct binary_op<integer_sequence<U, IntsU...>, O> {
+	template <typename U, U ...ints_u, typename O>
+	struct binary_op<integer_sequence<U, ints_u...>, O> {
 		using result_type = typename std::remove_const<decltype(O()(T(), U()))>::type;
-		using type = integer_sequence<result_type, (O()(Ints, IntsU))...>;
+		using type = integer_sequence<result_type, (O()(ints, ints_u))...>;
 	};
 
 public:
@@ -157,16 +157,16 @@ namespace detail {
 template<typename Is, typename Js, bool adjust_values = false>
 struct join_integer_sequences;
 
-template<typename T, T ...Is, T ...Js, bool adjust_values>
-struct join_integer_sequences<integer_sequence<T, Is...>,
-		integer_sequence<T, Js...>, adjust_values> {
-	using type = integer_sequence<T, Is..., ((adjust_values ? sizeof...(Is) : 0) + Js)...>;
+template<typename T, T ...is, T ...js, bool adjust_values>
+struct join_integer_sequences<integer_sequence<T, is...>,
+		integer_sequence<T, js...>, adjust_values> {
+	using type = integer_sequence<T, is..., ((adjust_values ? sizeof...(is) : 0) + js)...>;
 };
 
-template<typename T, std::size_t N>
+template<typename T, std::size_t n>
 struct make_integer_sequence: join_integer_sequences<
-		typename make_integer_sequence<T, N / 2>::type,
-		typename make_integer_sequence<T, N - N / 2>::type,
+		typename make_integer_sequence<T, n / 2>::type,
+		typename make_integer_sequence<T, n - n / 2>::type,
 		true> {
 };
 
@@ -180,10 +180,10 @@ struct make_integer_sequence<T, 0> {
 	using type = integer_sequence<T>;
 };
 
-template<typename T, std::size_t N, T v>
+template<typename T, std::size_t n, T v>
 struct make_constant_integer_sequence: join_integer_sequences<
-		typename make_constant_integer_sequence<T, N / 2, v>::type,
-		typename make_constant_integer_sequence<T, N - N / 2, v>::type> {
+		typename make_constant_integer_sequence<T, n / 2, v>::type,
+		typename make_constant_integer_sequence<T, n - n / 2, v>::type> {
 };
 
 template<typename T, T v>
@@ -199,37 +199,37 @@ struct make_constant_integer_sequence<T, 0, v> {
 }  // namespace detail
 
 /// \brief Generate a sequence of integers.
-/// The integers are consecutive, in the range `0 .. N-1`.
+/// The integers are consecutive, in the range `0 .. n-1`.
 /// \param T The type of the integers.
-/// \param N The total number of integers the sequence will have.
-template<typename T, std::size_t N>
-using make_integer_sequence = typename detail::make_integer_sequence<T, N>::type;
+/// \param n The total number of integers the sequence will have.
+template<typename T, std::size_t n>
+using make_integer_sequence = typename detail::make_integer_sequence<T, n>::type;
 
 /// \brief Generate a repeated sequence of the same integer.
-/// This will generate `N` integers with the value `v` of type `T`.
+/// This will generate `n` integers with the value `v` of type `T`.
 /// \param T The type of the integers.
-/// \param N The total number of integers the sequence will have.
+/// \param n The total number of integers the sequence will have.
 /// \param v The value of the integers.
-template<typename T, std::size_t N, T v>
-using make_constant_integer_sequence = typename detail::make_constant_integer_sequence<T, N, v>::type;
+template<typename T, std::size_t n, T v>
+using make_constant_integer_sequence = typename detail::make_constant_integer_sequence<T, n, v>::type;
 
 /// \brief Types representing sequences of `std::size_t` which can be used as indices.
-/// An `index_sequence<Ints...>` type represents a compile-time sequence of
-/// a variable number of `std::size_t` values (given by `Ints...`).
-/// \param Ints... The list of `std::size_t`-typed integers to encode in the type.
-template<std::size_t ...Ints>
-using index_sequence = integer_sequence<std::size_t, Ints...>;
+/// An `index_sequence<ints...>` type represents a compile-time sequence of
+/// a variable number of `std::size_t` values (given by `ints...`).
+/// \param ints... The list of `std::size_t`-typed integers to encode in the type.
+template<std::size_t ...ints>
+using index_sequence = integer_sequence<std::size_t, ints...>;
 /// \brief Generate a sequence of indices.
-/// The integers are consecutive, in the range `0 .. N-1`, and of `std::size_t` type.
-/// \param N The total number of integers the sequence will have.
-template<std::size_t N>
-using make_index_sequence = make_integer_sequence<std::size_t, N>;
+/// The integers are consecutive, in the range `0 .. n-1`, and of `std::size_t` type.
+/// \param n The total number of integers the sequence will have.
+template<std::size_t n>
+using make_index_sequence = make_integer_sequence<std::size_t, n>;
 /// \brief Generate a repeated sequence of the same index.
-/// This will generate `N` indices with the value `v` of type `std::size_t`.
-/// \param N The total number of indices the sequence will have.
+/// This will generate `n` indices with the value `v` of type `std::size_t`.
+/// \param n The total number of indices the sequence will have.
 /// \param v The value of the indices.
-template<std::size_t N, std::size_t v>
-using make_constant_index_sequence = make_constant_integer_sequence<std::size_t, N, v>;
+template<std::size_t n, std::size_t v>
+using make_constant_index_sequence = make_constant_integer_sequence<std::size_t, n, v>;
 
 /// \brief Template class to represent sequences of types.
 /// `pack` structs contain no data; all the information they contain is the list
@@ -264,9 +264,9 @@ struct size<std::tuple<T...>> {
 	static constexpr std::size_t value = sizeof...(T);
 };
 
-template <typename T, T ...Nums>
-struct size<integer_sequence<T, Nums...>> {
-	static constexpr std::size_t value = sizeof...(Nums);
+template <typename T, T ...ints>
+struct size<integer_sequence<T, ints...>> {
+	static constexpr std::size_t value = sizeof...(ints);
 };
 }  // namespace detail
 
@@ -326,8 +326,8 @@ struct element_type<i, std::tuple<T...>> {
 /// of a particular element in any of the sequence types supported by `ash::mpt`.
 /// \param T The type for which to inspect the element type.
 /// \param i The index of the element for which we want to retrieve the type.
-template<std::size_t i, typename T, T ...Nums>
-struct element_type<i, integer_sequence<T, Nums...>> {
+template<std::size_t i, typename T, T ...ints>
+struct element_type<i, integer_sequence<T, ints...>> {
 	/// Type of the `i`th element.
 	using type = T;
 };
@@ -341,12 +341,12 @@ using element_type_t = typename element_type<i, T>::type;
 
 /// \brief Convert an integer sequence value into a tuple value.
 /// The result is a `std::tuple` with as many elements as the input sequence,
-/// all of them of type `T`, set to the values of `Ints...`.
-/// \return An appropriate tuple type, containing the values of `Ints...`.
-template <typename T, T ...Ints>
-constexpr auto as_tuple(integer_sequence<T, Ints...>)
--> decltype(std::make_tuple(Ints...)) {
-	return std::make_tuple(Ints...);
+/// all of them of type `T`, set to the values of `ints...`.
+/// \return An appropriate tuple type, containing the values of `ints...`.
+template <typename T, T ...ints>
+constexpr auto as_tuple(integer_sequence<T, ints...>)
+-> decltype(std::make_tuple(ints...)) {
+	return std::make_tuple(ints...);
 }
 /// \brief Convert an `pack` value into a tuple value.
 /// The result is a `std::tuple` with as many elements as the input sequence,
@@ -389,10 +389,10 @@ as_pack(std::tuple<T...>) {
 /// every one of the same type, which is the common type of the `integer_sequence`
 /// elements.
 /// \return An appropriate `pack` type with all elements of the integer type in the sequence.
-template <typename T, T ...Ints>
-constexpr auto as_pack(integer_sequence<T, Ints...>)
--> decltype(as_pack(std::make_tuple(Ints...))) {
-	return as_pack(std::make_tuple(Ints...));
+template <typename T, T ...ints>
+constexpr auto as_pack(integer_sequence<T, ints...>)
+-> decltype(as_pack(std::make_tuple(ints...))) {
+	return as_pack(std::make_tuple(ints...));
 }
 
 /// \brief Get the `i`th *value* from a `pack`.
@@ -445,45 +445,45 @@ at(std::tuple<T...>&& t) {
 /// \param i The index to retrieve within the `integer_sequence` object.
 /// \param is The sequence from which to extract an element.
 /// \return The element at index `i`.
-template <std::size_t i, typename T, T ...Nums>
+template <std::size_t i, typename T, T ...ints>
 constexpr T
-at(integer_sequence<T, Nums...> is) {
+at(integer_sequence<T, ints...> is) {
 	return at<i>(as_tuple(is));
 }
 
 namespace detail {
-template <typename Val, typename F, typename ...Args, std::size_t ...Ints>
+template <typename Val, typename F, typename ...Args, std::size_t ...ints>
 static constexpr auto
-transform_one(Val&& v, F f, std::tuple<Args...>&& t, index_sequence<Ints...>)
--> decltype(f(std::forward<Val>(v), (std::forward<Args>(at<Ints>(t)))...)) {
-	return f(std::forward<Val>(v), (std::forward<Args>(at<Ints>(t)))...);
+transform_one(Val&& v, F f, std::tuple<Args...>&& t, index_sequence<ints...>)
+-> decltype(f(std::forward<Val>(v), (std::forward<Args>(at<ints>(t)))...)) {
+	return f(std::forward<Val>(v), (std::forward<Args>(at<ints>(t)))...);
 }
 
-template <typename T, typename F, std::size_t ...Ints, typename ...Args>
-static void for_each(T&& v, index_sequence<Ints...>, F f, std::tuple<Args...>&& a) {
+template <typename T, typename F, std::size_t ...ints, typename ...Args>
+static void for_each(T&& v, index_sequence<ints...>, F f, std::tuple<Args...>&& a) {
 	using swallow = int[];
 	(void)swallow{
 			0,
 			(void(transform_one(
-					at<Ints>(std::forward<T>(v)),
+					at<ints>(std::forward<T>(v)),
 					f,
 					std::forward<std::tuple<Args...>>(a),
 					make_index_sequence<sizeof...(Args)>{})), 0)...
 	};
 }
 
-template <typename T, typename F, std::size_t ...Ints, typename ...Args>
-static constexpr auto transform(T&& v, index_sequence<Ints...>, F f, std::tuple<Args...>&& a)
+template <typename T, typename F, std::size_t ...ints, typename ...Args>
+static constexpr auto transform(T&& v, index_sequence<ints...>, F f, std::tuple<Args...>&& a)
 -> decltype(std::make_tuple(
 		transform_one(
-				at<Ints>(std::forward<T>(v)),
+				at<ints>(std::forward<T>(v)),
 				f,
 				std::forward<std::tuple<Args...>>(a),
 				make_index_sequence<sizeof...(Args)>{})...
 )) {
 	return std::make_tuple(
 		transform_one(
-				at<Ints>(std::forward<T>(v)),
+				at<ints>(std::forward<T>(v)),
 				f,
 				std::forward<std::tuple<Args...>>(a),
 				make_index_sequence<sizeof...(Args)>{})...);
@@ -551,59 +551,59 @@ transform(T&& v, F f, Args&& ...args)
 
 /// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
 /// \param t The sequence to subset.
-/// \param ...Idx The indices to extract.
+/// \param ...idxs The indices to extract.
 /// \return A sliced sequence containing just the elements specified by the indices.
-template <typename ...T, std::size_t ...Idx>
-constexpr std::tuple<typename std::tuple_element<Idx, std::tuple<T...>>::type...>
-subset(std::tuple<T...>&t, index_sequence<Idx...>) {
-	return std::make_tuple(at<Idx>(t)...);
+template <typename ...T, std::size_t ...idxs>
+constexpr std::tuple<typename std::tuple_element<idxs, std::tuple<T...>>::type...>
+subset(std::tuple<T...>&t, index_sequence<idxs...>) {
+	return std::make_tuple(at<idxs>(t)...);
 }
 /// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
 /// \param t The sequence to subset.
-/// \param ...Idx The indices to extract.
+/// \param ...ints The indices to extract.
 /// \return A sliced sequence containing just the elements specified by the indices.
-template <typename ...T, std::size_t ...Idx>
-constexpr std::tuple<typename std::tuple_element<Idx, const std::tuple<T...>>::type...>
-subset(const std::tuple<T...>&t, index_sequence<Idx...>) {
-	return std::make_tuple(at<Idx>(t)...);
+template <typename ...T, std::size_t ...idxs>
+constexpr std::tuple<typename std::tuple_element<idxs, const std::tuple<T...>>::type...>
+subset(const std::tuple<T...>&t, index_sequence<idxs...>) {
+	return std::make_tuple(at<idxs>(t)...);
 }
 /// Return a new tuple containing a subset of the fields as determined by the passed index sequence.
 /// \param t The sequence to subset.
-/// \param ...Idx The indices to extract.
+/// \param ...ints The indices to extract.
 /// \return A sliced sequence containing just the elements specified by the indices.
-template <typename ...T, std::size_t ...Idx>
-constexpr std::tuple<typename std::tuple_element<Idx, const std::tuple<T...>>::type...>
-subset(std::tuple<T...>&&t, index_sequence<Idx...>) {
-	return std::make_tuple(at<Idx>(t)...);
+template <typename ...T, std::size_t ...idxs>
+constexpr std::tuple<typename std::tuple_element<idxs, const std::tuple<T...>>::type...>
+subset(std::tuple<T...>&&t, index_sequence<idxs...>) {
+	return std::make_tuple(at<idxs>(t)...);
 }
 /// Return a new pack containing a subset of the types as determined by the passed index sequence.
 /// \param t The sequence to subset.
-/// \param ...Idx The indices to extract.
+/// \param ...ints The indices to extract.
 /// \return A sliced sequence containing just the elements specified by the indices.
-template <typename ...T, std::size_t ...Idx>
-constexpr pack<element_type_t<Idx, pack<T...>>...>
-subset(pack<T...>, index_sequence<Idx...>) {
+template <typename ...T, std::size_t ...idxs>
+constexpr pack<element_type_t<idxs, pack<T...>>...>
+subset(pack<T...>, index_sequence<idxs...>) {
 	return {};
 }
 /// Return a new integer sequence containing a subset of the integers determined by the passed index sequence.
 /// \param t The sequence to subset.
-/// \param ...Idx The indices to extract.
+/// \param ...idxs The indices to extract.
 /// \return A sliced sequence containing just the elements specified by the indices.
-template <typename T, T ...Nums, std::size_t ...Idx>
-constexpr integer_sequence<T, at<Idx>(integer_sequence<T, Nums...>{})...>
-subset(integer_sequence<T, Nums...>, index_sequence<Idx...>) {
+template <typename T, T ...ints, std::size_t ...idxs>
+constexpr integer_sequence<T, at<idxs>(integer_sequence<T, ints...>{})...>
+subset(integer_sequence<T, ints...>, index_sequence<idxs...>) {
 	return {};
 }
 
 /// Return a subsequence based on a semi-open index range.
 /// \param t The sequence from which to extract a range.
-/// \param Begin The first index to extract.
-/// \param End The index following the last one to extract.
-/// \return A sliced sequence containing just the elements in the range `Begin .. End`.
-template <std::size_t Begin, std::size_t End, typename T>
+/// \param begin The first index to extract.
+/// \param end The index following the last one to extract.
+/// \return A sliced sequence containing just the elements in the range `begin .. end`.
+template <std::size_t begin, std::size_t end, typename T>
 constexpr auto range(T&& t)
--> decltype(subset(std::forward<T>(t), make_index_sequence<(End - Begin)>{} + make_constant_index_sequence<(End - Begin), Begin>{})) {
-	return subset(std::forward<T>(t), make_index_sequence<(End - Begin)>{} + make_constant_index_sequence<(End - Begin), Begin>{});
+-> decltype(subset(std::forward<T>(t), make_index_sequence<(end - begin)>{} + make_constant_index_sequence<(end - begin), begin>{})) {
+	return subset(std::forward<T>(t), make_index_sequence<(end - begin)>{} + make_constant_index_sequence<(end - begin), begin>{});
 }
 
 /// Return the head element of a sequence.
@@ -625,7 +625,7 @@ constexpr auto tail(T&& t)
 }
 
 namespace detail {
-template <std::size_t N>
+template <std::size_t n>
 struct accumulate_helper {
 	template <typename I, typename T, typename O>
 	static constexpr auto accumulate_internal(I&& a, T&& t, O o)
@@ -681,8 +681,8 @@ struct is_pack<pack<T...>>: public std::true_type {};
 template <typename T>
 struct is_integer_sequence: public std::false_type {};
 
-template <typename T, T ...Nums>
-struct is_integer_sequence<integer_sequence<T, Nums...>>: public std::true_type {};
+template <typename T, T ...ints>
+struct is_integer_sequence<integer_sequence<T, ints...>>: public std::true_type {};
 
 // Forward cat for tuples to tuple_cat.
 template <typename ...Args, typename Enable = typename std::enable_if<conjunction<is_tuple<typename std::remove_cv<typename std::remove_reference<Args>::type>::type>...>::value>::type>
