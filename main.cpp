@@ -7,6 +7,7 @@
 #include "ash/mpt.h"
 #include "ash/serializable.h"
 #include "ash/iostream_adapters.h"
+#include "ash/vector_assoc.h"
 
 template <typename R>
 struct K : ash::serializable<K<R>> {
@@ -47,6 +48,16 @@ void f(T) {
 }
 
 int main() {
+	ash::vector_set<int> vs = {3, 4, 1, 1};
+	vs.insert(2+2);
+	std::cerr << vs.size() << std::endl;
+	vs.emplace(2+3);
+	std::cerr << vs.size() << std::endl;
+
+	ash::vector_set<int> vs2;
+	vs2.swap(vs);
+	std::cerr << vs2.size() << std::endl;
+
 	z::Z z2;
 	std::unique_ptr<z::Z> z1(ash::registry::dynamic_object_factory::get().create<z::Z>("z::Z"));
 	std::unique_ptr<V> v1(ash::registry::dynamic_object_factory::get().create<V>("z::Z"));

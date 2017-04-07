@@ -8,6 +8,7 @@
 
 #include "ash/dynamic_base_class.h"
 #include "ash/singleton.h"
+#include "ash/vector_assoc.h"
 
 /*
  * unique, non-polymorphic
@@ -92,7 +93,7 @@ public:
 		return dynamic_subclass_set_.count(class_name) == 1;
 	}
 private:
-	std::set<const char*, detail::const_char_ptr_compare> dynamic_subclass_set_;
+	ash::vector_set<const char*, detail::const_char_ptr_compare> dynamic_subclass_set_;
 };
 
 namespace detail {
@@ -117,7 +118,7 @@ public:
 	const char* register_class(const char* class_name) {
 		factory_function_type f =
 				[]() {return static_cast<::ash::dynamic_base_class*>(new T());};
-		assert(factory_function_map_.emplace(class_name, f).second);
+		assert(factory_function_map_.emplace(class_name, (f)).second);
 		dynamic_subclass_registry<T>::get().register_subclass(class_name);
 		return class_name;
 	}
@@ -135,7 +136,7 @@ public:
 
 private:
 	using factory_function_type = ::ash::dynamic_base_class* (*)();
-	std::map<const char*, factory_function_type, detail::const_char_ptr_compare> factory_function_map_;
+	ash::vector_map<const char*, factory_function_type, detail::const_char_ptr_compare> factory_function_map_;
 };
 
 }  // namespace registry
