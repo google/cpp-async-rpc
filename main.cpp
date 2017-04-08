@@ -9,22 +9,20 @@
 #include "ash/iostream_adapters.h"
 #include "ash/vector_assoc.h"
 
-template <typename R>
-struct K : ash::serializable<K<R>> {
+template<typename R>
+struct K: ash::serializable<K<R>> {
 	R x = 1, y = 2;
 	std::string z = "pasta";
 
-	ASH_OWN_TYPE(K<R>);
-	ASH_FIELDS(x, y, z);
+	ASH_OWN_TYPE(K<R>);ASH_FIELDS(x, y, z);
 };
 
-struct V : ash::dynamic<V> {
-	int a = 64;
-	ASH_FIELDS(a);
+struct V: ash::dynamic<V> {
+	int a = 64;ASH_FIELDS(a);
 };
 ASH_REGISTER(V);
 
-struct X : ash::dynamic<X, V> {
+struct X: ash::dynamic<X, V> {
 	int x = 1, y = 2;
 	std::string z = "pasta";
 
@@ -32,14 +30,14 @@ struct X : ash::dynamic<X, V> {
 };
 ASH_REGISTER(X);
 
-struct Y : ash::dynamic<Y, V> {
+struct Y: ash::dynamic<Y, V> {
 };
 ASH_REGISTER(Y);
 
 namespace z {
-struct Z : ash::dynamic<Z, X> {
-};
-ASH_REGISTER(z::Z);
+	struct Z : ash::dynamic<Z, X> {
+	};
+	ASH_REGISTER(z::Z);
 }
 
 template<typename T>
@@ -48,20 +46,32 @@ void f(T) {
 }
 
 int main() {
-	ash::vector_set<int> vs = {3, 4, 1, 1};
-	vs.insert(2+2);
-	std::cerr << vs.size() << std::endl;
-	vs.emplace(2+3);
-	std::cerr << vs.size() << std::endl;
+	ash::vector_map<int, int> h { { 3, 3 }, { 2, 1 }, { 2, 2 } };
+	h.emplace(5, 6);
+	h.insert(std::make_pair(13, 14));
+	h.insert(std::make_pair(13, 19));
+	h[4] = 1;
+	std::cerr << h.at(13) << std::endl;
+	ash::vector_map<int, int> l;
+	l = h;
 
-	ash::vector_set<int> vs2;
-	vs2.swap(vs);
-	std::cerr << vs2.size() << std::endl;
+	for (auto it = h.begin(); it != h.end(); it++) {
+		std::cerr << it->first << " -> " << it->second << std::endl;
+	}
+
+	h.erase(2);
+
+	for (auto it = h.begin(); it != h.end(); it++) {
+		std::cerr << it->first << " -> " << it->second << std::endl;
+	}
 
 	z::Z z2;
-	std::unique_ptr<z::Z> z1(ash::registry::dynamic_object_factory::get().create<z::Z>("z::Z"));
-	std::unique_ptr<V> v1(ash::registry::dynamic_object_factory::get().create<V>("z::Z"));
-	std::unique_ptr<Y> y1(ash::registry::dynamic_object_factory::get().create<Y>("V"));
+	std::unique_ptr<z::Z> z1(
+			ash::registry::dynamic_object_factory::get().create<z::Z>("z::Z"));
+	std::unique_ptr<V> v1(
+			ash::registry::dynamic_object_factory::get().create<V>("z::Z"));
+	std::unique_ptr<Y> y1(
+			ash::registry::dynamic_object_factory::get().create<Y>("V"));
 
 	std::cerr << z2.portable_class_name() << std::endl;
 	std::cerr << z1->portable_class_name() << std::endl;
@@ -81,8 +91,8 @@ int main() {
 	f(X::base_classes { });
 
 	std::cerr
-			<< ash::traits::can_be_saved<decltype(*x), ash::native_binary_encoder>::value
-			<< std::endl;
+			<< ash::traits::can_be_saved<decltype(*x),
+					ash::native_binary_encoder>::value << std::endl;
 
 	ash::binary_sizer bs;
 	bs(x);

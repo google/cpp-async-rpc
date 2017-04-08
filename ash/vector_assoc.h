@@ -6,12 +6,13 @@
 #include <initializer_list>
 #include <memory>
 #include <utility>
+#include <stdexcept>
 #include <vector>
 
 namespace ash {
 
-template<typename Key, typename Compare = std::less<Key>,
-		typename Allocator = std::allocator<Key> > class vector_set: protected std::vector<
+template<typename Key, bool multiple_allowed, typename Compare = std::less<Key>,
+		typename Allocator = std::allocator<Key> > class vector_set_base: protected std::vector<
 		Key, Allocator> {
 public:
 	using underlying_container = std::vector<Key, Allocator>;
@@ -52,63 +53,86 @@ public:
 	using underlying_container::clear;
 	using underlying_container::swap;
 
+	struct value_equal {
+		value_equal(const Compare& comp = Compare()) :
+				comp_(comp) {
+		}
+		using result_type = bool;
+		using first_argument_type = value_type;
+		using second_argument_type = value_type;
+
+		bool operator()(const key_type& left, const key_type& right) const {
+			return !comp_(left, right) && !comp_(right, left);
+		}
+
+		Compare comp_;
+	};
+
 	// swap.
-	void swap(vector_set& other) {
+	void swap(vector_set_base& other) {
 		underlying_container::swap(other);
 	}
 
 	// Assignment.
-	vector_set& operator=(const vector_set& other) {
+	vector_set_base& operator=(const vector_set_base& other) {
 		underlying_container::operator =(other);
 		return *this;
 	}
-	vector_set& operator=(vector_set&& other) {
-		underlying_container::operator =(std::forward < vector_set > (other));
+	vector_set_base& operator=(vector_set_base&& other) {
+		underlying_container::operator =(
+				std::forward < vector_set_base > (other));
 		return *this;
 	}
-	vector_set& operator=(std::initializer_list<value_type> ilist) {
+	vector_set_base& operator=(std::initializer_list<value_type> ilist) {
 		underlying_container::operator =(ilist);
 		std::sort(begin(), end(), comp_);
-		this->erase(std::unique(begin(), end()), end());
+		if (!multiple_allowed) {
+			this->erase(std::unique(begin(), end(), eq_), end());
+		}
 		return *this;
 	}
 
 	// Constructors.
-	explicit vector_set(const Compare& comp, const Allocator& alloc =
+	explicit vector_set_base(const Compare& comp, const Allocator& alloc =
 			Allocator()) :
-			underlying_container(alloc), comp_(comp) {
+			underlying_container(alloc), comp_(comp), eq_(comp) {
 	}
-	explicit vector_set(const Allocator& alloc = Allocator()) :
+	explicit vector_set_base(const Allocator& alloc = Allocator()) :
 			underlying_container(alloc) {
 	}
 	template<typename InputIt>
-	vector_set(InputIt first, InputIt last, const Compare& comp = Compare(),
-			const Allocator& alloc = Allocator()) :
-			underlying_container(first, last, alloc), comp_(comp) {
+	vector_set_base(InputIt first, InputIt last, const Compare& comp =
+			Compare(), const Allocator& alloc = Allocator()) :
+			underlying_container(first, last, alloc), comp_(comp), eq_(comp) {
 		std::sort(begin(), end(), comp_);
-		this->erase(std::unique(begin(), end()), end());
+		if (!multiple_allowed) {
+			this->erase(std::unique(begin(), end(), eq_), end());
+		}
 	}
-	vector_set(const vector_set& other) :
+	vector_set_base(const vector_set_base& other) :
 			underlying_container(
 					static_cast<const underlying_container&>(other)) {
 	}
-	vector_set(const vector_set& other, const Allocator& alloc) :
+	vector_set_base(const vector_set_base& other, const Allocator& alloc) :
 			underlying_container(
 					static_cast<const underlying_container&>(other), alloc) {
 	}
-	vector_set(vector_set&& other) :
+	vector_set_base(vector_set_base&& other) :
 			underlying_container(
 					static_cast<const underlying_container&&>(other)) {
 	}
-	vector_set(vector_set&& other, const Allocator& alloc) :
+	vector_set_base(vector_set_base&& other, const Allocator& alloc) :
 			underlying_container(
 					static_cast<const underlying_container&&>(other), alloc) {
 	}
-	vector_set(std::initializer_list<value_type> init, const Compare& comp =
-			Compare(), const Allocator& alloc = Allocator()) :
-			underlying_container(init, alloc), comp_(comp) {
+	vector_set_base(std::initializer_list<value_type> init,
+			const Compare& comp = Compare(), const Allocator& alloc =
+					Allocator()) :
+			underlying_container(init, alloc), comp_(comp), eq_(comp) {
 		std::sort(begin(), end(), comp_);
-		this->erase(std::unique(begin(), end()), end());
+		if (!multiple_allowed) {
+			this->erase(std::unique(begin(), end(), eq_), end());
+		}
 	}
 
 	// find/bounds
@@ -135,18 +159,19 @@ public:
 	// insert
 	std::pair<iterator, bool> insert(const value_type& value) {
 		auto it = lower_bound(value);
-		if (it != end() && *it == value) {
+		if (!multiple_allowed && it != end() && eq_(*it, value)) {
 			return {it, false};
 		}
-		underlying_container::insert(it, value);
+		it = underlying_container::insert(it, value);
 		return {it, true};
 	}
 	std::pair<iterator, bool> insert(value_type&& value) {
 		auto it = lower_bound(value);
-		if (it != end() && *it == value) {
+		if (!multiple_allowed && it != end() && eq_(*it, value)) {
 			return {it, false};
 		}
-		underlying_container::insert(it, std::forward < value_type > (value));
+		it = underlying_container::insert(it,
+				std::forward < value_type > (value));
 		return {it, true};
 	}
 	iterator insert(const_iterator hint, const value_type& value) {
@@ -198,14 +223,14 @@ public:
 	// find.
 	iterator find(const Key& key) {
 		auto it = lower_bound(key);
-		if (it != end() && *it == key) {
+		if (it != end() && eq_(*it, key)) {
 			return it;
 		}
 		return end();
 	}
 	const_iterator find(const Key& key) const {
 		auto it = lower_bound(key);
-		if (it != end() && *it == key) {
+		if (it != end() && eq_(*it, key)) {
 			return it;
 		}
 		return end();
@@ -219,40 +244,81 @@ public:
 		return comp_;
 	}
 
-private:
+protected:
 	Compare comp_;
+	value_equal eq_;
 };
 
+template<typename Key, typename Compare = std::less<Key>,
+		typename Allocator = std::allocator<Key> > using vector_set = vector_set_base<Key, false, Compare, Allocator>;
 
+template<typename Key, typename Compare = std::less<Key>,
+		typename Allocator = std::allocator<Key> > using vector_multiset = vector_set_base<Key, true, Compare, Allocator>;
 
-template<typename Key, typename T, typename Compare = std::less<Key>,
-		typename Allocator = std::allocator<Key> > class vector_map: protected std::vector<
+template<typename Key, bool multiple_allowed, typename T,
+		typename Compare = std::less<Key>, typename Allocator = std::allocator<
+				Key> > class vector_map_base: protected std::vector<
 		std::pair<Key, T>, Allocator> {
 public:
 	using underlying_container = std::vector<std::pair<Key, T>, Allocator>;
 	using key_type = Key;
 	using mapped_type = T;
-	using value_type = std::pair<const Key, T>;
+	using value_type = typename underlying_container::value_type;
 	using typename underlying_container::size_type;
 	using typename underlying_container::difference_type;
 	using key_compare = Compare;
 
 	struct value_compare {
-		value_compare(const Compare& comp = Compare()) : comp_(comp) {}
+		value_compare(const Compare& comp = Compare()) :
+				comp_(comp) {
+		}
 		using result_type = bool;
 		using first_argument_type = value_type;
 		using second_argument_type = value_type;
 
-		bool operator()(const value_type& left, const value_type& right) {
+		bool operator()(const value_type& left, const value_type& right) const {
 			return comp_(left.first, right.first);
 		}
 
-		bool operator()(const value_type& left, const key_type& right) {
+		bool operator()(const value_type& left, const key_type& right) const {
 			return comp_(left.first, right);
+		}
+
+		bool operator()(const key_type& left, const value_type& right) const {
+			return comp_(left, right.first);
 		}
 
 		Compare comp_;
 	};
+
+	struct value_equal {
+		value_equal(const Compare& comp = Compare()) :
+				comp_(comp) {
+		}
+		using result_type = bool;
+		using first_argument_type = value_type;
+		using second_argument_type = value_type;
+
+		bool operator()(const key_type& left, const key_type& right) const {
+			return !comp_(left, right) && !comp(right, left);
+		}
+
+		bool operator()(const value_type& left, const value_type& right) const {
+			return !comp_(left.first, right.first)
+					&& !comp_(right.first, left.first);
+		}
+
+		bool operator()(const value_type& left, const key_type& right) const {
+			return !comp_(left.first, right) && !comp_(right, left.first);
+		}
+
+		bool operator()(const key_type& left, const value_type& right) const {
+			return !comp_(left, right.first) && !comp_(right.first, left);
+		}
+
+		Compare comp_;
+	};
+
 	using typename underlying_container::allocator_type;
 	using typename underlying_container::reference;
 	using typename underlying_container::const_reference;
@@ -285,62 +351,70 @@ public:
 	using underlying_container::swap;
 
 	// swap.
-	void swap(vector_map& other) {
+	void swap(vector_map_base& other) {
 		underlying_container::swap(other);
 	}
 
 	// Assignment.
-	vector_map& operator=(const vector_map& other) {
+	vector_map_base& operator=(const vector_map_base& other) {
 		underlying_container::operator =(other);
 		return *this;
 	}
-	vector_map& operator=(vector_map&& other) {
-		underlying_container::operator =(std::forward < vector_map > (other));
+	vector_map_base& operator=(vector_map_base&& other) {
+		underlying_container::operator =(
+				std::forward < vector_map_base > (other));
 		return *this;
 	}
-	vector_map& operator=(std::initializer_list<value_type> ilist) {
+	vector_map_base& operator=(std::initializer_list<value_type> ilist) {
 		underlying_container::operator =(ilist);
 		std::sort(begin(), end(), comp_);
-		this->erase(std::unique(begin(), end()), end());
+		if (!multiple_allowed) {
+			this->erase(std::unique(begin(), end(), eq_), end());
+		}
 		return *this;
 	}
 
 	// Constructors.
-	explicit vector_map(const Compare& comp, const Allocator& alloc =
+	explicit vector_map_base(const Compare& comp, const Allocator& alloc =
 			Allocator()) :
-			underlying_container(alloc), comp_(comp) {
+			underlying_container(alloc), comp_(comp), eq_(comp) {
 	}
-	explicit vector_map(const Allocator& alloc = Allocator()) :
+	explicit vector_map_base(const Allocator& alloc = Allocator()) :
 			underlying_container(alloc) {
 	}
 	template<typename InputIt>
-	vector_map(InputIt first, InputIt last, const Compare& comp = Compare(),
-			const Allocator& alloc = Allocator()) :
-			underlying_container(first, last, alloc), comp_(comp) {
+	vector_map_base(InputIt first, InputIt last, const Compare& comp =
+			Compare(), const Allocator& alloc = Allocator()) :
+			underlying_container(first, last, alloc), comp_(comp), eq_(comp) {
 		std::sort(begin(), end(), comp_);
-		this->erase(std::unique(begin(), end()), end());
+		if (!multiple_allowed) {
+			this->erase(std::unique(begin(), end(), eq_), end());
+		}
 	}
-	vector_map(const vector_map& other) :
+	vector_map_base(const vector_map_base& other) :
 			underlying_container(
 					static_cast<const underlying_container&>(other)) {
 	}
-	vector_map(const vector_map& other, const Allocator& alloc) :
+	vector_map_base(const vector_map_base& other, const Allocator& alloc) :
 			underlying_container(
 					static_cast<const underlying_container&>(other), alloc) {
 	}
-	vector_map(vector_map&& other) :
+	vector_map_base(vector_map_base&& other) :
 			underlying_container(
 					static_cast<const underlying_container&&>(other)) {
 	}
-	vector_map(vector_map&& other, const Allocator& alloc) :
+	vector_map_base(vector_map_base&& other, const Allocator& alloc) :
 			underlying_container(
 					static_cast<const underlying_container&&>(other), alloc) {
 	}
-	vector_map(std::initializer_list<value_type> init, const Compare& comp =
-			Compare(), const Allocator& alloc = Allocator()) :
-			underlying_container(init, alloc), comp_(comp) {
+	vector_map_base(std::initializer_list<value_type> init,
+			const Compare& comp = Compare(), const Allocator& alloc =
+					Allocator()) :
+			underlying_container(init, alloc), comp_(comp), eq_(comp) {
 		std::sort(begin(), end(), comp_);
-		this->erase(std::unique(begin(), end()), end());
+		if (!multiple_allowed) {
+			this->erase(std::unique(begin(), end(), eq_), end());
+		}
 	}
 
 	// find/bounds
@@ -367,18 +441,19 @@ public:
 	// insert
 	std::pair<iterator, bool> insert(const value_type& value) {
 		auto it = lower_bound(value.first);
-		if (it != end() && it->first == value.first) {
+		if (!multiple_allowed && it != end() && eq_(*it, value)) {
 			return {it, false};
 		}
-		underlying_container::insert(it, value);
+		it = underlying_container::insert(it, value);
 		return {it, true};
 	}
 	std::pair<iterator, bool> insert(value_type&& value) {
 		auto it = lower_bound(value.first);
-		if (it != end() && it->first == value.first) {
+		if (!multiple_allowed && it != end() && eq_(*it, value)) {
 			return {it, false};
 		}
-		underlying_container::insert(it, std::forward < value_type > (value));
+		it = underlying_container::insert(it,
+				std::forward < value_type > (value));
 		return {it, true};
 	}
 	iterator insert(const_iterator hint, const value_type& value) {
@@ -430,14 +505,14 @@ public:
 	// find.
 	iterator find(const Key& key) {
 		auto it = lower_bound(key);
-		if (it != end() && it->first == key) {
+		if (it != end() && eq_(*it, key)) {
 			return it;
 		}
 		return end();
 	}
 	const_iterator find(const Key& key) const {
 		auto it = lower_bound(key);
-		if (it != end() && it->first == key) {
+		if (it != end() && eq_(*it, key)) {
 			return it;
 		}
 		return end();
@@ -451,10 +526,59 @@ public:
 		return comp_;
 	}
 
-private:
+protected:
 	value_compare comp_;
+	value_equal eq_;
 };
 
-}  // namespace ash
+template<typename Key, typename T, typename Compare = std::less<Key>,
+		typename Allocator = std::allocator<Key> > using vector_multimap = vector_map_base<Key, true, T, Compare, Allocator>;
+
+template<typename Key, typename T, typename Compare = std::less<Key>,
+		typename Allocator = std::allocator<Key> > class vector_map: public vector_map_base<
+		Key, false, T, Compare, Allocator> {
+public:
+	using typename vector_map_base<Key, false, T, Compare, Allocator>::underlying_container;
+
+	// Inherit constructors.
+	using vector_map_base<Key, false, T, Compare, Allocator>::vector_map_base;
+
+	// operator []
+	T& operator[](const Key& key) {
+		auto it = this->lower_bound(key);
+		if (it != this->end() && this->eq_(*it, key)) {
+			return it->second;
+		}
+		it = underlying_container::emplace(it, key, T());
+		return it->second;
+	}
+	T& operator[](Key&& key) {
+		auto it = this->lower_bound(key);
+		if (it != this->end() && this->eq_(*it, key)) {
+			return it->second;
+		}
+		it = underlying_container::emplace(it, std::forward < Key > (key), T());
+		return it->second;
+	}
+
+	// at
+	T& at(const Key& key) {
+		auto it = this->find(key);
+		if (it == this->end()) {
+			throw std::out_of_range("key not found.");
+		}
+		return it->second;
+	}
+	const T& at(const Key& key) const {
+		auto it = this->find(key);
+		if (it == this->end()) {
+			throw std::out_of_range("key not found.");
+		}
+		return it->second;
+	}
+};
+
+}
+// namespace ash
 
 #endif /* ASH_VECTOR_ASSOC_H_ */
