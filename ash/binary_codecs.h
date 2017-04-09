@@ -111,7 +111,7 @@ private:
 	template<typename T>
 	typename std::enable_if<traits::has_base_classes<T>::value, status>::type save_base_classes(
 			const T& o) {
-		apply_until_first_error(typename T::base_classes { },
+		return apply_until_first_error(typename T::base_classes { },
 				base_class_saver { }, o, *this);
 	}
 
@@ -132,7 +132,7 @@ private:
 	template<typename T>
 	typename std::enable_if<traits::has_field_descriptors<T>::value, status>::type save_fields(
 			const T& o) {
-		apply_until_first_error(typename T::field_descriptors { },
+		return apply_until_first_error(typename T::field_descriptors { },
 				field_saver { }, o, *this);
 	}
 

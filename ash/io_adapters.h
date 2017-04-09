@@ -34,7 +34,6 @@ public:
 };
 
 status_or<std::size_t> input_stream::read(char* p, std::size_t l) {
-	int c;
 	std::size_t r = 0;
 	while (r < l) {
 		auto status_or_char = getc();

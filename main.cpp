@@ -46,15 +46,16 @@ void f(T) {
 	std::cerr << "X: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
+
 int main() {
-	ash::status code = static_cast<ash::status>(4333);
-	/*
+	ash::status code = static_cast<ash::status>(130);
+
 	std::cerr << ash::code(code) << ": " << ash::ok(code) << " ("
 			<< ash::name(code) << ")" << std::endl;
 	std::cerr << ash::code(ash::status::FAILED_PRECONDITION) << ": "
 			<< ash::ok(ash::status::FAILED_PRECONDITION) << " ("
 			<< ash::name(ash::status::FAILED_PRECONDITION) << ")" << std::endl;
-*/
+
 	ash::vector_multiset<int> h { 3, 2, 2 };
 	h.emplace(5);
 	h.insert(13);
