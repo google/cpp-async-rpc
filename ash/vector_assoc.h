@@ -334,10 +334,6 @@ class vector_set: public detail::vector_tree<Key, false, Key, Key, Compare,
 		detail::key_value_compare<Key, Key, Compare>,
 		detail::key_value_equal<Key, Key, Compare>, Allocator> {
 public:
-	using typename detail::vector_tree<Key, false, Key, Key, Compare,
-			detail::key_value_compare<Key, Key, Compare>,
-			detail::key_value_equal<Key, Key, Compare>, Allocator>::underlying_container;
-
 	// Inherit constructors.
 	using detail::vector_tree<Key, false, Key, Key, Compare,
 			detail::key_value_compare<Key, Key, Compare>,
@@ -350,10 +346,6 @@ class vector_multiset: public detail::vector_tree<Key, true, Key, Key, Compare,
 		detail::key_value_compare<Key, Key, Compare>,
 		detail::key_value_equal<Key, Key, Compare>, Allocator> {
 public:
-	using typename detail::vector_tree<Key, true, Key, Key, Compare,
-			detail::key_value_compare<Key, Key, Compare>,
-			detail::key_value_equal<Key, Key, Compare>, Allocator>::underlying_container;
-
 	// Inherit constructors.
 	using detail::vector_tree<Key, true, Key, Key, Compare,
 			detail::key_value_compare<Key, Key, Compare>,
@@ -418,9 +410,6 @@ class vector_multimap: public detail::vector_tree<Key, true, T,
 		detail::key_value_compare<Key, std::pair<Key, T>, Compare>,
 		detail::key_value_equal<Key, std::pair<Key, T>, Compare>, Allocator> {
 public:
-	using typename detail::vector_tree<Key, true, T, std::pair<Key, T>, Compare,
-			detail::key_value_compare<Key, std::pair<Key, T>, Compare>,
-			detail::key_value_equal<Key, std::pair<Key, T>, Compare>, Allocator>::underlying_container;
 	using mapped_type = T;
 
 	// Inherit constructors.
