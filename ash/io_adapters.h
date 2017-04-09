@@ -65,7 +65,7 @@ public:
 		return in_.read(p, l);
 	}
 
-	status readFully(char* p, std::size_t l) {
+	status read_fully(char* p, std::size_t l) {
 		return in_.read_fully(p, l);
 	}
 

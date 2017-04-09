@@ -48,12 +48,13 @@ void f(T) {
 
 int main() {
 	ash::status code = static_cast<ash::status>(4333);
+	/*
 	std::cerr << ash::code(code) << ": " << ash::ok(code) << " ("
 			<< ash::name(code) << ")" << std::endl;
 	std::cerr << ash::code(ash::status::FAILED_PRECONDITION) << ": "
 			<< ash::ok(ash::status::FAILED_PRECONDITION) << " ("
 			<< ash::name(ash::status::FAILED_PRECONDITION) << ")" << std::endl;
-
+*/
 	ash::vector_multiset<int> h { 3, 2, 2 };
 	h.emplace(5);
 	h.insert(13);
@@ -107,15 +108,15 @@ int main() {
 					ash::native_binary_encoder>::value << std::endl;
 
 	ash::binary_sizer bs;
-	bs(x);
-	bs(y);
+	ASH_CHECK_OK(bs(x));
+	ASH_CHECK_OK(bs(y));
 	std::cerr << "SIZE: " << bs.size() << std::endl;
 
 	std::ostringstream oss;
 	ash::ostream_output_stream osa(oss);
 	ash::native_binary_encoder nbe(osa);
-	nbe(x);
-	nbe(y);
+	ASH_CHECK_OK(nbe(x));
+	ASH_CHECK_OK(nbe(y));
 
 	std::istringstream iss(oss.str());
 	ash::istream_input_stream isa(iss);

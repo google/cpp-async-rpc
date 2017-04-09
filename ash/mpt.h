@@ -627,16 +627,16 @@ constexpr auto tail(T&& t)
 namespace detail {
 template <std::size_t n>
 struct accumulate_helper {
-	template <typename I, typename T, typename O>
-	static constexpr auto accumulate_internal(I&& a, T&& t, O o)
-	-> decltype(accumulate(o(std::forward<I>(a), head(std::forward<T>(t))), tail(std::forward<T>(t)), o)) {
-		return accumulate(o(std::forward<I>(a), head(std::forward<T>(t))), tail(std::forward<T>(t)), o);
+	template <typename I, typename T, typename O, typename... Args>
+	static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args)
+	-> decltype(accumulate(o(std::forward<I>(a), head(std::forward<T>(t)), std::forward<Args>(args)...), tail(std::forward<T>(t)), o, std::forward<Args>(args)...)) {
+		return accumulate(o(std::forward<I>(a), head(std::forward<T>(t)), std::forward<Args>(args)...), tail(std::forward<T>(t)), o, std::forward<Args>(args)...);
 	}
 };
 template <>
 struct accumulate_helper<0> {
-	template <typename I, typename T, typename O>
-	static constexpr auto accumulate_internal(I&& a, T&& t, O o)
+	template <typename I, typename T, typename O, typename... Args>
+	static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args)
 	-> I {
 		return a;
 	}
@@ -644,10 +644,10 @@ struct accumulate_helper<0> {
 }  // namespace detail
 
 // Accumulate elements with an initial value using the given operator.
-template <typename I, typename T, typename O>
-constexpr auto accumulate(I&& a, T&& t, O o)
--> decltype(detail::accumulate_helper<size<T>::value>::accumulate_internal(std::forward<I>(a), std::forward<T>(t), o)) {
-	return detail::accumulate_helper<size<T>::value>::accumulate_internal(std::forward<I>(a), std::forward<T>(t), o);
+template <typename I, typename T, typename O, typename... Args>
+constexpr auto accumulate(I&& a, T&& t, O o, Args&&... args)
+-> decltype(detail::accumulate_helper<size<T>::value>::accumulate_internal(std::forward<I>(a), std::forward<T>(t), o, std::forward<Args>(args)...)) {
+	return detail::accumulate_helper<size<T>::value>::accumulate_internal(std::forward<I>(a), std::forward<T>(t), o, std::forward<Args>(args)...);
 }
 
 // Wrap and unwrap pack types. Wrapped types can be used in contexts where we
@@ -764,7 +764,6 @@ struct index_cat {
 		return {};
 	}
 };
-
 }  // namespace_detail
 
 /// Get the indexes of the elements that meet a condition.

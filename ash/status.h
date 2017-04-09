@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "ash/enum.h"
+#include "ash/mpt.h"
 
 namespace ash {
 ASH_ENUM(status, uint8_t, "Unknown status code",
@@ -18,7 +19,7 @@ ASH_ENUM(status, uint8_t, "Unknown status code",
 		(NOT_IMPLEMENTED, 6),
 		(IO_ERROR, 7),
 		(DEADLINE_EXCEEDED, 8),
-		(UNKNOWN, 9));
+		(UNKNOWN_ERROR, 9));
 
 constexpr bool ok(status value) {
 	return value == status::OK;
@@ -32,7 +33,8 @@ const char* name(status value) {
 	return ::ash::enum_names<status>::name(value);
 }
 
-#define ASH_CHECK(x) do { if (!(x)) std::terminate(); } while (false);
+#define ASH_CHECK(x) do { if (!(x)) std::terminate(); } while (false)
+#define ASH_CHECK_OK(x) ASH_CHECK(::ash::ok(x))
 
 template <typename T>
 class status_or {
@@ -68,8 +70,45 @@ private:
 	T t_;
 };
 
+template <typename T>
+bool ok(const status_or<T>& value) {
+	return value.status() == status::OK;
+}
+
+template <typename T>
+int code(const status_or<T>& value) {
+	return static_cast<int>(value.status());
+}
+
+template <typename T>
+const char* name(const status_or<T>& value) {
+	return ::ash::enum_names<status>::name(value.status());
+}
+
 #define ASH_RETURN_IF_ERROR(EXPR) do { const auto& ___result = EXPR; if (!::ash::ok(___result)) return ___result; } while (false)
 #define ASH_ASSIGN_OR_RETURN(LHS, EXPR) do { const auto& ___result = EXPR; if (!___result.ok()) return ___result.status(); LHS = ___result.value(); } while (false)
+
+namespace detail {
+template <typename O>
+struct apply_until_first_error {
+	apply_until_first_error(O o) : o_(o) {}
+
+	template<typename Current, typename... Args>
+	status operator()(status previous_status, Current, Args&&... args) {
+		ASH_RETURN_IF_ERROR(previous_status);
+		return o_(Current{}, std::forward<Args>(args)...);
+	}
+
+	O o_;
+};
+}  // namespace_detail
+
+/// Apply o (which should return ash::status) on every element of t, stopping at the first error.
+/// status::OK is returned if everyhting went well; otherwise the first error status is reported back.
+template <typename T, typename O, typename... Args>
+::ash::status apply_until_first_error(T&& t, O o, Args&&... args) {
+	return ::ash::mpt::accumulate(status::OK, t, detail::apply_until_first_error<O>(o), std::forward<Args>(args)...);
+}
 
 }  // namespace ash
 
