@@ -4,11 +4,9 @@
 #include <cstddef>
 #include <stdexcept>
 
+#include "ash/status.h"
+
 namespace ash {
-// Adapter classes for I/O.
-
-constexpr int ASH_EOF = -1;
-
 // Input adapter base. Implementations should override at least one of
 // read or getc and delegate the other. Throw exceptions for I/O errors.
 class input_stream {
@@ -16,38 +14,44 @@ public:
 	// Read up to l chars into the buffer pointed at by p. Return the
 	// actual amount of bytes read, which could be fewer than l if hitting
 	// EOF.
-	virtual std::size_t read(char* p, std::size_t l) = 0;
+	virtual status_or<std::size_t> read(char* p, std::size_t l) = 0;
 
-	// Ensure that l chars are read, or throw.
-	void read_fully(char* p, std::size_t l) {
-		auto r = read(p, l);
+	// Ensure that l chars are read, or return status::END_OF_FILE.
+	status read_fully(char* p, std::size_t l) {
+		std::size_t r;
+		ASH_ASSIGN_OR_RETURN(r, read(p, l));
 		if (r < l) {
-			throw std::runtime_error("EOF before full read.");
+			return status::END_OF_FILE;
 		}
+		return status::OK;
 	}
 
-	// Read one char out, or -1 on EOF.
-	virtual int getc() = 0;
+	// Try to read one more char, or block.
+	virtual status_or<char> getc() = 0;
 
 	virtual ~input_stream() {
 	}
 };
 
-std::size_t input_stream::read(char* p, std::size_t l) {
+status_or<std::size_t> input_stream::read(char* p, std::size_t l) {
 	int c;
 	std::size_t r = 0;
-	while (r < l && (c = getc() != ASH_EOF)) {
+	while (r < l) {
+		auto status_or_char = getc();
+		if(status_or_char.status() == status::END_OF_FILE) {
+			break;
+		}
+		ASH_RETURN_IF_ERROR(status_or_char.status());
+
 		r++;
-		*p++ = c;
+		*p++ = status_or_char.value();
 	}
 	return r;
 }
 
-int input_stream::getc() {
+status_or<char> input_stream::getc() {
 	char c;
-	if (read(&c, 1) < 1) {
-		return ASH_EOF;
-	}
+	ASH_RETURN_IF_ERROR(read_fully(&c, 1));
 	return c;
 }
 
@@ -57,15 +61,15 @@ public:
 			in_(in) {
 	}
 
-	std::size_t read(char* p, std::size_t l) {
+	status_or<std::size_t> read(char* p, std::size_t l) {
 		return in_.read(p, l);
 	}
 
-	void readFully(char* p, std::size_t l) {
-		in_.read_fully(p, l);
+	status readFully(char* p, std::size_t l) {
+		return in_.read_fully(p, l);
 	}
 
-	int getc() {
+	status_or<char> getc() {
 		return in_.getc();
 	}
 
@@ -78,23 +82,25 @@ private:
 class output_stream {
 public:
 	// Write l chars out.
-	virtual void write(const char* p, std::size_t l) = 0;
+	virtual status write(const char* p, std::size_t l) = 0;
 
 	// Write c out.
-	virtual void putc(char c) = 0;
+	virtual status putc(char c) = 0;
 
 	virtual ~output_stream() {
 	}
 };
 
-void output_stream::write(const char* p, std::size_t l) {
+status output_stream::write(const char* p, std::size_t l) {
 	while (l-- > 0) {
-		putc(*p++);
+		ASH_RETURN_IF_ERROR(putc(*p++));
 	}
+	return status::OK;
 }
 
-void output_stream::putc(char c) {
-	write(&c, 1);
+status output_stream::putc(char c) {
+	ASH_RETURN_IF_ERROR(write(&c, 1));
+	return status::OK;
 }
 
 class output_adapter {
@@ -103,12 +109,12 @@ public:
 			out_(out) {
 	}
 
-	void write(const char* p, std::size_t l) {
-		out_.write(p, l);
+	status write(const char* p, std::size_t l) {
+		return out_.write(p, l);
 	}
 
-	void putc(char c) {
-		out_.putc(c);
+	status putc(char c) {
+		return out_.putc(c);
 	}
 private:
 	output_stream& out_;
@@ -128,13 +134,15 @@ public:
 	}
 
 	// Write l chars out.
-	void write(const char* p, std::size_t l) {
+	status write(const char* p, std::size_t l) {
 		size_ += l;
+		return status::OK;
 	}
 
 	// Write c out.
-	void putc(char c) {
+	status putc(char c) {
 		size_++;
+		return status::OK;
 	}
 
 private:

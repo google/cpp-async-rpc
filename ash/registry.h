@@ -4,10 +4,12 @@
 #include <cassert>
 #include <cstring>
 #include <map>
+#include <memory>
 #include <set>
 
 #include "ash/dynamic_base_class.h"
 #include "ash/singleton.h"
+#include "ash/status.h"
 #include "ash/vector_assoc.h"
 
 /*
@@ -117,7 +119,8 @@ public:
 	template<typename T>
 	const char* register_class(const char* class_name) {
 		factory_function_type f =
-				[]() {return static_cast<::ash::dynamic_base_class*>(new T());};
+				[]() {return std::unique_ptr<::ash::dynamic_base_class>(new T());};
+
 		assert(factory_function_map_.emplace(class_name, (f)).second);
 		dynamic_subclass_registry<T>::get().register_subclass(class_name);
 		return class_name;
@@ -125,18 +128,20 @@ public:
 
 	// Returns nullptr in case of errors.
 	template<typename T>
-	T* create(const char* class_name) const {
+	status_or<std::unique_ptr<T> > create(const char* class_name) const {
 		if (!dynamic_subclass_registry<T>::get().is_subclass(class_name))
-			return nullptr;
+			return status::INVALID_ARGUMENT;
 		const auto it = factory_function_map_.find(class_name);
 		if (it == factory_function_map_.end())
-			return nullptr;
-		return static_cast<T*>(it->second());
+			return status::NOT_FOUND;
+		std::unique_ptr<::ash::dynamic_base_class> ptr(it->second());
+		return std::unique_ptr<T>(static_cast<T*>(ptr.release()));
 	}
 
 private:
-	using factory_function_type = ::ash::dynamic_base_class* (*)();
-	ash::vector_map<const char*, factory_function_type, detail::const_char_ptr_compare> factory_function_map_;
+	using factory_function_type = std::unique_ptr<::ash::dynamic_base_class> (*)();
+	ash::vector_map<const char*, factory_function_type,
+			detail::const_char_ptr_compare> factory_function_map_;
 };
 
 }  // namespace registry

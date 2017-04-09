@@ -16,6 +16,9 @@ public:
 	using field_descriptors = mpt::pack<>;
 	using dynamic_base_classes = mpt::pack<>;
 
+	/// Make sure deleters work.
+	virtual ~dynamic_base_class() {}
+
 private:
 	/// Get the string that portably identifies the object's class.
 	virtual const char* portable_class_name_internal() const = 0;

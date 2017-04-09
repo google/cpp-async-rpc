@@ -14,20 +14,21 @@ class istream_input_stream: public input_stream {
 public:
 	istream_input_stream(std::istream& is) :
 			is_(is) {
-		is_.exceptions(std::istream::badbit);
 	}
 
-	std::size_t read(char* p, std::size_t l) override {
+	status_or<std::size_t> read(char* p, std::size_t l) override {
 		is_.read(p, l);
-		return is_.gcount();
+		if(is_.bad()) return status::IO_ERROR;
+		return static_cast<std::size_t>(is_.gcount());
 	}
 
-	int getc() override {
+	status_or<char> getc() override {
 		char c;
 		if (is_.get(c)) {
 			return c;
 		}
-		return ASH_EOF;
+		if(is_.bad()) return status::IO_ERROR;
+		return status::END_OF_FILE;
 	}
 
 private:
@@ -38,15 +39,18 @@ class ostream_output_stream: public output_stream {
 public:
 	ostream_output_stream(std::ostream& os) :
 			os_(os) {
-		os_.exceptions(std::istream::badbit);
 	}
 
-	virtual void write(const char* p, std::size_t l) {
+	status write(const char* p, std::size_t l) override {
 		os_.write(p, l);
+		if(os_.bad()) return status::IO_ERROR;
+		return status::OK;
 	}
 
-	virtual void putc(char c) {
+	status putc(char c) override {
 		os_.put(c);
+		if(os_.bad()) return status::IO_ERROR;
+		return status::OK;
 	}
 
 private:

@@ -16,6 +16,9 @@
 // Expand to nothing.
 #define ASH_EMPTY()
 
+// Remove parenthesis.
+#define ASH_NO_PARENS(MACRO, ...) MACRO __VA_ARGS__
+
 // Expand what(x) for every x in the variadic args, with sep() between each two.
 #define ASH_FOREACH(what, sep, ...) ASH_FOREACH_N(ASH_ARG_COUNT( __VA_ARGS__ ), what, sep, __VA_ARGS__)
 #define ASH_FOREACH_N(n, what, sep, ...) ASH_FOREACH_EXPAND(ASH_CONCAT(ASH_FOREACH_, n) (what, sep, __VA_ARGS__))
