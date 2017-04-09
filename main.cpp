@@ -4,6 +4,7 @@
 #include <string>
 
 #include "ash.h"
+#include "ash/codes.h"
 #include "ash/mpt.h"
 #include "ash/serializable.h"
 #include "ash/iostream_adapters.h"
@@ -46,6 +47,14 @@ void f(T) {
 }
 
 int main() {
+	ash::e_size_t code = -33;
+	std::cerr << ash::code(code) << ": " << ash::ok(code) << " ("
+			<< ash::description(code) << ")" << std::endl;
+	std::cerr << ash::code(ash::status::FAILED_PRECONDITION) << ": "
+			<< ash::ok(ash::status::FAILED_PRECONDITION) << " ("
+			<< ash::description(ash::status::FAILED_PRECONDITION) << ")"
+			<< std::endl;
+
 	ash::vector_multiset<int> h { 3, 2, 2 };
 	h.emplace(5);
 	h.insert(13);
