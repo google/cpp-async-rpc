@@ -46,23 +46,23 @@ void f(T) {
 }
 
 int main() {
-	ash::vector_map<int, int> h { { 3, 3 }, { 2, 1 }, { 2, 2 } };
-	h.emplace(5, 6);
-	h.insert(std::make_pair(13, 14));
-	h.insert(std::make_pair(13, 19));
-	h[4] = 1;
-	std::cerr << h.at(13) << std::endl;
-	ash::vector_map<int, int> l;
+	ash::vector_multiset<int> h { 3, 2, 2 };
+	h.emplace(5);
+	h.insert(13);
+	h.insert(13);
+	//h[4] = 1;
+	//std::cerr << h.at(13) << std::endl;
+	ash::vector_multiset<int> l;
 	l = h;
 
 	for (auto it = h.begin(); it != h.end(); it++) {
-		std::cerr << it->first << " -> " << it->second << std::endl;
+		std::cerr << *it << std::endl;
 	}
 
 	h.erase(2);
 
 	for (auto it = h.begin(); it != h.end(); it++) {
-		std::cerr << it->first << " -> " << it->second << std::endl;
+		std::cerr << *it << std::endl;
 	}
 
 	z::Z z2;
