@@ -15,11 +15,13 @@ struct K: ash::serializable<K<R>> {
 	R x = 1, y = 2;
 	std::string z = "pasta";
 
-	ASH_OWN_TYPE(K<R>);ASH_FIELDS(x, y, z);
+	ASH_OWN_TYPE(K<R>);
+	ASH_FIELDS(x, y, z);
 };
 
 struct V: ash::dynamic<V> {
-	int a = 64;ASH_FIELDS(a);
+	int a = 64;
+	ASH_FIELDS(a);
 };
 ASH_REGISTER(V);
 
@@ -31,9 +33,11 @@ struct X: ash::dynamic<X, V> {
 };
 ASH_REGISTER(X);
 
-struct Y: ash::dynamic<Y, V> {
+struct Y: ash::serializable<Y> {
+	int u = 32;
+	ASH_FIELDS(u);
 };
-ASH_REGISTER(Y);
+//ASH_REGISTER(Y);
 
 namespace z {
 	struct Z : ash::dynamic<Z, X> {
@@ -82,15 +86,17 @@ int main() {
 
 	std::unique_ptr<V> v1(std::move(
 			ash::registry::dynamic_object_factory::get().create<V>("z::Z").value()));
+	/*
 	auto y1 =
 			ash::registry::dynamic_object_factory::get().create<Y>("V");
+			*/
 	std::unique_ptr<V> xx1(std::move(
 			ash::registry::dynamic_object_factory::get().create<V>("X").value()));
 
 	std::cerr << z2.portable_class_name() << std::endl;
 	std::cerr << z1->portable_class_name() << std::endl;
 	std::cerr << v1->portable_class_name() << std::endl;
-	std::cerr << ash::name(y1.status()) << std::endl;
+	//std::cerr << ash::name(y1.status()) << std::endl;
 	std::cerr << xx1->portable_class_name() << std::endl;
 	//std::cerr << y1->portable_class_name() << std::endl;
 	using pp = ash::mpt::pack<double, int, double>;
@@ -100,7 +106,8 @@ int main() {
 	std::unique_ptr < X > x(new X());
 	x->x = 44;
 	x->a = 88;
-	std::unique_ptr < X > y;
+	std::unique_ptr < V > v(std::move(x));
+	std::unique_ptr < Y > y(new Y());
 
 	f(X::base_classes { });
 
@@ -109,24 +116,30 @@ int main() {
 					ash::native_binary_encoder>::value << std::endl;
 
 	ash::binary_sizer bs;
-	ASH_CHECK_OK(bs(x));
+	ASH_CHECK_OK(bs(ash::status::FAILED_PRECONDITION));
+	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(y));
 	std::cerr << "SIZE: " << bs.size() << std::endl;
 
 	std::ostringstream oss;
 	ash::ostream_output_stream osa(oss);
 	ash::native_binary_encoder nbe(osa);
-	ASH_CHECK_OK(nbe(x));
+	ASH_CHECK_OK(nbe(ash::status::FAILED_PRECONDITION));
+	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(y));
 
 	std::istringstream iss(oss.str());
 	ash::istream_input_stream isa(iss);
 	ash::native_binary_decoder nbd(isa);
 
-	std::unique_ptr<X> x2, y2;
+	std::unique_ptr<V> v2;
+	std::unique_ptr<Y> y2;
 
-	nbd(x2);
-	nbd(y2);
+	ASH_CHECK_OK(nbd(code));
+	ASH_CHECK_OK(nbd(v2));
+	ASH_CHECK_OK(nbd(y2));
+
+	std::unique_ptr<X> x2(static_cast<X*>(v2.release()));
 
 	std::cerr << x2->x << ", " << x2->a << std::endl;
 

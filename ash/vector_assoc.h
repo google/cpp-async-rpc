@@ -101,11 +101,11 @@ struct key_value_equal<Key, Key, Compare> {
 	Compare comp_;
 };
 
-template<typename Key, bool multiple_allowed, typename T, typename Value,
-		typename Compare, typename Allocator> class vector_tree: protected std::vector<
-		Value, Allocator> {
+template<typename Key, bool multiple_allowed, typename Value, typename Compare,
+		typename Allocator> class vector_tree: protected std::vector<Value,
+		Allocator> {
 protected:
-	using value_equal = key_value_equal<Key, Value>;
+	using value_equal = key_value_equal<Key, Value, Compare>;
 
 public:
 	using underlying_container = std::vector<Value, Allocator>;
@@ -114,7 +114,7 @@ public:
 	using typename underlying_container::size_type;
 	using typename underlying_container::difference_type;
 	using key_compare = Compare;
-	using value_compare = key_value_compare<Key, Value>;
+	using value_compare = key_value_compare<Key, Value, Compare>;
 
 	using typename underlying_container::allocator_type;
 	using typename underlying_container::reference;
@@ -329,34 +329,32 @@ protected:
 
 template<typename Key, typename Compare = std::less<Key>,
 		typename Allocator = std::allocator<Key> >
-class vector_set: public detail::vector_tree<Key, false, Key, Key, Compare,
-		Allocator> {
+class vector_set: public detail::vector_tree<Key, false, Key, Compare, Allocator> {
 public:
 	// Inherit constructors.
-	using detail::vector_tree<Key, false, Key, Key, Compare, Allocator>::vector_tree;
+	using detail::vector_tree<Key, false, Key, Compare, Allocator>::vector_tree;
 };
 
 template<typename Key, typename Compare = std::less<Key>,
 		typename Allocator = std::allocator<Key> >
-class vector_multiset: public detail::vector_tree<Key, true, Key, Key, Compare,
+class vector_multiset: public detail::vector_tree<Key, true, Key, Compare,
 		Allocator> {
 public:
 	// Inherit constructors.
-	using detail::vector_tree<Key, true, Key, Key, Compare, Allocator>::vector_tree;
+	using detail::vector_tree<Key, true, Key, Compare, Allocator>::vector_tree;
 };
 
 template<typename Key, typename T, typename Compare = std::less<Key>,
 		typename Allocator = std::allocator<std::pair<Key, T> > >
-class vector_map: public detail::vector_tree<Key, false, T, std::pair<Key, T>,
+class vector_map: public detail::vector_tree<Key, false, std::pair<Key, T>,
 		Compare, Allocator> {
 public:
-	using typename detail::vector_tree<Key, false, T, std::pair<Key, T>,
-			Compare, Allocator>::underlying_container;
+	using typename detail::vector_tree<Key, false, std::pair<Key, T>, Compare,
+			Allocator>::underlying_container;
 	using mapped_type = T;
 
 	// Inherit constructors.
-	using detail::vector_tree<Key, false, T, std::pair<Key, T>, Compare,
-			Allocator>::vector_tree;
+	using detail::vector_tree<Key, false, std::pair<Key, T>, Compare, Allocator>::vector_tree;
 
 	// operator []
 	T& operator[](const Key& key) {
@@ -395,14 +393,13 @@ public:
 
 template<typename Key, typename T, typename Compare = std::less<Key>,
 		typename Allocator = std::allocator<std::pair<Key, T> > >
-class vector_multimap: public detail::vector_tree<Key, true, T,
-		std::pair<Key, T>, Compare, Allocator> {
+class vector_multimap: public detail::vector_tree<Key, true, std::pair<Key, T>,
+		Compare, Allocator> {
 public:
 	using mapped_type = T;
 
 	// Inherit constructors.
-	using detail::vector_tree<Key, true, T, std::pair<Key, T>, Compare,
-			Allocator>::vector_tree;
+	using detail::vector_tree<Key, true, std::pair<Key, T>, Compare, Allocator>::vector_tree;
 };
 
 }

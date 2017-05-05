@@ -114,19 +114,98 @@ void dynamic_subclass_registry<T>::register_subclass(const char* class_name) {
 			detail::register_subclass { }, class_name);
 }
 
-class dynamic_object_factory: public singleton<dynamic_object_factory> {
+template<typename S>
+class dynamic_encoder_registry: public singleton<dynamic_encoder_registry<S>> {
 public:
 	template<typename T>
-	const char* register_class(const char* class_name) {
-		factory_function_type f =
-				[]() {return std::unique_ptr<::ash::dynamic_base_class>(new T());};
+	void register_class(const char* class_name) {
+		encoder_function_type f = [](S& s, const ::ash::dynamic_base_class& o) {
+			return s(static_cast<const T&>(o));
+		};
 
+		assert(encoder_function_map_.emplace(class_name, (f)).second);
+	}
+
+	status encode(S& s, const ::ash::dynamic_base_class& o) {
+		const auto it = encoder_function_map_.find(o.portable_class_name());
+		if (it == encoder_function_map_.end())
+			return status::NOT_FOUND;
+		return it->second(s, o);
+	}
+
+private:
+	using encoder_function_type = status (*)(S&, const ::ash::dynamic_base_class&);
+	ash::vector_map<const char*, encoder_function_type,
+			detail::const_char_ptr_compare> encoder_function_map_;
+};
+
+namespace detail {
+template <typename T>
+struct register_encoder {
+	template<typename S>
+	void operator()(mpt::wrap_type<S>, const char* class_name) {
+		dynamic_encoder_registry<S>::get().template register_class<T>(class_name);
+	}
+};
+}  // namespace detail
+
+template<typename S>
+class dynamic_decoder_registry: public singleton<dynamic_decoder_registry<S>> {
+public:
+	template<typename T>
+	void register_class(const char* class_name) {
+		decoder_function_type f = [](S& s, ::ash::dynamic_base_class& o) {
+			return s(static_cast<T&>(o));
+		};
+
+		assert(decoder_function_map_.emplace(class_name, (f)).second);
+	}
+
+	status decode(S& s, ::ash::dynamic_base_class& o) {
+		const auto it = decoder_function_map_.find(o.portable_class_name());
+		if (it == decoder_function_map_.end())
+			return status::NOT_FOUND;
+		return it->second(s, o);
+	}
+
+private:
+	using decoder_function_type = status (*)(S&, ::ash::dynamic_base_class&);
+	ash::vector_map<const char*, decoder_function_type,
+			detail::const_char_ptr_compare> decoder_function_map_;
+};
+
+namespace detail {
+template <typename T>
+struct register_decoder {
+	template<typename S>
+	void operator()(mpt::wrap_type<S>, const char* class_name) {
+		dynamic_decoder_registry<S>::get().template register_class<T>(class_name);
+	}
+};
+}  // namespace detail
+
+class dynamic_object_factory: public singleton<dynamic_object_factory> {
+public:
+	template<typename T, typename Encoders, typename Decoders>
+	const char* register_class(const char* class_name) {
+		// Register the class into this factory for object creation.
+		factory_function_type f = []() {
+			return std::unique_ptr<::ash::dynamic_base_class>(new T());
+		};
 		assert(factory_function_map_.emplace(class_name, (f)).second);
+
+		// Register the class into the class hierarchy.
 		dynamic_subclass_registry<T>::get().register_subclass(class_name);
+
+		// Register the encoders.
+		mpt::for_each(Encoders{}, detail::register_encoder<T>{}, class_name);
+
+		// Register the decoders.
+		mpt::for_each(Decoders{}, detail::register_decoder<T>{}, class_name);
+
 		return class_name;
 	}
 
-	// Returns nullptr in case of errors.
 	template<typename T>
 	status_or<std::unique_ptr<T> > create(const char* class_name) const {
 		if (!dynamic_subclass_registry<T>::get().is_subclass(class_name))
@@ -135,7 +214,43 @@ public:
 		if (it == factory_function_map_.end())
 			return status::NOT_FOUND;
 		std::unique_ptr<::ash::dynamic_base_class> ptr(it->second());
-		return std::unique_ptr<T>(static_cast<T*>(ptr.release()));
+		return std::unique_ptr < T > (static_cast<T*>(ptr.release()));
+	}
+
+	// Non-polymorphic save.
+	template<typename S, typename T>
+	typename std::enable_if<!is_dynamic<T>::value, status>::type save(S& s,
+			const T& o) {
+		return s(o);
+	}
+
+	// Polymorphic save.
+	template<typename S, typename T>
+	typename std::enable_if<is_dynamic<T>::value, status>::type save(S& s,
+			const T& o) {
+		s(o.portable_class_name());
+		return dynamic_encoder_registry<S>::get().encode(s, o);
+	}
+
+	// Non-polymorphic load.
+	template<typename T, typename S>
+	typename std::enable_if<!is_dynamic<T>::value,
+			status_or<std::unique_ptr<T> > >::type load(S& s) {
+		std::unique_ptr < T > o(new T());
+		ASH_RETURN_IF_ERROR(s(*o));
+		return o;
+	}
+
+	// Polymorphic load.
+	template<typename T, typename S>
+	typename std::enable_if<is_dynamic<T>::value, status_or<std::unique_ptr<T> > >::type load(
+			S& s) {
+		std::string class_name;
+		ASH_RETURN_IF_ERROR(s(class_name));
+		std::unique_ptr<T> o;
+		ASH_ASSIGN_OR_RETURN(o, create<T>(class_name.c_str()));
+		ASH_RETURN_IF_ERROR(dynamic_decoder_registry<S>::get().decode(s, *o));
+		return o;
 	}
 
 private:

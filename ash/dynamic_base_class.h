@@ -10,7 +10,7 @@ namespace ash {
 /// Base class for all run-time polymorphic serializable classes.
 class dynamic_base_class {
 public:
-	const char *portable_class_name() {
+	const char *portable_class_name() const {
 		return portable_class_name_internal();
 	}
 	using field_descriptors = mpt::pack<>;

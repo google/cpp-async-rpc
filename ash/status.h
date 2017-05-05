@@ -86,7 +86,7 @@ const char* name(const status_or<T>& value) {
 }
 
 #define ASH_RETURN_IF_ERROR(EXPR) do { const auto& ___result = EXPR; if (!::ash::ok(___result)) return ___result; } while (false)
-#define ASH_ASSIGN_OR_RETURN(LHS, EXPR) do { const auto& ___result = EXPR; if (!___result.ok()) return ___result.status(); LHS = ___result.value(); } while (false)
+#define ASH_ASSIGN_OR_RETURN(LHS, EXPR) do { auto ___result = EXPR; if (!___result.ok()) return ___result.status(); LHS = std::move(___result.value()); } while (false)
 
 namespace detail {
 template <typename O>

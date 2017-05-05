@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <utility>
@@ -11,6 +12,7 @@
 #include "ash/traits.h"
 #include "ash/mpt.h"
 #include "ash/io_adapters.h"
+#include "ash/registry.h"
 
 namespace ash {
 
@@ -20,6 +22,13 @@ class binary_encoder {
 public:
 	binary_encoder(Adapter out) :
 			out_(out) {
+	}
+
+	// Special case for const char*, compatible with std::string de-serialization.
+	status operator()(const char* s) {
+		std::size_t l = std::strlen(s);
+		ASH_RETURN_IF_ERROR(write_variant(l));
+		return write_block(s, l);
 	}
 
 	// Serializable scalar.
@@ -86,7 +95,9 @@ public:
 		bool present = (p != nullptr);
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
-			ASH_RETURN_IF_ERROR((*this)(*p));
+			ASH_RETURN_IF_ERROR(
+					::ash::registry::dynamic_object_factory::get().save(*this,
+							*p));
 		}
 		return status::OK;
 	}
@@ -351,8 +362,10 @@ public:
 		bool present;
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
-			p.reset(new T());
-			return (*this)(*p);
+			ASH_ASSIGN_OR_RETURN(p,
+					::ash::registry::dynamic_object_factory::get().load<T>(
+							*this));
+			return status::OK;
 		} else {
 			p.reset();
 			return status::OK;
@@ -473,6 +486,7 @@ private:
 		while (l-- > 0) {
 			ASH_RETURN_IF_ERROR((*this)(*p++));
 		}
+		return status::OK;
 	}
 
 	// If we need to reverse the data, read it out byte by byte.
@@ -486,6 +500,7 @@ private:
 				ASH_ASSIGN_OR_RETURN(p[data_size - j], in_.getc());
 			}
 		}
+		return status::OK;
 	}
 
 	// Just read out a whole block of memory if we don't need to reverse,
@@ -523,8 +538,8 @@ using little_endian_binary_encoder = binary_encoder<output_adapter, !traits::tar
 using big_endian_binary_encoder = binary_encoder<output_adapter, !traits::target_is_big_endian>;
 
 using native_binary_decoder = binary_decoder<input_adapter, false>;
-using little_endian_binary_decoder = binary_decoder<output_adapter, !traits::target_is_little_endian>;
-using big_endian_binary_decoder = binary_decoder<output_adapter, !traits::target_is_big_endian>;
+using little_endian_binary_decoder = binary_decoder<input_adapter, !traits::target_is_little_endian>;
+using big_endian_binary_decoder = binary_decoder<input_adapter, !traits::target_is_big_endian>;
 
 }  // namespace ash
 
