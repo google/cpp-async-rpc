@@ -17,7 +17,7 @@
 namespace ash {
 
 // Binary encoder.
-template<typename Adapter, bool reverse_bytes>
+template<typename MyClass, typename Adapter, bool reverse_bytes>
 class binary_encoder {
 public:
 	binary_encoder(Adapter out) :
@@ -96,8 +96,8 @@ public:
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
 			ASH_RETURN_IF_ERROR(
-					::ash::registry::dynamic_object_factory::get().save(*this,
-							*p));
+					::ash::registry::dynamic_object_factory::get().save(
+							static_cast<MyClass&>(*this), *p));
 		}
 		return status::OK;
 	}
@@ -244,7 +244,7 @@ protected:
 };
 
 // Binary decoder.
-template<typename Adapter, bool reverse_bytes>
+template<typename MyClass, typename Adapter, bool reverse_bytes>
 class binary_decoder {
 public:
 	binary_decoder(Adapter in) :
@@ -363,8 +363,8 @@ public:
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
 			ASH_ASSIGN_OR_RETURN(p,
-					::ash::registry::dynamic_object_factory::get().load<T>(
-							*this));
+					(::ash::registry::dynamic_object_factory::get().load<
+							MyClass, T>(static_cast<MyClass&>(*this))));
 			return status::OK;
 		} else {
 			p.reset();
@@ -516,10 +516,10 @@ protected:
 };
 
 // Sizing OutputEncoder
-class binary_sizer: public binary_encoder<output_sizer, false> {
+class binary_sizer: public binary_encoder<binary_sizer, output_sizer, false> {
 public:
 	binary_sizer() :
-			binary_encoder<output_sizer, false>(output_sizer()) {
+			binary_encoder<binary_sizer, output_sizer, false>(output_sizer()) {
 	}
 
 	// Get the total number of bytes written so far.
@@ -533,13 +533,27 @@ public:
 	}
 };
 
-using native_binary_encoder = binary_encoder<output_adapter, false>;
-using little_endian_binary_encoder = binary_encoder<output_adapter, !traits::target_is_little_endian>;
-using big_endian_binary_encoder = binary_encoder<output_adapter, !traits::target_is_big_endian>;
+class native_binary_encoder: public binary_encoder<native_binary_encoder,
+		output_adapter, false> {
+	using binary_encoder<native_binary_encoder, output_adapter, false>::binary_encoder;
+};
+class reversing_binary_encoder: public binary_encoder<native_binary_encoder,
+		output_adapter, true> {
+	using binary_encoder<native_binary_encoder, output_adapter, true>::binary_encoder;
+};
+using little_endian_binary_encoder = mpt::conditional_t<traits::target_is_little_endian, native_binary_encoder, reversing_binary_encoder>;
+using big_endian_binary_encoder = mpt::conditional_t<traits::target_is_big_endian, native_binary_encoder, reversing_binary_encoder>;
 
-using native_binary_decoder = binary_decoder<input_adapter, false>;
-using little_endian_binary_decoder = binary_decoder<input_adapter, !traits::target_is_little_endian>;
-using big_endian_binary_decoder = binary_decoder<input_adapter, !traits::target_is_big_endian>;
+class native_binary_decoder: public binary_decoder<native_binary_decoder,
+		input_adapter, false> {
+	using binary_decoder<native_binary_decoder, input_adapter, false>::binary_decoder;
+};
+class reversing_binary_decoder: public binary_decoder<native_binary_decoder,
+		input_adapter, true> {
+	using binary_decoder<native_binary_decoder, input_adapter, true>::binary_decoder;
+};
+using little_endian_binary_decoder = mpt::conditional_t<traits::target_is_little_endian, native_binary_decoder, reversing_binary_decoder>;
+using big_endian_binary_decoder = mpt::conditional_t<traits::target_is_big_endian, native_binary_decoder, reversing_binary_decoder>;
 
 }  // namespace ash
 

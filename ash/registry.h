@@ -140,11 +140,12 @@ private:
 };
 
 namespace detail {
-template <typename T>
+template<typename T>
 struct register_encoder {
 	template<typename S>
 	void operator()(mpt::wrap_type<S>, const char* class_name) {
-		dynamic_encoder_registry<S>::get().template register_class<T>(class_name);
+		dynamic_encoder_registry<S>::get().template register_class<T>(
+				class_name);
 	}
 };
 }  // namespace detail
@@ -175,11 +176,12 @@ private:
 };
 
 namespace detail {
-template <typename T>
+template<typename T>
 struct register_decoder {
 	template<typename S>
 	void operator()(mpt::wrap_type<S>, const char* class_name) {
-		dynamic_decoder_registry<S>::get().template register_class<T>(class_name);
+		dynamic_decoder_registry<S>::get().template register_class<T>(
+				class_name);
 	}
 };
 }  // namespace detail
@@ -188,6 +190,8 @@ class dynamic_object_factory: public singleton<dynamic_object_factory> {
 public:
 	template<typename T, typename Encoders, typename Decoders>
 	const char* register_class(const char* class_name) {
+		static_assert(is_dynamic<T>::value, "Only classes inheriting from ash::dynamic_base_class can be registered for polymorphism");
+
 		// Register the class into this factory for object creation.
 		factory_function_type f = []() {
 			return std::unique_ptr<::ash::dynamic_base_class>(new T());
@@ -198,10 +202,12 @@ public:
 		dynamic_subclass_registry<T>::get().register_subclass(class_name);
 
 		// Register the encoders.
-		mpt::for_each(Encoders{}, detail::register_encoder<T>{}, class_name);
+		mpt::for_each(Encoders { }, detail::register_encoder<T> { },
+				class_name);
 
 		// Register the decoders.
-		mpt::for_each(Decoders{}, detail::register_decoder<T>{}, class_name);
+		mpt::for_each(Decoders { }, detail::register_decoder<T> { },
+				class_name);
 
 		return class_name;
 	}
@@ -233,7 +239,7 @@ public:
 	}
 
 	// Non-polymorphic load.
-	template<typename T, typename S>
+	template<typename S, typename T>
 	typename std::enable_if<!is_dynamic<T>::value,
 			status_or<std::unique_ptr<T> > >::type load(S& s) {
 		std::unique_ptr < T > o(new T());
@@ -242,7 +248,7 @@ public:
 	}
 
 	// Polymorphic load.
-	template<typename T, typename S>
+	template<typename S, typename T>
 	typename std::enable_if<is_dynamic<T>::value, status_or<std::unique_ptr<T> > >::type load(
 			S& s) {
 		std::string class_name;

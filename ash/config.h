@@ -9,7 +9,7 @@ namespace ash {
 namespace config {
 
 using all_encoders = mpt::pack<
-ash::binary_encoder<ash::output_sizer, false>,
+ash::binary_sizer,
 ash::big_endian_binary_encoder,
 ash::little_endian_binary_encoder
 >;
