@@ -95,14 +95,43 @@ public:
 		bool present = (p != nullptr);
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
-			ASH_RETURN_IF_ERROR(
-					::ash::registry::dynamic_object_factory::get().save(
-							static_cast<MyClass&>(*this), *p));
+			ASH_RETURN_IF_ERROR(save_object_reference(*p));
 		}
 		return status::OK;
 	}
 
+	// Save potentially short integers in a compact form.
+	//
+	// Use the highest bit in each byte to determine whether more bytes come
+	// after the current one. The final byte will have its high order bit
+	// clear.
+	//
+	// For convenience, this is always represented in little endian format.
+	status write_variant(std::size_t l) {
+		do {
+			uint8_t o = static_cast<uint8_t>(l & 0x7f);
+			l >>= 7;
+			if (l) {
+				o |= 0x80;
+			}
+			ASH_RETURN_IF_ERROR((*this)(o));
+		} while (l);
+		return status::OK;
+	}
+
 private:
+	template<typename T>
+	typename std::enable_if<!is_dynamic<T>::value, status>::type save_object_reference(
+			const T& o) {
+		return (*this)(o);
+	}
+
+	template<typename T>
+	typename std::enable_if<is_dynamic<T>::value, status>::type save_object_reference(
+			const T& o) {
+		return class_dictionary_.encode(static_cast<MyClass&>(*this), o);
+	}
+
 	struct tuple_element_saver {
 		template<typename T, typename S>
 		status operator()(const T& v, S& s) {
@@ -180,25 +209,6 @@ private:
 		return write_variant(t.size());
 	}
 
-	// Save potentially short integers in a compact form.
-	//
-	// Use the highest bit in each byte to determine whether more bytes come
-	// after the current one. The final byte will have its high order bit
-	// clear.
-	//
-	// For convenience, this is always represented in little endian format.
-	status write_variant(std::size_t l) {
-		do {
-			uint8_t o = static_cast<uint8_t>(l & 0x7f);
-			l >>= 7;
-			if (l) {
-				o |= 0x80;
-			}
-			ASH_RETURN_IF_ERROR((*this)(o));
-		} while (l);
-		return status::OK;
-	}
-
 	// For contiguous sequences of scalars, just treat them as a block of contiguous
 	// memory.
 	template<typename T>
@@ -238,6 +248,8 @@ private:
 			const T* p, std::size_t l) {
 		return out_.write(reinterpret_cast<const char*>(p), l * sizeof(T));
 	}
+
+	registry::encoder_class_dictionary<MyClass> class_dictionary_;
 
 protected:
 	Adapter out_;
@@ -362,9 +374,7 @@ public:
 		bool present;
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
-			ASH_ASSIGN_OR_RETURN(p,
-					(::ash::registry::dynamic_object_factory::get().load<
-							MyClass, T>(static_cast<MyClass&>(*this))));
+			ASH_ASSIGN_OR_RETURN(p, load_object_reference<T>());
 			return status::OK;
 		} else {
 			p.reset();
@@ -372,7 +382,37 @@ public:
 		}
 	}
 
+	// Read potentially short integers from a compact form.
+	//
+	// Use the highest bit in each byte to determine whether more bytes come
+	// after the current one. The final byte will have its high order bit
+	// clear.
+	//
+	// For convenience, this is always represented in little endian format.
+	status_or<std::size_t> read_variant() {
+		std::size_t l = 0;
+		uint8_t o;
+		do {
+			ASH_RETURN_IF_ERROR((*this)(o));
+			l <<= 7;
+			l |= (static_cast<std::size_t>(o) & 0x7f);
+		} while ((o & 0x80) != 0);
+		return l;
+	}
+
 private:
+	template<typename T>
+	typename std::enable_if<!is_dynamic<T>::value, status_or<std::unique_ptr<T>>>::type load_object_reference() {
+		std::unique_ptr<T> o(new T());
+		ASH_RETURN_IF_ERROR((*this)(*o));
+		return o;
+	}
+
+	template<typename T>
+	typename std::enable_if<is_dynamic<T>::value, status_or<std::unique_ptr<T>>>::type load_object_reference() {
+		return class_dictionary_.template create_and_decode<T>(static_cast<MyClass&>(*this));
+	}
+
 	struct tuple_element_loader {
 		template<typename T, typename S>
 		status operator()(T& v, S& s) {
@@ -453,24 +493,6 @@ private:
 		return read_variant();
 	}
 
-	// Read potentially short integers from a compact form.
-	//
-	// Use the highest bit in each byte to determine whether more bytes come
-	// after the current one. The final byte will have its high order bit
-	// clear.
-	//
-	// For convenience, this is always represented in little endian format.
-	status_or<std::size_t> read_variant() {
-		std::size_t l = 0;
-		uint8_t o;
-		do {
-			ASH_RETURN_IF_ERROR((*this)(o));
-			l <<= 7;
-			l |= (static_cast<std::size_t>(o) & 0x7f);
-		} while ((o & 0x80) != 0);
-		return l;
-	}
-
 	// For contiguous sequences of scalars, just treat them as a block of contiguous
 	// memory.
 	template<typename T>
@@ -511,6 +533,7 @@ private:
 		return in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
 	}
 
+	registry::decoder_class_dictionary<MyClass> class_dictionary_;
 protected:
 	Adapter in_;
 };

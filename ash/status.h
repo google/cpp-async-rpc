@@ -40,6 +40,7 @@ template <typename T>
 class status_or {
 public:
 	status_or(T&& t) : status_(::ash::status::OK), t_(std::forward<T>(t)) {}
+	status_or(const T& t) : status_(::ash::status::OK), t_(t) {}
 
 	status_or(::ash::status s) : status_(s) {
 		ASH_CHECK(!ok());

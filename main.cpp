@@ -52,73 +52,20 @@ void f(T) {
 
 
 int main() {
-	ash::status code = static_cast<ash::status>(130);
-
-	std::cerr << ash::code(code) << ": " << ash::ok(code) << " ("
-			<< ash::name(code) << ")" << std::endl;
-	std::cerr << ash::code(ash::status::FAILED_PRECONDITION) << ": "
-			<< ash::ok(ash::status::FAILED_PRECONDITION) << " ("
-			<< ash::name(ash::status::FAILED_PRECONDITION) << ")" << std::endl;
-
-	ash::vector_multiset<int> h { 3, 2, 2 };
-	h.emplace(5);
-	h.insert(13);
-	h.insert(13);
-	//h[4] = 1;
-	//std::cerr << h.at(13) << std::endl;
-	ash::vector_multiset<int> l;
-	l = h;
-
-	for (auto it = h.begin(); it != h.end(); it++) {
-		std::cerr << *it << std::endl;
-	}
-
-	h.erase(2);
-
-	for (auto it = h.begin(); it != h.end(); it++) {
-		std::cerr << *it << std::endl;
-	}
-
-	z::Z z2;
-	std::unique_ptr<z::Z> z1(std::move(
-			ash::registry::dynamic_object_factory::get().create<z::Z>("z::Z").value()
-			));
-
-	std::unique_ptr<V> v1(std::move(
-			ash::registry::dynamic_object_factory::get().create<V>("z::Z").value()));
-	/*
-	auto y1 =
-			ash::registry::dynamic_object_factory::get().create<Y>("V");
-			*/
-	std::unique_ptr<V> xx1(std::move(
-			ash::registry::dynamic_object_factory::get().create<V>("X").value()));
-
-	std::cerr << z2.portable_class_name() << std::endl;
-	std::cerr << z1->portable_class_name() << std::endl;
-	std::cerr << v1->portable_class_name() << std::endl;
-	//std::cerr << ash::name(y1.status()) << std::endl;
-	std::cerr << xx1->portable_class_name() << std::endl;
-	//std::cerr << y1->portable_class_name() << std::endl;
-	using pp = ash::mpt::pack<double, int, double>;
-	constexpr auto rrrrr = ash::mpt::count_if(pp { }, ash::mpt::is<double> { });
-	f(ash::mpt::filter_if(pp { }, ash::mpt::is<double> { }));
-	f(ash::mpt::find_if(pp { }, ash::mpt::is<double> { }));
+	ash::status code;
 	std::unique_ptr < X > x(new X());
 	x->x = 44;
 	x->a = 88;
 	std::unique_ptr < V > v(std::move(x));
 	std::unique_ptr < Y > y(new Y());
-
-	f(X::base_classes { });
-
-	std::cerr
-			<< ash::traits::can_be_saved<decltype(*x),
-					ash::native_binary_encoder>::value << std::endl;
+	std::unique_ptr < z::Z > z(new z::Z());
 
 	ash::binary_sizer bs;
 	ASH_CHECK_OK(bs(ash::status::FAILED_PRECONDITION));
 	ASH_CHECK_OK(bs(v));
+	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(y));
+	ASH_CHECK_OK(bs(z));
 	std::cerr << "SIZE: " << bs.size() << std::endl;
 
 	std::ostringstream oss;
@@ -126,7 +73,9 @@ int main() {
 	ash::native_binary_encoder nbe(osa);
 	ASH_CHECK_OK(nbe(ash::status::FAILED_PRECONDITION));
 	ASH_CHECK_OK(nbe(v));
+	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(y));
+	ASH_CHECK_OK(nbe(z));
 
 	std::istringstream iss(oss.str());
 	ash::istream_input_stream isa(iss);
@@ -134,10 +83,13 @@ int main() {
 
 	std::unique_ptr<V> v2;
 	std::unique_ptr<Y> y2;
+	std::unique_ptr<z::Z> z2;
 
 	ASH_CHECK_OK(nbd(code));
 	ASH_CHECK_OK(nbd(v2));
+	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(y2));
+	ASH_CHECK_OK(nbd(z2));
 
 	std::unique_ptr<X> x2(static_cast<X*>(v2.release()));
 
