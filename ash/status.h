@@ -33,8 +33,23 @@ const char* name(status value) {
 	return ::ash::enum_names<status>::name(value);
 }
 
+#if 0
+#define ASH_CHECK(x) do { \
+	if (!(x)) { \
+		std::cerr << "ERROR(" << __FILE__ << ":" <<  __LINE__ << "): Check failed: " << #x << std::endl; \
+		std::terminate(); \
+	} \
+} while (false)
+#define ASH_CHECK_OK(x) do { \
+	if(!::ash::ok(x)) { \
+		std::cerr << "ERROR(" << __FILE__ << ":" <<  __LINE__ << "): Status not OK: " << ::ash::name(x) << std::endl; \
+		std::terminate(); \
+	} \
+} while (false)
+#else
 #define ASH_CHECK(x) do { if (!(x)) std::terminate(); } while (false)
 #define ASH_CHECK_OK(x) ASH_CHECK(::ash::ok(x))
+#endif
 
 template <typename T>
 class status_or {

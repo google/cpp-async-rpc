@@ -44,24 +44,26 @@ namespace z {
 	};
 	ASH_REGISTER(z::Z);
 }
-
+/*
 template<typename T>
 void f(T) {
 	std::cerr << "X: " << __PRETTY_FUNCTION__ << std::endl;
 }
-
+*/
 
 int main() {
+	//ASH_CHECK(3 == 4);
 	ash::status code;
-	std::unique_ptr < X > x(new X());
+	std::shared_ptr < X > x(new X());
 	x->x = 44;
 	x->a = 88;
-	std::unique_ptr < V > v(std::move(x));
+	std::shared_ptr < V > v = x;
 	std::unique_ptr < Y > y(new Y());
 	std::unique_ptr < z::Z > z(new z::Z());
 
 	ash::binary_sizer bs;
 	ASH_CHECK_OK(bs(ash::status::FAILED_PRECONDITION));
+	ASH_CHECK_OK(bs(x));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(y));
@@ -72,6 +74,7 @@ int main() {
 	ash::ostream_output_stream osa(oss);
 	ash::native_binary_encoder nbe(osa);
 	ASH_CHECK_OK(nbe(ash::status::FAILED_PRECONDITION));
+	ASH_CHECK_OK(nbe(x));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(y));
@@ -81,19 +84,20 @@ int main() {
 	ash::istream_input_stream isa(iss);
 	ash::native_binary_decoder nbd(isa);
 
-	std::unique_ptr<V> v2;
+	std::shared_ptr<X> x2;
+	std::shared_ptr<V> v2;
 	std::unique_ptr<Y> y2;
 	std::unique_ptr<z::Z> z2;
 
 	ASH_CHECK_OK(nbd(code));
+	ASH_CHECK_OK(nbd(x2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(y2));
 	ASH_CHECK_OK(nbd(z2));
 
-	std::unique_ptr<X> x2(static_cast<X*>(v2.release()));
-
 	std::cerr << x2->x << ", " << x2->a << std::endl;
+	std::cerr << std::static_pointer_cast<X>(v2)->x << ", " << std::static_pointer_cast<X>(v2)->a << std::endl;
 
 	std::cout << oss.str();
 

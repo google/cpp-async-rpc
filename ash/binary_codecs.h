@@ -6,13 +6,15 @@
 #include <cstring>
 #include <memory>
 #include <string>
-#include <utility>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 #include "ash/traits.h"
 #include "ash/mpt.h"
 #include "ash/io_adapters.h"
 #include "ash/registry.h"
+#include "ash/vector_assoc.h"
 
 namespace ash {
 
@@ -100,6 +102,34 @@ public:
 		return status::OK;
 	}
 
+	// Shared pointers.
+	template<typename T>
+	status operator()(const std::shared_ptr<T>& p) {
+		// Short-circuit nullptr.
+		if (!p) {
+			return write_variant(0);
+		}
+
+		auto it = shared_object_map_.find(p.get());
+		bool first_time = false;
+		if (it == shared_object_map_.end()) {
+			std::size_t next_object_id = shared_object_map_.size();
+			it = shared_object_map_.emplace(p.get(), next_object_id).first;
+			first_time = true;
+		}
+		ASH_RETURN_IF_ERROR(write_variant(it->second));
+		if (first_time) {
+			ASH_RETURN_IF_ERROR(save_object_reference(*p));
+		}
+		return status::OK;
+	}
+
+private:
+	struct class_info {
+		std::size_t class_id;
+		typename registry::dynamic_encoder_registry<MyClass>::encoder_function_type encoder_function;
+	};
+
 	// Save potentially short integers in a compact form.
 	//
 	// Use the highest bit in each byte to determine whether more bytes come
@@ -119,7 +149,27 @@ public:
 		return status::OK;
 	}
 
-private:
+	status save_dynamic_object_reference(const ::ash::dynamic_base_class& o) {
+		const char* class_name = o.portable_class_name();
+		auto it = class_info_map_.find(class_name);
+		bool first_time = false;
+		if (it == class_info_map_.end()) {
+			// Not cached yet. Need to interrogate the dynamic_encoder_registry for this class.
+			typename registry::dynamic_encoder_registry<MyClass>::encoder_function_type encoder_function;
+			ASH_ASSIGN_OR_RETURN(encoder_function,
+					registry::dynamic_encoder_registry<MyClass>::get()[class_name]);
+			std::size_t next_class_id = class_info_map_.size();
+			it = class_info_map_.emplace(class_name, class_info { next_class_id,
+					encoder_function }).first;
+			first_time = true;
+		}
+		ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
+		if (first_time) {
+			ASH_RETURN_IF_ERROR((*this)(class_name));
+		}
+		return it->second.encoder_function(static_cast<MyClass&>(*this), o);
+	}
+
 	template<typename T>
 	typename std::enable_if<!is_dynamic<T>::value, status>::type save_object_reference(
 			const T& o) {
@@ -129,7 +179,7 @@ private:
 	template<typename T>
 	typename std::enable_if<is_dynamic<T>::value, status>::type save_object_reference(
 			const T& o) {
-		return class_dictionary_.encode(static_cast<MyClass&>(*this), o);
+		return save_dynamic_object_reference(o);
 	}
 
 	struct tuple_element_saver {
@@ -249,7 +299,9 @@ private:
 		return out_.write(reinterpret_cast<const char*>(p), l * sizeof(T));
 	}
 
-	registry::encoder_class_dictionary<MyClass> class_dictionary_;
+	// Here we depend on portable_class_name() returning identical pointers for speed.
+	ash::vector_map<const char*, class_info> class_info_map_;
+	ash::vector_map<void*, std::size_t> shared_object_map_ = { { nullptr, 0 } };
 
 protected:
 	Adapter out_;
@@ -258,6 +310,30 @@ protected:
 // Binary decoder.
 template<typename MyClass, typename Adapter, bool reverse_bytes>
 class binary_decoder {
+private:
+	class update_pointer {
+	public:
+		update_pointer(std::shared_ptr<void>& ptr) :
+				ptr_(ptr) {
+		}
+		template<typename T> void operator()(const std::shared_ptr<T>& ptr) {
+			ptr_ = ptr;
+		}
+	private:
+		std::shared_ptr<void>& ptr_;
+	};
+
+	class no_pointer_update {
+	public:
+		template<typename T> void operator()(const std::unique_ptr<T>& ptr) {
+		}
+	};
+
+	struct shared_object_info {
+		std::shared_ptr<void> ptr;
+		registry::type_id type_id;
+	};
+
 public:
 	binary_decoder(Adapter in) :
 			in_(in) {
@@ -374,13 +450,69 @@ public:
 		bool present;
 		ASH_RETURN_IF_ERROR((*this)(present));
 		if (present) {
-			ASH_ASSIGN_OR_RETURN(p, load_object_reference<T>());
-			return status::OK;
+			return load_object_reference(p, no_pointer_update());
 		} else {
 			p.reset();
 			return status::OK;
 		}
 	}
+
+	// Shared pointers.
+	template<typename T>
+	status operator()(std::shared_ptr<T>& p) {
+		// Read the object numeric ID for this stream.
+		std::size_t object_id;
+		ASH_ASSIGN_OR_RETURN(object_id, read_variant());
+
+		// Short-circuit nullptr.
+		if (object_id == 0) {
+			p.reset();
+			return status::OK;
+		}
+
+		// Are we reading a new object?
+		bool first_time = false;
+
+		// Check for garbage (unsorted object IDs) in the input.
+		if (object_id > shared_object_vector_.size()) {
+			// We didn't get either a known ID or the next one to assign.
+			return status::OUT_OF_RANGE;
+		}
+
+		// Enter a new object pointer if needed.
+		if (object_id == shared_object_vector_.size()) {
+			shared_object_vector_.push_back(shared_object_info { nullptr,
+					registry::get_type_id<T>() });
+			first_time = true;
+		}
+
+		// Get the shared object info.
+		auto& object_info = shared_object_vector_[object_id];
+
+		if (first_time) {
+			// Deserialize the object the first time.
+			return load_object_reference(p, update_pointer(object_info.ptr));
+		} else {
+			// Check for type compatibility.
+			if (object_info.type_id != registry::get_type_id<T>()
+					|| !registry::check_dynamic_compatibility<T>(
+							object_info.ptr.get())) {
+				// We recorded an incompatible type when we saw this object before,
+				// or the object's dynamic type can't be stored in this pointer.
+				return status::INVALID_ARGUMENT;
+			}
+			// Cast the object reference we already had.
+			p = std::static_pointer_cast < T > (object_info.ptr);
+			return status::OK;
+		}
+	}
+
+private:
+	struct class_info {
+		std::string class_name;
+		registry::dynamic_object_factory::factory_function_type factory_function;
+		typename registry::dynamic_decoder_registry<MyClass>::decoder_function_type decoder_function;
+	};
 
 	// Read potentially short integers from a compact form.
 	//
@@ -400,17 +532,63 @@ public:
 		return l;
 	}
 
-private:
-	template<typename T>
-	typename std::enable_if<!is_dynamic<T>::value, status_or<std::unique_ptr<T>>>::type load_object_reference() {
-		std::unique_ptr<T> o(new T());
-		ASH_RETURN_IF_ERROR((*this)(*o));
-		return o;
+	template<typename P, typename O>
+	status load_dynamic_object_reference(P& ptr, O o) {
+		using T = typename P::element_type;
+
+		// Read the class numeric ID for this stream.
+		std::size_t class_id;
+		ASH_ASSIGN_OR_RETURN(class_id, read_variant());
+
+		// Check for garbage (unsorted class IDs) in the input.
+		if (class_id > class_info_vector_.size()) {
+			// We didn't get either a known ID or the next one to assign.
+			return status::OUT_OF_RANGE;
+		}
+
+		// Construct the required info structure if needed.
+		if (class_id == class_info_vector_.size()) {
+			// Not seen yet. Need to read a class name and interrogate the dynamic_object_factory and dynamic_decoder_registry for this class.
+			std::string class_name;
+			ASH_RETURN_IF_ERROR((*this)(class_name));
+			registry::dynamic_object_factory::factory_function_type factory_function;
+			typename registry::dynamic_decoder_registry<MyClass>::decoder_function_type decoder_function;
+			ASH_ASSIGN_OR_RETURN(factory_function,
+					registry::dynamic_object_factory::get()[class_name.c_str()]);
+			ASH_ASSIGN_OR_RETURN(decoder_function,
+					registry::dynamic_decoder_registry<MyClass>::get()[class_name.c_str()]);
+			class_info_vector_.push_back(class_info { class_name,
+					factory_function, decoder_function });
+		}
+
+		// Info structure for the concrete class.
+		const auto& info = class_info_vector_[class_id];
+
+		// Check that the subclass is compatible (slow).
+		if (!registry::dynamic_subclass_registry<T>::get().is_subclass(
+				info.class_name.c_str()))
+			return status::INVALID_ARGUMENT;
+
+		// Instantiate the object.
+		ptr.reset(static_cast<T*>(info.factory_function()));
+		o(ptr);
+
+		// Perform the decoding.
+		return info.decoder_function(static_cast<MyClass&>(*this), *ptr);
 	}
 
-	template<typename T>
-	typename std::enable_if<is_dynamic<T>::value, status_or<std::unique_ptr<T>>>::type load_object_reference() {
-		return class_dictionary_.template create_and_decode<T>(static_cast<MyClass&>(*this));
+	template<typename P, typename O>
+	typename std::enable_if<!is_dynamic<typename P::element_type>::value, status>::type load_object_reference(
+			P& ptr, O o) {
+		ptr.reset(new typename P::element_type());
+		o(ptr);
+		return (*this)(*ptr);
+	}
+
+	template<typename P, typename O>
+	typename std::enable_if<is_dynamic<typename P::element_type>::value, status>::type load_object_reference(
+			P& ptr, O o) {
+		return load_dynamic_object_reference(ptr, o);
 	}
 
 	struct tuple_element_loader {
@@ -533,7 +711,10 @@ private:
 		return in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
 	}
 
-	registry::decoder_class_dictionary<MyClass> class_dictionary_;
+	std::vector<class_info> class_info_vector_;
+	std::vector<shared_object_info> shared_object_vector_ = {
+			shared_object_info { nullptr, nullptr } };
+
 protected:
 	Adapter in_;
 };
