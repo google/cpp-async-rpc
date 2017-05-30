@@ -47,7 +47,8 @@ namespace z {
 
 int main() {
 	//ASH_CHECK(3 == 4);
-	ash::status code;
+	ash::status_or<int> code;
+	ash::status_or<int> code1 = ash::status::FAILED_PRECONDITION;
 	std::shared_ptr < X > x(new X());
 	x->x = 44;
 	x->a = 88;
@@ -57,7 +58,7 @@ int main() {
 	std::unique_ptr < z::Z > z(new z::Z());
 
 	ash::binary_sizer bs;
-	ASH_CHECK_OK(bs(ash::status::FAILED_PRECONDITION));
+	ASH_CHECK_OK(bs(code1));
 	ASH_CHECK_OK(bs(x));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(v));
@@ -69,7 +70,7 @@ int main() {
 	std::ostringstream oss;
 	ash::ostream_output_stream osa(oss);
 	ash::native_binary_encoder nbe(osa);
-	ASH_CHECK_OK(nbe(ash::status::FAILED_PRECONDITION));
+	ASH_CHECK_OK(nbe(code1));
 	ASH_CHECK_OK(nbe(x));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(v));
@@ -95,6 +96,7 @@ int main() {
 	ASH_CHECK_OK(nbd(y2));
 	ASH_CHECK_OK(nbd(z2));
 
+	std::cerr << ash::name(code) << "(" << ash::code(code) << "): " << ash::ok(code) << std::endl;
 	std::cerr << x2->x << ", " << x2->a << std::endl;
 	std::cerr << std::static_pointer_cast<X>(v2)->x << ", " << std::static_pointer_cast<X>(v2)->a << std::endl;
 

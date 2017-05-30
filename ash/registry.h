@@ -13,69 +13,6 @@
 #include "ash/status.h"
 #include "ash/vector_assoc.h"
 
-/*
- * unique, non-polymorphic
- *  save:
- *   1. save null?
- *   2. if !null
- *    2.1. static save
- *  load:
- *   1. load null?
- *   2. if !null
- *    2.1. static new
- *    2.2. set pointer
- *    2.3. static load
- *
- * shared, non-polymorphic
- *  save:
- *   1. get sequence/register, saved?
- *   2. save sequence
- *   3. if !saved
- *    3.1. static save
- *  load:
- *   1. read sequence, loaded?
- *   2. if !loaded
- *    2.1. static new
- *    2.2. set pointer
- *    2.3. register
- *    2.4. static load
- *   3. if loaded
- *    3.1. get registered
- *    3.2. set pointer
- *
- * unique, polymorphic
- *  save:
- *   1. save null?
- *   2. if !null
- *    2.1. save class_name
- *    2.2. dynamic save
- *  load:
- *   1. load null?
- *   2. if !null
- *    2.1. load class_name
- *    2.2. dynamic new (-> base)
- *    2.3. set pointer (-> base)
- *    2.4. dynamic load
- *
- * shared, polymorphic
- *  save:
- *   1. get sequence/register (-> all bases), saved?
- *   2. save sequence
- *   2. if !saved
- *    2.1. save class_name
- *    2.2. dynamic save
- *  load:
- *   1. read sequence, loaded?
- *   2. if !loaded
- *    2.1. load class_name
- *    2.2. dynamic new (-> base)
- *    2.3. set pointer (-> base)
- *    2.4. register (-> all bases)
- *    2.5. dynamic load
- *   3. if loaded
- *    3.1. get registered (-> base)
- *    3.2. set pointer (-> base)
- */
 namespace ash {
 
 namespace registry {

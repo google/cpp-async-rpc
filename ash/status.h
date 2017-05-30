@@ -7,6 +7,7 @@
 
 #include "ash/enum.h"
 #include "ash/mpt.h"
+#include "ash/serializable_base.h"
 
 namespace ash {
 ASH_ENUM(status, uint8_t, "Unknown status code",
@@ -52,8 +53,9 @@ const char* name(status value) {
 #endif
 
 template <typename T>
-class status_or {
+class status_or : public serializable<status_or<T>> {
 public:
+	status_or() : status_(::ash::status::UNKNOWN_ERROR) {}
 	status_or(T&& t) : status_(::ash::status::OK), t_(std::forward<T>(t)) {}
 	status_or(const T& t) : status_(::ash::status::OK), t_(t) {}
 
@@ -79,11 +81,13 @@ public:
 		return t_;
 	}
 
-	// TODO: Make this class serializable.
-
 private:
 	::ash::status status_;
 	T t_;
+
+public:
+	ASH_OWN_TYPE(status_or<T>);
+	ASH_FIELDS(status_, t_);
 };
 
 template <typename T>
