@@ -124,6 +124,13 @@ public:
 		return status::OK;
 	}
 
+	// Weak pointers.
+	template<typename T>
+	status operator()(const std::weak_ptr<T>& p) {
+		std::shared_ptr<T> shared(p);
+		return (*this)(shared);
+	}
+
 private:
 	struct class_info {
 		std::size_t class_id;
@@ -505,6 +512,15 @@ public:
 			p = std::static_pointer_cast < T > (object_info.ptr);
 			return status::OK;
 		}
+	}
+
+	// Weak pointers.
+	template<typename T>
+	status operator()(std::weak_ptr<T>& p) {
+		std::shared_ptr<T> shared;
+		ASH_RETURN_IF_ERROR((*this)(shared));
+		p = shared;
+		return status::OK;
 	}
 
 private:

@@ -44,12 +44,6 @@ namespace z {
 	};
 	ASH_REGISTER(z::Z);
 }
-/*
-template<typename T>
-void f(T) {
-	std::cerr << "X: " << __PRETTY_FUNCTION__ << std::endl;
-}
-*/
 
 int main() {
 	//ASH_CHECK(3 == 4);
@@ -58,6 +52,7 @@ int main() {
 	x->x = 44;
 	x->a = 88;
 	std::shared_ptr < V > v = x;
+	std::weak_ptr < V > w = v;
 	std::unique_ptr < Y > y(new Y());
 	std::unique_ptr < z::Z > z(new z::Z());
 
@@ -66,6 +61,7 @@ int main() {
 	ASH_CHECK_OK(bs(x));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(v));
+	ASH_CHECK_OK(bs(w));
 	ASH_CHECK_OK(bs(y));
 	ASH_CHECK_OK(bs(z));
 	std::cerr << "SIZE: " << bs.size() << std::endl;
@@ -77,6 +73,7 @@ int main() {
 	ASH_CHECK_OK(nbe(x));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(v));
+	ASH_CHECK_OK(nbe(w));
 	ASH_CHECK_OK(nbe(y));
 	ASH_CHECK_OK(nbe(z));
 
@@ -86,6 +83,7 @@ int main() {
 
 	std::shared_ptr<X> x2;
 	std::shared_ptr<V> v2;
+	std::weak_ptr<V> w2;
 	std::unique_ptr<Y> y2;
 	std::unique_ptr<z::Z> z2;
 
@@ -93,6 +91,7 @@ int main() {
 	ASH_CHECK_OK(nbd(x2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(v2));
+	ASH_CHECK_OK(nbd(w2));
 	ASH_CHECK_OK(nbd(y2));
 	ASH_CHECK_OK(nbd(z2));
 
