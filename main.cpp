@@ -63,8 +63,9 @@ struct Y: ash::serializable<Y> {
 namespace z {
 struct Z: ash::dynamic<Z, X> {
 	std::shared_ptr<Z> z2;
+	std::shared_ptr<int> z3;
 
-	ASH_FIELDS(z2);
+	ASH_FIELDS(z2, z3);
 };
 ASH_REGISTER(z::Z);}
 
@@ -100,7 +101,7 @@ int main() {
 			<< std::endl;
 	std::cerr << ash::traits::type_hash<Y, ash::native_binary_encoder>::value
 			<< std::endl;
-	//std::cerr << ash::traits::type_hash<z::Z, ash::native_binary_encoder>::value << std::endl;
+	std::cerr << ash::traits::type_hash<z::Z, ash::native_binary_encoder>::value << std::endl;
 
 	//ASH_CHECK(3 == 4);
 	ash::status_or<int> code;
