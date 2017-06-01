@@ -1,11 +1,10 @@
 #ifndef ASH_SERIALIZABLE_BASE_H_
 #define ASH_SERIALIZABLE_BASE_H_
 
-#include <cassert>
-
 #include "ash/dynamic_base_class.h"
 #include "ash/mpt.h"
 #include "ash/preprocessor.h"
+#include "ash/status.h"
 
 namespace ash {
 
@@ -40,7 +39,7 @@ private:
 	// Implement the virtual function that returns the name of our type.
 	const char *portable_class_name_internal() const override {
 		using Descriptor = ash::detail::dynamic_class_descriptor<OwnType>;
-		assert(Descriptor::class_name != nullptr);
+		ASH_CHECK(Descriptor::class_name != nullptr);
 		return Descriptor::class_name;
 	}
 };

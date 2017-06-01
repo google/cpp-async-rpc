@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <stdexcept>
 
-#include "ash/status.h"
+#include "ash/status_or.h"
 
 namespace ash {
 // Input adapter base. Implementations should override at least one of

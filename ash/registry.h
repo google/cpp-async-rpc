@@ -1,7 +1,6 @@
 #ifndef ASH_REGISTRY_H_
 #define ASH_REGISTRY_H_
 
-#include <cassert>
 #include <cstring>
 #include <map>
 #include <memory>
@@ -10,7 +9,7 @@
 
 #include "ash/dynamic_base_class.h"
 #include "ash/singleton.h"
-#include "ash/status.h"
+#include "ash/status_or.h"
 #include "ash/vector_assoc.h"
 
 namespace ash {

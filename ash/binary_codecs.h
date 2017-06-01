@@ -14,6 +14,7 @@
 #include "ash/mpt.h"
 #include "ash/io_adapters.h"
 #include "ash/registry.h"
+#include "ash/status_or.h"
 #include "ash/vector_assoc.h"
 
 namespace ash {
@@ -127,7 +128,7 @@ public:
 	// Weak pointers.
 	template<typename T>
 	status operator()(const std::weak_ptr<T>& p) {
-		std::shared_ptr<T> shared(p);
+		std::shared_ptr<T> shared = p.lock();
 		return (*this)(shared);
 	}
 
@@ -757,9 +758,9 @@ class native_binary_encoder: public binary_encoder<native_binary_encoder,
 		output_adapter, false> {
 	using binary_encoder<native_binary_encoder, output_adapter, false>::binary_encoder;
 };
-class reversing_binary_encoder: public binary_encoder<native_binary_encoder,
+class reversing_binary_encoder: public binary_encoder<reversing_binary_encoder,
 		output_adapter, true> {
-	using binary_encoder<native_binary_encoder, output_adapter, true>::binary_encoder;
+	using binary_encoder<reversing_binary_encoder, output_adapter, true>::binary_encoder;
 };
 using little_endian_binary_encoder = mpt::conditional_t<traits::target_is_little_endian, native_binary_encoder, reversing_binary_encoder>;
 using big_endian_binary_encoder = mpt::conditional_t<traits::target_is_big_endian, native_binary_encoder, reversing_binary_encoder>;
@@ -768,9 +769,9 @@ class native_binary_decoder: public binary_decoder<native_binary_decoder,
 		input_adapter, false> {
 	using binary_decoder<native_binary_decoder, input_adapter, false>::binary_decoder;
 };
-class reversing_binary_decoder: public binary_decoder<native_binary_decoder,
+class reversing_binary_decoder: public binary_decoder<reversing_binary_decoder,
 		input_adapter, true> {
-	using binary_decoder<native_binary_decoder, input_adapter, true>::binary_decoder;
+	using binary_decoder<reversing_binary_decoder, input_adapter, true>::binary_decoder;
 };
 using little_endian_binary_decoder = mpt::conditional_t<traits::target_is_little_endian, native_binary_decoder, reversing_binary_decoder>;
 using big_endian_binary_decoder = mpt::conditional_t<traits::target_is_big_endian, native_binary_decoder, reversing_binary_decoder>;
