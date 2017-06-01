@@ -28,6 +28,23 @@ struct V: ash::dynamic<V> {
 };
 ASH_REGISTER(V);
 
+struct V2: ash::dynamic<V2> {
+	int a = 64;
+
+	ASH_FIELDS(a);
+
+	template<typename S>
+	void save(S&) const {
+	}
+
+	template<typename S>
+	void load(S&) {
+	}
+
+	ASH_CUSTOM_SERIALIZATION_VERSION(1);
+};
+ASH_REGISTER(V2);
+
 struct X: ash::dynamic<X, V> {
 	int x = 1, y = 2;
 	std::string z = "pasta";
@@ -51,55 +68,39 @@ struct Z: ash::dynamic<Z, X> {
 };
 ASH_REGISTER(z::Z);}
 
+template <typename T> void f() {
+	std::cerr << "XXX: " << __PRETTY_FUNCTION__ << std::endl;
+}
+
 int main() {
+	using A = ash::mpt::pack<>;
+	using B = ash::mpt::insert_into_t<int, A>;
+	using C = ash::mpt::insert_into_t<int, B>;
+	using D = ash::mpt::insert_into_t<double, C>;
+	using E = ash::mpt::insert_into_t<int, D>;
+	f<E>();
+
 	std::cerr << std::hex;
-	std::cerr << ash::traits::type_hash<signed int>::value << std::endl;
-	std::cerr << ash::traits::type_hash<unsigned int>::value << std::endl;
-	std::cerr << ash::traits::type_hash<long double>::value << std::endl;
-	std::cerr << ash::traits::type_hash<ash::status>::value << std::endl;
-	std::cerr << ash::traits::type_hash<unsigned int[1]>::value << std::endl;
-	std::cerr << ash::traits::type_hash<unsigned int[2]>::value << std::endl;
+	std::cerr
+			<< ash::traits::get_custom_serialization_version<signed int,
+					ash::native_binary_encoder>::value << std::endl;
 
-	std::cerr << ash::traits::type_hash<signed int[1]>::value << std::endl;
-	std::cerr << ash::traits::type_hash<signed int[2]>::value << std::endl;
+	std::cerr
+			<< ash::traits::type_hash<signed int, ash::native_binary_encoder>::value
+			<< std::endl;
+	std::cerr
+			<< ash::traits::type_hash<std::tuple<int>,
+					ash::native_binary_encoder>::value << std::endl;
 
-	std::cerr << ash::traits::type_hash<std::array<signed int, 2>>::value
+	std::cerr << ash::traits::type_hash<V, ash::native_binary_encoder>::value
 			<< std::endl;
-
-	std::cerr << ash::traits::type_hash<signed int[2][3]>::value << std::endl;
-
-	std::cerr << ash::traits::type_hash<std::pair<int, double>>::value
+	std::cerr << ash::traits::type_hash<V2, ash::native_binary_encoder>::value
 			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::tuple<int, double>>::value
+	std::cerr << ash::traits::type_hash<X, ash::native_binary_encoder>::value
 			<< std::endl;
-
-	std::cerr << ash::traits::type_hash<std::vector<std::pair<int, double>>>::value
+	std::cerr << ash::traits::type_hash<Y, ash::native_binary_encoder>::value
 			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::set<std::pair<int, double>>>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::multiset<std::pair<int, double>>>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::map<int, double>>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<ash::vector_map<int, double>>::value
-			<< std::endl;
-
-	std::cerr << ash::traits::type_hash<std::unique_ptr<char>>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::shared_ptr<char>>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::weak_ptr<char>>::value
-			<< std::endl;
-
-	std::cerr << ash::traits::type_hash<std::vector<char>>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<std::string>::value
-			<< std::endl;
-
-	/*
-	 std::cerr << ash::traits::type_hash<ash::status_or<int>>::value
-	 << std::endl;
-	 */
+	//std::cerr << ash::traits::type_hash<z::Z, ash::native_binary_encoder>::value << std::endl;
 
 	//ASH_CHECK(3 == 4);
 	ash::status_or<int> code;

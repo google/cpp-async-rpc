@@ -44,6 +44,8 @@ private:
 	}
 };
 
+}  // namespace detail
+
 /// A field_descriptor type specifies how to access one data member.
 template<typename MPtr, MPtr m_ptr>
 struct field_descriptor;
@@ -55,7 +57,6 @@ struct field_descriptor<T C::*, m_ptr> {
 	using member_type = T;
 	static constexpr auto member_pointer = m_ptr;
 };
-}  // namespace detail
 
 /// Inherit publicly from this in serializable classes, specifying own type and public bases.
 template<typename OwnType, typename ...Bases>
@@ -68,7 +69,7 @@ template<typename OwnType, typename ...Bases>
 using dynamic = mpt::conditional_t<(mpt::count_if(mpt::pack<Bases...> {}, detail::dynamic_class_filter {}) > 0), serializable<OwnType, Bases...>, serializable<OwnType, ::ash::dynamic_base_class, Bases...>>;
 
 /// Define a `field_descriptor` type for a member field named `NAME`.
-#define ASH_FIELD(NAME) ::ash::detail::field_descriptor<decltype(&own_type::NAME), &own_type::NAME>
+#define ASH_FIELD(NAME) ::ash::field_descriptor<decltype(&own_type::NAME), &own_type::NAME>
 #define ASH_FIELD_SEP() ,
 
 /// Needed to find our own type in template classes, as the base class is dependent.
@@ -77,6 +78,9 @@ using dynamic = mpt::conditional_t<(mpt::count_if(mpt::pack<Bases...> {}, detail
 /// Define the list of `field_descriptor` elements for the current class.
 #define ASH_FIELDS(...) \
 	using field_descriptors = ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>
+
+/// Version of the load/save methods.
+#define ASH_CUSTOM_SERIALIZATION_VERSION(VERSION) static_assert( VERSION != 0, "Custom serialization version must be non-zero."); static constexpr std::size_t custom_serialization_version = VERSION
 
 }  // namespace ash
 

@@ -784,9 +784,16 @@ constexpr std::size_t count_if(T&& t, O o) {
 	return size<decltype(find_if(std::forward<T>(t), o))>::value;
 }
 
+template <typename T, typename Pack>
+struct is_in {
+	static constexpr bool value = (count_if(Pack{}, is<T>{}) > 0);
+};
+
+template <typename T, typename Pack>
+using insert_into_t = conditional_t<is_in<T, Pack>::value, Pack, decltype(cat(Pack{}, pack<T>{}))>;
+
 }  // namespace mpt
 
-}
-// namespace ash
+}  // namespace ash
 
 #endif /* ASH_MPT_H_ */
