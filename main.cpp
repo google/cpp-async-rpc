@@ -102,6 +102,7 @@ int main() {
 	std::cerr << ash::traits::type_hash<Y, ash::native_binary_encoder>::value
 			<< std::endl;
 	std::cerr << ash::traits::type_hash<z::Z, ash::native_binary_encoder>::value << std::endl;
+	std::cerr << ash::traits::type_hash<std::shared_ptr<z::Z>, ash::native_binary_encoder>::value << std::endl;
 
 	//ASH_CHECK(3 == 4);
 	ash::status_or<int> code;
@@ -117,25 +118,25 @@ int main() {
 	z->z = "rosco";
 
 	ash::binary_sizer bs;
-	ASH_CHECK_OK(bs(code1));
+	ASH_CHECK_OK(bs(code1, ash::verify_structure{}));
 	ASH_CHECK_OK(bs(x));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(w));
 	ASH_CHECK_OK(bs(y));
-	ASH_CHECK_OK(bs(z));
+	ASH_CHECK_OK(bs(z, ash::verify_structure{}));
 	std::cerr << "SIZE: " << bs.size() << std::endl;
 
 	std::ostringstream oss;
 	ash::ostream_output_stream osa(oss);
 	ash::native_binary_encoder nbe(osa);
-	ASH_CHECK_OK(nbe(code1));
+	ASH_CHECK_OK(nbe(code1, ash::verify_structure{}));
 	ASH_CHECK_OK(nbe(x));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(w));
 	ASH_CHECK_OK(nbe(y));
-	ASH_CHECK_OK(nbe(z));
+	ASH_CHECK_OK(nbe(z, ash::verify_structure{}));
 
 	std::istringstream iss(oss.str());
 	ash::istream_input_stream isa(iss);
@@ -147,13 +148,13 @@ int main() {
 	std::unique_ptr<Y> y2;
 	std::shared_ptr<z::Z> z2;
 
-	ASH_CHECK_OK(nbd(code));
+	ASH_CHECK_OK(nbd(code, ash::verify_structure{}));
 	ASH_CHECK_OK(nbd(x2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(w2));
 	ASH_CHECK_OK(nbd(y2));
-	ASH_CHECK_OK(nbd(z2));
+	ASH_CHECK_OK(nbd(z2, ash::verify_structure{}));
 
 	std::cerr << ash::name(code) << "(" << ash::code(code) << "): "
 			<< ash::ok(code) << std::endl;

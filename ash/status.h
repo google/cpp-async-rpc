@@ -33,7 +33,7 @@ const char* name(status value) {
 	return ::ash::enum_names<status>::name(value);
 }
 
-#if 0
+#if 1
 #define ASH_CHECK(x) do { \
 	if (!(x)) { \
 		std::cerr << "ERROR(" << __FILE__ << ":" <<  __LINE__ << "): Check failed: " << #x << std::endl; \

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "ash/traits.h"
+#include "ash/type_hash.h"
 #include "ash/mpt.h"
 #include "ash/io_adapters.h"
 #include "ash/registry.h"
@@ -19,12 +20,24 @@
 
 namespace ash {
 
+// Tag class to enable type compatibility hashes in serialized data.
+struct verify_structure {
+};
+
 // Binary encoder.
 template<typename MyClass, typename Adapter, bool reverse_bytes>
 class binary_encoder {
 public:
 	binary_encoder(Adapter out) :
 			out_(out) {
+	}
+
+	// Tag processing variant that'll write a structure hash to the output.
+	template<typename T, typename ... Tags>
+	status operator()(const T& o, verify_structure, Tags ... tags) {
+		const std::uint32_t type_hash = traits::type_hash<T, MyClass>::value;
+		ASH_RETURN_IF_ERROR((*this)(type_hash));
+		return (*this)(o, tags...);
 	}
 
 	// Special case for const char*, compatible with std::string de-serialization.
@@ -345,6 +358,17 @@ private:
 public:
 	binary_decoder(Adapter in) :
 			in_(in) {
+	}
+
+	// Tag processing variant that'll read a structure hash to the input and verify it.
+	template<typename T, typename ... Tags>
+	status operator()(T& o, verify_structure, Tags ... tags) {
+		std::uint32_t type_hash;
+		ASH_RETURN_IF_ERROR((*this)(type_hash));
+		if (type_hash != traits::type_hash<T, MyClass>::value) {
+			return status::INVALID_ARGUMENT;
+		}
+		return (*this)(o, tags...);
 	}
 
 	// Serializable scalar.
