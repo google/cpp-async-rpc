@@ -1,6 +1,7 @@
 #ifndef ASH_REGISTRY_H_
 #define ASH_REGISTRY_H_
 
+#include <cstdint>
 #include <cstring>
 #include <map>
 #include <memory>
@@ -10,6 +11,7 @@
 #include "ash/dynamic_base_class.h"
 #include "ash/singleton.h"
 #include "ash/status_or.h"
+#include "ash/type_hash.h"
 #include "ash/vector_assoc.h"
 
 namespace ash {
@@ -55,6 +57,10 @@ template<typename S>
 class dynamic_encoder_registry: public singleton<dynamic_encoder_registry<S>> {
 public:
 	using encoder_function_type = status (*)(S&, const ::ash::dynamic_base_class&);
+	struct info {
+		encoder_function_type encoder_function;
+		std::uint32_t type_hash;
+	};
 
 	template<typename T>
 	void register_class(const char* class_name) {
@@ -62,19 +68,19 @@ public:
 			return s(static_cast<const T&>(o));
 		};
 
-		ASH_CHECK(encoder_function_map_.emplace(class_name, (f)).second);
+		ASH_CHECK(encoder_info_map_.emplace(class_name, info { (f),
+				traits::type_hash<T, S>::value }).second);
 	}
 
-	status_or<encoder_function_type> operator[](const char* class_name) const {
-		const auto it = encoder_function_map_.find(class_name);
-		if (it == encoder_function_map_.end())
+	status_or<info> operator[](const char* class_name) const {
+		const auto it = encoder_info_map_.find(class_name);
+		if (it == encoder_info_map_.end())
 			return status::NOT_FOUND;
 		return it->second;
 	}
 
 private:
-	ash::vector_map<const char*, encoder_function_type,
-			detail::const_char_ptr_compare> encoder_function_map_;
+	ash::vector_map<const char*, info, detail::const_char_ptr_compare> encoder_info_map_;
 };
 
 namespace detail {
@@ -92,6 +98,10 @@ template<typename S>
 class dynamic_decoder_registry: public singleton<dynamic_decoder_registry<S>> {
 public:
 	using decoder_function_type = status (*)(S&, ::ash::dynamic_base_class&);
+	struct info {
+		decoder_function_type decoder_function;
+		std::uint32_t type_hash;
+	};
 
 	template<typename T>
 	void register_class(const char* class_name) {
@@ -99,19 +109,19 @@ public:
 			return s(static_cast<T&>(o));
 		};
 
-		ASH_CHECK(decoder_function_map_.emplace(class_name, (f)).second);
+		ASH_CHECK(decoder_info_map_.emplace(class_name, info { (f),
+				traits::type_hash<T, S>::value }).second);
 	}
 
-	status_or<decoder_function_type> operator[](const char* class_name) const {
-		const auto it = decoder_function_map_.find(class_name);
-		if (it == decoder_function_map_.end())
+	status_or<info> operator[](const char* class_name) const {
+		const auto it = decoder_info_map_.find(class_name);
+		if (it == decoder_info_map_.end())
 			return status::NOT_FOUND;
 		return it->second;
 	}
 
 private:
-	ash::vector_map<const char*, decoder_function_type,
-			detail::const_char_ptr_compare> decoder_function_map_;
+	ash::vector_map<const char*, info, detail::const_char_ptr_compare> decoder_info_map_;
 };
 
 namespace detail {

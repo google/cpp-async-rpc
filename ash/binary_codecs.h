@@ -173,20 +173,20 @@ private:
 	status save_dynamic_object_reference(const ::ash::dynamic_base_class& o) {
 		const char* class_name = o.portable_class_name();
 		auto it = class_info_map_.find(class_name);
-		bool first_time = false;
 		if (it == class_info_map_.end()) {
 			// Not cached yet. Need to interrogate the dynamic_encoder_registry for this class.
-			typename registry::dynamic_encoder_registry<MyClass>::encoder_function_type encoder_function;
-			ASH_ASSIGN_OR_RETURN(encoder_function,
+			typename registry::dynamic_encoder_registry<MyClass>::info encoder_info;
+			ASH_ASSIGN_OR_RETURN(encoder_info,
 					registry::dynamic_encoder_registry<MyClass>::get()[class_name]);
 			std::size_t next_class_id = class_info_map_.size();
 			it = class_info_map_.emplace(class_name, class_info { next_class_id,
-					encoder_function }).first;
-			first_time = true;
-		}
-		ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
-		if (first_time) {
+					encoder_info.encoder_function }).first;
+			ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
 			ASH_RETURN_IF_ERROR((*this)(class_name));
+			ASH_RETURN_IF_ERROR((*this)(encoder_info.type_hash));
+		}
+		else {
+			ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
 		}
 		return it->second.encoder_function(static_cast<MyClass&>(*this), o);
 	}
@@ -592,14 +592,19 @@ private:
 			// Not seen yet. Need to read a class name and interrogate the dynamic_object_factory and dynamic_decoder_registry for this class.
 			std::string class_name;
 			ASH_RETURN_IF_ERROR((*this)(class_name));
+			std::uint32_t type_hash;
+			ASH_RETURN_IF_ERROR((*this)(type_hash));
 			registry::dynamic_object_factory::factory_function_type factory_function;
-			typename registry::dynamic_decoder_registry<MyClass>::decoder_function_type decoder_function;
+			typename registry::dynamic_decoder_registry<MyClass>::info decoder_info;
 			ASH_ASSIGN_OR_RETURN(factory_function,
 					registry::dynamic_object_factory::get()[class_name.c_str()]);
-			ASH_ASSIGN_OR_RETURN(decoder_function,
+			ASH_ASSIGN_OR_RETURN(decoder_info,
 					registry::dynamic_decoder_registry<MyClass>::get()[class_name.c_str()]);
+			if (type_hash != decoder_info.type_hash) {
+				return status::INVALID_ARGUMENT;
+			}
 			class_info_vector_.push_back(class_info { class_name,
-					factory_function, decoder_function });
+					factory_function, decoder_info.decoder_function });
 		}
 
 		// Info structure for the concrete class.
