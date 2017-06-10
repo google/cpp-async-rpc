@@ -1,6 +1,8 @@
 #ifndef ASH_SERIALIZABLE_BASE_H_
 #define ASH_SERIALIZABLE_BASE_H_
 
+#include <cstdint>
+
 #include "ash/dynamic_base_class.h"
 #include "ash/mpt.h"
 #include "ash/preprocessor.h"
@@ -80,7 +82,7 @@ using dynamic = mpt::conditional_t<(mpt::count_if(mpt::pack<Bases...> {}, detail
 	using field_descriptors = ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>
 
 /// Version of the load/save methods.
-#define ASH_CUSTOM_SERIALIZATION_VERSION(VERSION) static_assert( VERSION != 0, "Custom serialization version must be non-zero."); static constexpr std::size_t custom_serialization_version = VERSION
+#define ASH_CUSTOM_SERIALIZATION_VERSION(VERSION) static_assert( VERSION != 0, "Custom serialization version must be non-zero."); static constexpr std::uint32_t custom_serialization_version = VERSION
 
 }  // namespace ash
 

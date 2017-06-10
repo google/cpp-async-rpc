@@ -111,6 +111,19 @@ struct enable_if_type {
 			T, typename ::ash::traits::enable_if_type<typename T:: TYPE_NAME >::type> \
 			: public std::true_type {};
 
+/// \brief Define a checker template struct to verify whether a class has a named internal compile-time constant.
+///
+/// The generated checker struct will be named `has_{CONSTANT_NAME}`.
+///
+/// \param CONSTANT_NAME Name of the nested constant to check for.
+#define ASH_DEFINE_HAS_INNER_CONSTANT_CHECKER(CONSTANT_NAME) \
+		template<typename T, typename VT, typename Enable = void> \
+		struct has_ ## CONSTANT_NAME : public std::false_type {}; \
+		template<typename T, typename VT> \
+		struct has_ ## CONSTANT_NAME < \
+			T, VT, typename std::enable_if<std::is_same<const VT, decltype(T:: CONSTANT_NAME)>::value>::type> \
+			: public std::true_type {};
+
 /// \brief Check wether `T` is a POD scalar that can be serialized by serializing its memory as-is.
 ///
 /// Whether a type is a scalar type that has a stable meaning when serialized between
@@ -224,47 +237,35 @@ struct get_base_classes<T,
 	using type = mpt::pack<>;
 };
 
-/// Check whether a class has a `Ret save(Args...) const` method.
-ASH_DEFINE_HAS_CONST_METHOD_CHECKER(save);
+/// Check whether a class has defines custom_serialization_version constant.
+ASH_DEFINE_HAS_INNER_CONSTANT_CHECKER(custom_serialization_version);
 
-/// Check whether a class has a `Ret load(Args...)` method.
-ASH_DEFINE_HAS_METHOD_CHECKER(load);
-
-/// \brief Check if a type `T` implements custom serialization for a codec `S`.
-/// The result is `true` if the type has either of a custom `load` or `save
-/// method suitable for the particular codec.
-template<typename T, typename S>
-struct has_custom_serialization: std::integral_constant<bool,
-		has_save<T, void(S&)>::value || has_load<T, void(S&)>::value> {
+/// \brief Check if a type `T` implements custom serialization.
+/// The result is `true` if the type defines a uint32_t custom_serialization_version constant.
+template<typename T>
+struct has_custom_serialization: has_custom_serialization_version<T,
+		std::uint32_t> {
 };
 
-template<typename T, typename S, typename Enable = void>
+template<typename T, typename Enable = void>
 struct get_custom_serialization_version;
-template<typename T, typename S>
-struct get_custom_serialization_version<T, S,
-		typename std::enable_if<has_custom_serialization<T, S>::value>::type> {
+template<typename T>
+struct get_custom_serialization_version<T,
+		typename std::enable_if<has_custom_serialization<T>::value>::type> {
 	static constexpr std::size_t value = T::custom_serialization_version;
 };
-template<typename T, typename S>
-struct get_custom_serialization_version<T, S,
-		typename std::enable_if<!has_custom_serialization<T, S>::value>::type> {
+template<typename T>
+struct get_custom_serialization_version<T,
+		typename std::enable_if<!has_custom_serialization<T>::value>::type> {
 	static constexpr std::size_t value = 0;
 };
 
-/// \brief Check if a type `T` can be saved into a codec `S`.
+/// \brief Check if a type `T` can be serialized.
 /// The result is `true` if the type either has field descriptors defined or
-/// it implements a suitable `save` method.
-template<typename T, typename S>
-struct can_be_saved: std::integral_constant<bool,
-		has_field_descriptors<T>::value || has_save<T, void(S&)>::value> {
-};
-
-/// \brief Check if a type `T` can be loaded from a codec `S`.
-/// The result is `true` if the type either has field descriptors defined or
-/// it implements a suitable `load` method.
-template<typename T, typename S>
-struct can_be_loaded: std::integral_constant<bool,
-		has_field_descriptors<T>::value || has_load<T, void(S&)>::value> {
+/// it implements custom serialization.
+template<typename T>
+struct can_be_serialized: std::integral_constant<bool,
+		has_field_descriptors<T>::value || has_custom_serialization<T>::value> {
 };
 
 }  // namespace traits

@@ -35,7 +35,7 @@ public:
 	// Tag processing variant that'll write a structure hash to the output.
 	template<typename T, typename ... Tags>
 	status operator()(const T& o, verify_structure, Tags ... tags) {
-		const std::uint32_t type_hash = traits::type_hash<T, MyClass>::value;
+		const std::uint32_t type_hash = traits::type_hash<T>::value;
 		ASH_RETURN_IF_ERROR((*this)(type_hash));
 		return (*this)(o, tags...);
 	}
@@ -98,8 +98,8 @@ public:
 
 	// Saveable objects.
 	template<typename T>
-	typename std::enable_if<traits::can_be_saved<T, binary_encoder>::value,
-			status>::type operator()(const T& o) {
+	typename std::enable_if<traits::can_be_serialized<T>::value, status>::type operator()(
+			const T& o) {
 		ASH_RETURN_IF_ERROR(save_base_classes(o));
 		ASH_RETURN_IF_ERROR(save_fields(o));
 		return invoke_save(o);
@@ -184,8 +184,7 @@ private:
 			ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
 			ASH_RETURN_IF_ERROR((*this)(class_name));
 			ASH_RETURN_IF_ERROR((*this)(encoder_info.type_hash));
-		}
-		else {
+		} else {
 			ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
 		}
 		return it->second.encoder_function(static_cast<MyClass&>(*this), o);
@@ -255,14 +254,14 @@ private:
 
 	// Invoke the save method, if present.
 	template<typename T>
-	typename std::enable_if<traits::has_save<T, status(binary_encoder&)>::value,
-			status>::type invoke_save(const T& o) {
+	typename std::enable_if<traits::has_custom_serialization<T>::value, status>::type invoke_save(
+			const T& o) {
+		static_assert( traits::get_custom_serialization_version<T>::value != 0, "Custom serialization version must be non-zero.");
 		return o.save(*this);
 	}
 
 	template<typename T>
-	typename std::enable_if<
-			!traits::has_save<T, status(binary_encoder&)>::value, status>::type invoke_save(
+	typename std::enable_if<!traits::has_custom_serialization<T>::value, status>::type invoke_save(
 			const T& o) {
 		return status::OK;
 	}
@@ -365,7 +364,7 @@ public:
 	status operator()(T& o, verify_structure, Tags ... tags) {
 		std::uint32_t type_hash;
 		ASH_RETURN_IF_ERROR((*this)(type_hash));
-		if (type_hash != traits::type_hash<T, MyClass>::value) {
+		if (type_hash != traits::type_hash<T>::value) {
 			return status::INVALID_ARGUMENT;
 		}
 		return (*this)(o, tags...);
@@ -469,8 +468,8 @@ public:
 
 	// Loadable objects.
 	template<typename T>
-	typename std::enable_if<traits::can_be_loaded<T, binary_decoder>::value,
-			status>::type operator()(T& o) {
+	typename std::enable_if<traits::can_be_serialized<T>::value, status>::type operator()(
+			T& o) {
 		ASH_RETURN_IF_ERROR(load_base_classes(o));
 		ASH_RETURN_IF_ERROR(load_fields(o));
 		return invoke_load(o);
@@ -689,14 +688,14 @@ private:
 
 	// Invoke the load method, if present.
 	template<typename T>
-	typename std::enable_if<traits::has_load<T, status(binary_decoder&)>::value,
-			status>::type invoke_load(T& o) {
+	typename std::enable_if<traits::has_custom_serialization<T>::value, status>::type invoke_load(
+			T& o) {
+		static_assert( traits::get_custom_serialization_version<T>::value != 0, "Custom serialization version must be non-zero.");
 		return o.load(*this);
 	}
 
 	template<typename T>
-	typename std::enable_if<
-			!traits::has_load<T, status(binary_decoder&)>::value, status>::type invoke_load(
+	typename std::enable_if<!traits::has_custom_serialization<T>::value, status>::type invoke_load(
 			T& o) {
 		return status::OK;
 	}

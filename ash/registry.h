@@ -69,7 +69,7 @@ public:
 		};
 
 		ASH_CHECK(encoder_info_map_.emplace(class_name, info { (f),
-				traits::type_hash<T, S>::value }).second);
+				traits::type_hash<T>::value }).second);
 	}
 
 	status_or<info> operator[](const char* class_name) const {
@@ -110,7 +110,7 @@ public:
 		};
 
 		ASH_CHECK(decoder_info_map_.emplace(class_name, info { (f),
-				traits::type_hash<T, S>::value }).second);
+				traits::type_hash<T>::value }).second);
 	}
 
 	status_or<info> operator[](const char* class_name) const {

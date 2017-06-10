@@ -34,11 +34,13 @@ struct V2: ash::dynamic<V2> {
 	ASH_FIELDS(a);
 
 	template<typename S>
-	void save(S&) const {
+	ash::status save(S&) const {
+		return ash::status::OK;
 	}
 
 	template<typename S>
-	void load(S&) {
+	ash::status load(S&) {
+		return ash::status::OK;
 	}
 
 	ASH_CUSTOM_SERIALIZATION_VERSION(1);
@@ -69,11 +71,21 @@ struct Z: ash::dynamic<Z, X> {
 };
 ASH_REGISTER(z::Z);}
 
-template <typename T> void f() {
+template<typename T> void f() {
 	std::cerr << "XXX: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
+struct kk {
+	static constexpr int roro = 1;
+};
+
+ASH_DEFINE_HAS_INNER_CONSTANT_CHECKER(roro);
+
 int main() {
+	f<decltype(kk::roro)>();
+	std::cerr << has_roro<kk, int>::value << std::endl;
+	std::cerr << has_roro<Y, int>::value << std::endl;
+
 	using A = ash::mpt::pack<>;
 	using B = ash::mpt::insert_into_t<int, A>;
 	using C = ash::mpt::insert_into_t<int, B>;
@@ -83,26 +95,19 @@ int main() {
 
 	std::cerr << std::hex;
 	std::cerr
-			<< ash::traits::get_custom_serialization_version<signed int,
-					ash::native_binary_encoder>::value << std::endl;
+			<< ash::traits::get_custom_serialization_version<signed int>::value
+			<< std::endl;
 
-	std::cerr
-			<< ash::traits::type_hash<signed int, ash::native_binary_encoder>::value
-			<< std::endl;
-	std::cerr
-			<< ash::traits::type_hash<std::tuple<int>,
-					ash::native_binary_encoder>::value << std::endl;
+	std::cerr << ash::traits::type_hash<signed int>::value << std::endl;
+	std::cerr << ash::traits::type_hash<std::tuple<int>>::value << std::endl;
 
-	std::cerr << ash::traits::type_hash<V, ash::native_binary_encoder>::value
+	std::cerr << ash::traits::type_hash<V>::value << std::endl;
+	std::cerr << ash::traits::type_hash<V2>::value << std::endl;
+	std::cerr << ash::traits::type_hash<X>::value << std::endl;
+	std::cerr << ash::traits::type_hash<Y>::value << std::endl;
+	std::cerr << ash::traits::type_hash<z::Z>::value << std::endl;
+	std::cerr << ash::traits::type_hash<std::shared_ptr<z::Z>>::value
 			<< std::endl;
-	std::cerr << ash::traits::type_hash<V2, ash::native_binary_encoder>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<X, ash::native_binary_encoder>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<Y, ash::native_binary_encoder>::value
-			<< std::endl;
-	std::cerr << ash::traits::type_hash<z::Z, ash::native_binary_encoder>::value << std::endl;
-	std::cerr << ash::traits::type_hash<std::shared_ptr<z::Z>, ash::native_binary_encoder>::value << std::endl;
 
 	//ASH_CHECK(3 == 4);
 	ash::status_or<int> code;
@@ -118,25 +123,25 @@ int main() {
 	z->z = "rosco";
 
 	ash::binary_sizer bs;
-	ASH_CHECK_OK(bs(code1, ash::verify_structure{}));
+	ASH_CHECK_OK(bs(code1, ash::verify_structure { }));
 	ASH_CHECK_OK(bs(x));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(v));
 	ASH_CHECK_OK(bs(w));
 	ASH_CHECK_OK(bs(y));
-	ASH_CHECK_OK(bs(z, ash::verify_structure{}));
+	ASH_CHECK_OK(bs(z, ash::verify_structure { }));
 	std::cerr << "SIZE: " << bs.size() << std::endl;
 
 	std::ostringstream oss;
 	ash::ostream_output_stream osa(oss);
 	ash::native_binary_encoder nbe(osa);
-	ASH_CHECK_OK(nbe(code1, ash::verify_structure{}));
+	ASH_CHECK_OK(nbe(code1, ash::verify_structure { }));
 	ASH_CHECK_OK(nbe(x));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(v));
 	ASH_CHECK_OK(nbe(w));
 	ASH_CHECK_OK(nbe(y));
-	ASH_CHECK_OK(nbe(z, ash::verify_structure{}));
+	ASH_CHECK_OK(nbe(z, ash::verify_structure { }));
 
 	std::istringstream iss(oss.str());
 	ash::istream_input_stream isa(iss);
@@ -148,13 +153,13 @@ int main() {
 	std::unique_ptr<Y> y2;
 	std::shared_ptr<z::Z> z2;
 
-	ASH_CHECK_OK(nbd(code, ash::verify_structure{}));
+	ASH_CHECK_OK(nbd(code, ash::verify_structure { }));
 	ASH_CHECK_OK(nbd(x2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(v2));
 	ASH_CHECK_OK(nbd(w2));
 	ASH_CHECK_OK(nbd(y2));
-	ASH_CHECK_OK(nbd(z2, ash::verify_structure{}));
+	ASH_CHECK_OK(nbd(z2, ash::verify_structure { }));
 
 	std::cerr << ash::name(code) << "(" << ash::code(code) << "): "
 			<< ash::ok(code) << std::endl;
