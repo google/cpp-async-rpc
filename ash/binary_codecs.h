@@ -146,7 +146,7 @@ public:
 	}
 
 private:
-	struct class_info {
+	struct seen_class_info {
 		std::size_t class_id;
 		typename registry::dynamic_encoder_registry<MyClass>::encoder_function_type encoder_function;
 	};
@@ -174,16 +174,19 @@ private:
 		const char* class_name = o.portable_class_name();
 		auto it = class_info_map_.find(class_name);
 		if (it == class_info_map_.end()) {
-			// Not cached yet. Need to interrogate the dynamic_encoder_registry for this class.
+			// Not cached yet. Need to interrogate the registries for this class.
+			typename registry::dynamic_object_factory::info class_info;
 			typename registry::dynamic_encoder_registry<MyClass>::info encoder_info;
+			ASH_ASSIGN_OR_RETURN(class_info,
+					registry::dynamic_object_factory::get()[class_name]);
 			ASH_ASSIGN_OR_RETURN(encoder_info,
 					registry::dynamic_encoder_registry<MyClass>::get()[class_name]);
 			std::size_t next_class_id = class_info_map_.size();
-			it = class_info_map_.emplace(class_name, class_info { next_class_id,
-					encoder_info.encoder_function }).first;
+			it = class_info_map_.emplace(class_name, seen_class_info {
+					next_class_id, encoder_info.encoder_function }).first;
 			ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
 			ASH_RETURN_IF_ERROR((*this)(class_name));
-			ASH_RETURN_IF_ERROR((*this)(encoder_info.type_hash));
+			ASH_RETURN_IF_ERROR((*this)(class_info.type_hash));
 		} else {
 			ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
 		}
@@ -320,7 +323,7 @@ private:
 	}
 
 	// Here we depend on portable_class_name() returning identical pointers for speed.
-	ash::vector_map<const char*, class_info> class_info_map_;
+	ash::vector_map<const char*, seen_class_info> class_info_map_;
 	ash::vector_map<void*, std::size_t> shared_object_map_ = { { nullptr, 0 } };
 
 protected:
@@ -548,7 +551,7 @@ public:
 	}
 
 private:
-	struct class_info {
+	struct seen_class_info {
 		std::string class_name;
 		registry::dynamic_object_factory::factory_function_type factory_function;
 		typename registry::dynamic_decoder_registry<MyClass>::decoder_function_type decoder_function;
@@ -593,17 +596,18 @@ private:
 			ASH_RETURN_IF_ERROR((*this)(class_name));
 			std::uint32_t type_hash;
 			ASH_RETURN_IF_ERROR((*this)(type_hash));
-			registry::dynamic_object_factory::factory_function_type factory_function;
+			registry::dynamic_object_factory::info class_info;
 			typename registry::dynamic_decoder_registry<MyClass>::info decoder_info;
-			ASH_ASSIGN_OR_RETURN(factory_function,
+			ASH_ASSIGN_OR_RETURN(class_info,
 					registry::dynamic_object_factory::get()[class_name.c_str()]);
 			ASH_ASSIGN_OR_RETURN(decoder_info,
 					registry::dynamic_decoder_registry<MyClass>::get()[class_name.c_str()]);
-			if (type_hash != decoder_info.type_hash) {
+			if (type_hash != class_info.type_hash) {
 				return status::INVALID_ARGUMENT;
 			}
-			class_info_vector_.push_back(class_info { class_name,
-					factory_function, decoder_info.decoder_function });
+			class_info_vector_.push_back(
+					seen_class_info { class_name, class_info.factory_function,
+							decoder_info.decoder_function });
 		}
 
 		// Info structure for the concrete class.
@@ -756,7 +760,7 @@ private:
 		return in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
 	}
 
-	std::vector<class_info> class_info_vector_;
+	std::vector<seen_class_info> class_info_vector_;
 	std::vector<shared_object_info> shared_object_vector_ = {
 			shared_object_info { nullptr, nullptr } };
 

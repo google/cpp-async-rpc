@@ -59,7 +59,6 @@ public:
 	using encoder_function_type = status (*)(S&, const ::ash::dynamic_base_class&);
 	struct info {
 		encoder_function_type encoder_function;
-		std::uint32_t type_hash;
 	};
 
 	template<typename T>
@@ -68,8 +67,7 @@ public:
 			return s(static_cast<const T&>(o));
 		};
 
-		ASH_CHECK(encoder_info_map_.emplace(class_name, info { (f),
-				traits::type_hash<T>::value }).second);
+		ASH_CHECK(encoder_info_map_.emplace(class_name, info { (f) }).second);
 	}
 
 	status_or<info> operator[](const char* class_name) const {
@@ -100,7 +98,6 @@ public:
 	using decoder_function_type = status (*)(S&, ::ash::dynamic_base_class&);
 	struct info {
 		decoder_function_type decoder_function;
-		std::uint32_t type_hash;
 	};
 
 	template<typename T>
@@ -109,8 +106,7 @@ public:
 			return s(static_cast<T&>(o));
 		};
 
-		ASH_CHECK(decoder_info_map_.emplace(class_name, info { (f),
-				traits::type_hash<T>::value }).second);
+		ASH_CHECK(decoder_info_map_.emplace(class_name, info { (f) }).second);
 	}
 
 	status_or<info> operator[](const char* class_name) const {
@@ -138,6 +134,10 @@ struct register_decoder {
 class dynamic_object_factory: public singleton<dynamic_object_factory> {
 public:
 	using factory_function_type = ::ash::dynamic_base_class* (*)();
+	struct info {
+		factory_function_type factory_function;
+		std::uint32_t type_hash;
+	};
 
 	template<typename T, typename Encoders, typename Decoders>
 	const char* register_class(const char* class_name) {
@@ -147,7 +147,8 @@ public:
 		factory_function_type f = []() {
 			return static_cast<::ash::dynamic_base_class*>(new T());
 		};
-		ASH_CHECK(factory_function_map_.emplace(class_name, (f)).second);
+		ASH_CHECK(factory_function_map_.emplace(class_name, info { (f),
+				traits::type_hash<T>::value }).second);
 
 		// Register the class into the class hierarchy.
 		dynamic_subclass_registry<T>::get().register_subclass(class_name);
@@ -163,7 +164,7 @@ public:
 		return class_name;
 	}
 
-	status_or<factory_function_type> operator[](const char* class_name) const {
+	status_or<info> operator[](const char* class_name) const {
 		const auto it = factory_function_map_.find(class_name);
 		if (it == factory_function_map_.end())
 			return status::NOT_FOUND;
@@ -171,8 +172,7 @@ public:
 	}
 
 private:
-	ash::vector_map<const char*, factory_function_type,
-			detail::const_char_ptr_compare> factory_function_map_;
+	ash::vector_map<const char*, info, detail::const_char_ptr_compare> factory_function_map_;
 };
 
 using type_id = const void *;
