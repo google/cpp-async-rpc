@@ -9,7 +9,6 @@
 #include "ash/mpt.h"
 #include "ash/serializable.h"
 #include "ash/iostream_adapters.h"
-#include "ash/vector_assoc.h"
 
 template<typename R>
 struct K: ash::serializable<K<R>> {

@@ -1,3 +1,4 @@
-docs/
-
-/main
+/builddir/
+/.settings/
+/.cproject
+/.project

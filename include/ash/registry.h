@@ -12,7 +12,8 @@
 #include "ash/singleton.h"
 #include "ash/status_or.h"
 #include "ash/type_hash.h"
-#include "ash/vector_assoc.h"
+#include "ash/container/flat_map.h"
+#include "ash/container/flat_set.h"
 
 namespace ash {
 
@@ -34,7 +35,7 @@ public:
 		return dynamic_subclass_set_.count(class_name) == 1;
 	}
 private:
-	ash::vector_set<const char*, detail::const_char_ptr_compare> dynamic_subclass_set_;
+	ash::flat_set<const char*, detail::const_char_ptr_compare> dynamic_subclass_set_;
 };
 
 namespace detail {
@@ -78,7 +79,7 @@ public:
 	}
 
 private:
-	ash::vector_map<const char*, info, detail::const_char_ptr_compare> encoder_info_map_;
+	ash::flat_map<const char*, info, detail::const_char_ptr_compare> encoder_info_map_;
 };
 
 namespace detail {
@@ -117,7 +118,7 @@ public:
 	}
 
 private:
-	ash::vector_map<const char*, info, detail::const_char_ptr_compare> decoder_info_map_;
+	ash::flat_map<const char*, info, detail::const_char_ptr_compare> decoder_info_map_;
 };
 
 namespace detail {
@@ -172,7 +173,7 @@ public:
 	}
 
 private:
-	ash::vector_map<const char*, info, detail::const_char_ptr_compare> factory_function_map_;
+	ash::flat_map<const char*, info, detail::const_char_ptr_compare> factory_function_map_;
 };
 
 using type_id = const void *;

@@ -16,7 +16,7 @@
 #include "ash/io_adapters.h"
 #include "ash/registry.h"
 #include "ash/status_or.h"
-#include "ash/vector_assoc.h"
+#include "ash/container/flat_map.h"
 
 namespace ash {
 
@@ -323,8 +323,8 @@ private:
 	}
 
 	// Here we depend on portable_class_name() returning identical pointers for speed.
-	ash::vector_map<const char*, seen_class_info> class_info_map_;
-	ash::vector_map<void*, std::size_t> shared_object_map_ = { { nullptr, 0 } };
+	ash::flat_map<const char*, seen_class_info> class_info_map_;
+	ash::flat_map<void*, std::size_t> shared_object_map_ = { { nullptr, 0 } };
 
 protected:
 	Adapter out_;

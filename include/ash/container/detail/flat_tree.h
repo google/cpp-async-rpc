@@ -1,5 +1,5 @@
-#ifndef ASH_VECTOR_ASSOC_H_
-#define ASH_VECTOR_ASSOC_H_
+#ifndef ASH_CONTAINER_DETAIL_FLAT_TREE_H_
+#define ASH_CONTAINER_DETAIL_FLAT_TREE_H_
 
 #include <algorithm>
 #include <functional>
@@ -10,8 +10,8 @@
 #include <vector>
 
 namespace ash {
-
 namespace detail {
+
 template<typename Key, typename Value, typename Compare = std::less<Key> >
 struct key_value_compare {
 	key_value_compare(const Compare& comp = Compare()) :
@@ -102,7 +102,7 @@ struct key_value_equal<Key, Key, Compare> {
 };
 
 template<typename Key, bool multiple_allowed, typename Value, typename Compare,
-		typename Allocator> class vector_tree: protected std::vector<Value,
+		typename Allocator> class flat_tree: protected std::vector<Value,
 		Allocator> {
 protected:
 	using value_equal = key_value_equal<Key, Value, Compare>;
@@ -148,20 +148,20 @@ public:
 	using underlying_container::swap;
 
 	// swap.
-	void swap(vector_tree& other) {
+	void swap(flat_tree& other) {
 		underlying_container::swap(other);
 	}
 
 	// Assignment.
-	vector_tree& operator=(const vector_tree& other) {
+	flat_tree& operator=(const flat_tree& other) {
 		underlying_container::operator =(other);
 		return *this;
 	}
-	vector_tree& operator=(vector_tree&& other) {
-		underlying_container::operator =(std::forward < vector_tree > (other));
+	flat_tree& operator=(flat_tree&& other) {
+		underlying_container::operator =(std::forward < flat_tree > (other));
 		return *this;
 	}
-	vector_tree& operator=(std::initializer_list<value_type> ilist) {
+	flat_tree& operator=(std::initializer_list<value_type> ilist) {
 		underlying_container::operator =(ilist);
 		std::sort(begin(), end(), comp_);
 		if (!multiple_allowed) {
@@ -171,15 +171,15 @@ public:
 	}
 
 	// Constructors.
-	explicit vector_tree(const Compare& comp, const Allocator& alloc =
+	explicit flat_tree(const Compare& comp, const Allocator& alloc =
 			Allocator()) :
 			underlying_container(alloc), comp_(comp), eq_(comp) {
 	}
-	explicit vector_tree(const Allocator& alloc = Allocator()) :
+	explicit flat_tree(const Allocator& alloc = Allocator()) :
 			underlying_container(alloc) {
 	}
 	template<typename InputIt>
-	vector_tree(InputIt first, InputIt last, const Compare& comp = Compare(),
+	flat_tree(InputIt first, InputIt last, const Compare& comp = Compare(),
 			const Allocator& alloc = Allocator()) :
 			underlying_container(first, last, alloc), comp_(comp), eq_(comp) {
 		std::sort(begin(), end(), comp_);
@@ -187,23 +187,23 @@ public:
 			this->erase(std::unique(begin(), end(), eq_), end());
 		}
 	}
-	vector_tree(const vector_tree& other) :
+	flat_tree(const flat_tree& other) :
 			underlying_container(
 					static_cast<const underlying_container&>(other)) {
 	}
-	vector_tree(const vector_tree& other, const Allocator& alloc) :
+	flat_tree(const flat_tree& other, const Allocator& alloc) :
 			underlying_container(
 					static_cast<const underlying_container&>(other), alloc) {
 	}
-	vector_tree(vector_tree&& other) :
+	flat_tree(flat_tree&& other) :
 			underlying_container(
 					static_cast<const underlying_container&&>(other)) {
 	}
-	vector_tree(vector_tree&& other, const Allocator& alloc) :
+	flat_tree(flat_tree&& other, const Allocator& alloc) :
 			underlying_container(
 					static_cast<const underlying_container&&>(other), alloc) {
 	}
-	vector_tree(std::initializer_list<value_type> init, const Compare& comp =
+	flat_tree(std::initializer_list<value_type> init, const Compare& comp =
 			Compare(), const Allocator& alloc = Allocator()) :
 			underlying_container(init, alloc), comp_(comp), eq_(comp) {
 		std::sort(begin(), end(), comp_);
@@ -325,84 +325,8 @@ protected:
 	value_compare comp_;
 	value_equal eq_;
 };
+
 }  // namespace detail
+}  // namespace ash
 
-template<typename Key, typename Compare = std::less<Key>,
-		typename Allocator = std::allocator<Key> >
-class vector_set: public detail::vector_tree<Key, false, Key, Compare, Allocator> {
-public:
-	// Inherit constructors.
-	using detail::vector_tree<Key, false, Key, Compare, Allocator>::vector_tree;
-};
-
-template<typename Key, typename Compare = std::less<Key>,
-		typename Allocator = std::allocator<Key> >
-class vector_multiset: public detail::vector_tree<Key, true, Key, Compare,
-		Allocator> {
-public:
-	// Inherit constructors.
-	using detail::vector_tree<Key, true, Key, Compare, Allocator>::vector_tree;
-};
-
-template<typename Key, typename T, typename Compare = std::less<Key>,
-		typename Allocator = std::allocator<std::pair<Key, T> > >
-class vector_map: public detail::vector_tree<Key, false, std::pair<Key, T>,
-		Compare, Allocator> {
-public:
-	using typename detail::vector_tree<Key, false, std::pair<Key, T>, Compare,
-			Allocator>::underlying_container;
-	using mapped_type = T;
-
-	// Inherit constructors.
-	using detail::vector_tree<Key, false, std::pair<Key, T>, Compare, Allocator>::vector_tree;
-
-	// operator []
-	T& operator[](const Key& key) {
-		auto it = this->lower_bound(key);
-		if (it != this->end() && this->eq_(*it, key)) {
-			return it->second;
-		}
-		it = underlying_container::emplace(it, key, T());
-		return it->second;
-	}
-	T& operator[](Key&& key) {
-		auto it = this->lower_bound(key);
-		if (it != this->end() && this->eq_(*it, key)) {
-			return it->second;
-		}
-		it = underlying_container::emplace(it, std::forward < Key > (key), T());
-		return it->second;
-	}
-
-	// at
-	T& at(const Key& key) {
-		auto it = this->find(key);
-		if (it == this->end()) {
-			throw std::out_of_range("key not found.");
-		}
-		return it->second;
-	}
-	const T& at(const Key& key) const {
-		auto it = this->find(key);
-		if (it == this->end()) {
-			throw std::out_of_range("key not found.");
-		}
-		return it->second;
-	}
-};
-
-template<typename Key, typename T, typename Compare = std::less<Key>,
-		typename Allocator = std::allocator<std::pair<Key, T> > >
-class vector_multimap: public detail::vector_tree<Key, true, std::pair<Key, T>,
-		Compare, Allocator> {
-public:
-	using mapped_type = T;
-
-	// Inherit constructors.
-	using detail::vector_tree<Key, true, std::pair<Key, T>, Compare, Allocator>::vector_tree;
-};
-
-}
-// namespace ash
-
-#endif /* ASH_VECTOR_ASSOC_H_ */
+#endif /* ASH_CONTAINER_DETAIL_FLAT_TREE_H_ */

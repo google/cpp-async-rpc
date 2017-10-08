@@ -1,0 +1,10 @@
+[wrap-file]
+directory=Catch-1.10.0
+
+source_url=https://github.com/philsquared/Catch/archive/v1.10.0.zip
+source_filename=catch-1.10.0.zip
+source_hash=a24b2c7bfa15bd117bf1a6b2cfe68a656f786d232c30eee7a0a08324ecc4fa88
+
+patch_url=https://drive.google.com/uc?authuser=0&id=0B_ASuk4ovv4BMG9rNnhobXB6VkE&export=download
+patch_filename=catch-1.10.0-meson.zip
+patch_hash=2f23f72761adf709e3b18c73101626de0592cd38f1931e91955ea682318f1f5c
