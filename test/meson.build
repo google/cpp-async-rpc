@@ -10,6 +10,14 @@ tests_list = find_tests_output.stdout().strip().split('\n')
 foreach test_source : tests_list
   test_source_components = test_source.split('.')
   test_binary_name = test_source_components[0].underscorify()
-  test_executable = executable(test_binary_name, test_source, include_directories : includes, dependencies : [catch_dependency])
+  test_executable = executable(
+    test_binary_name,
+    test_source,
+    include_directories : includes,
+    dependencies : [catch_dependency],
+    # Catch requires exceptions:
+    cpp_args : [cpp_reenable_exceptions_flag],
+    link_args : [cpp_reenable_exceptions_flag]
+  )
   test(test_binary_name, test_executable)
 endforeach
