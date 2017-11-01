@@ -685,16 +685,9 @@ class binary_decoder {
   };
 
   template <typename T>
-  typename std::enable_if<traits::has_base_classes<T>::value, status>::type
-  load_base_classes(T& o) {
-    return apply_until_first_error(typename T::base_classes{},
+  status load_base_classes(T& o) {
+    return apply_until_first_error(typename traits::get_base_classes<T>::type{},
                                    base_class_loader{}, o, *this);
-  }
-
-  template <typename T>
-  typename std::enable_if<!traits::has_base_classes<T>::value, status>::type
-  load_base_classes(T& o) {
-    return status::OK;
   }
 
   // Load fields from field_descriptors, if present.
@@ -706,17 +699,10 @@ class binary_decoder {
   };
 
   template <typename T>
-  typename std::enable_if<traits::has_field_descriptors<T>::value, status>::type
-  load_fields(T& o) {
-    return apply_until_first_error(typename T::field_descriptors{},
-                                   field_loader{}, o, *this);
-  }
-
-  template <typename T>
-  typename std::enable_if<!traits::has_field_descriptors<T>::value,
-                          status>::type
-  load_fields(T& o) {
-    return status::OK;
+  status load_fields(T& o) {
+    return apply_until_first_error(
+        typename traits::get_field_descriptors<T>::type{}, field_loader{}, o,
+        *this);
   }
 
   // Invoke the load method, if present.
