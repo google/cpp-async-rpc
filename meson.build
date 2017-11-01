@@ -16,6 +16,7 @@ add_global_link_arguments(cpp_no_exceptions_flag, cpp_no_rtti_flag, language : '
 
 # For reference in the docs target.
 readme_file = files('README.md')
+license_file = files('LICENSE.md')
 
 # Enter the project subdirectories.
 subdir('include')

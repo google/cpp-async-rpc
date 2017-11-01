@@ -1,3 +1,24 @@
+/// \file
+/// \brief Compile-time type hashing for automatic data schema checks.
+///
+/// \copyright
+///   Copyright 2017 by Google Inc. All Rights Reserved.
+///
+/// \copyright
+///   Licensed under the Apache License, Version 2.0 (the "License"); you may
+///   not use this file except in compliance with the License. You may obtain a
+///   copy of the License at
+///
+/// \copyright
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// \copyright
+///   Unless required by applicable law or agreed to in writing, software
+///   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+///   License for the specific language governing permissions and limitations
+///   under the License.
+
 #ifndef INCLUDE_ASH_TYPE_HASH_H_
 #define INCLUDE_ASH_TYPE_HASH_H_
 
@@ -9,7 +30,8 @@
 #include <utility>
 #include "ash/mpt.h"
 #include "ash/serializable_base.h"
-#include "ash/traits.h"
+#include "ash/traits/container_traits.h"
+#include "ash/traits/serialization_traits.h"
 
 namespace ash {
 
@@ -146,7 +168,7 @@ struct type_hash<
 
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<T, Seen, base,
-                 typename std::enable_if<is_iterable<T>::value &&
+                 typename std::enable_if<is_const_iterable<T>::value &&
                                          has_static_size<T>::value &&
                                          !mpt::is_in<T, Seen>::value>::type> {
   static constexpr std::uint32_t value = detail::compose_with_types<
@@ -159,40 +181,40 @@ template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
     typename std::enable_if<
-        is_iterable<T>::value && !has_static_size<T>::value &&
+        is_const_iterable<T>::value && !has_static_size<T>::value &&
         !is_associative<T>::value && !mpt::is_in<T, Seen>::value>::type> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SEQUENCE, false, 0),
       mpt::insert_into_t<T, Seen>,
-      typename deserializable_value_type<typename T::value_type>::type>::value;
+      typename writable_value_type<typename T::value_type>::type>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
     typename std::enable_if<
-        is_iterable<T>::value && !has_static_size<T>::value &&
+        is_const_iterable<T>::value && !has_static_size<T>::value &&
         is_associative<T>::value &&
         !std::is_same<typename T::key_type, typename T::value_type>::value &&
         !mpt::is_in<T, Seen>::value>::type> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::MAP, false, 0),
       mpt::insert_into_t<T, Seen>,
-      typename deserializable_value_type<typename T::value_type>::type>::value;
+      typename writable_value_type<typename T::value_type>::type>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
     typename std::enable_if<
-        is_iterable<T>::value && !has_static_size<T>::value &&
+        is_const_iterable<T>::value && !has_static_size<T>::value &&
         is_associative<T>::value &&
         std::is_same<typename T::key_type, typename T::value_type>::value &&
         !mpt::is_in<T, Seen>::value>::type> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SET, false, 0),
       mpt::insert_into_t<T, Seen>,
-      typename deserializable_value_type<typename T::value_type>::type>::value;
+      typename writable_value_type<typename T::value_type>::type>::value;
 };
 
 template <typename T, typename Seen, typename Deleter, std::uint32_t base>

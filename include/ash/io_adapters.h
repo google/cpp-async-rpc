@@ -1,9 +1,28 @@
+/// \file
+/// \brief Adapters to link codecs to streams.
+///
+/// \copyright
+///   Copyright 2017 by Google Inc. All Rights Reserved.
+///
+/// \copyright
+///   Licensed under the Apache License, Version 2.0 (the "License"); you may
+///   not use this file except in compliance with the License. You may obtain a
+///   copy of the License at
+///
+/// \copyright
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// \copyright
+///   Unless required by applicable law or agreed to in writing, software
+///   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+///   License for the specific language governing permissions and limitations
+///   under the License.
+
 #ifndef INCLUDE_ASH_IO_ADAPTERS_H_
 #define INCLUDE_ASH_IO_ADAPTERS_H_
 
 #include <cstddef>
-#include <stdexcept>
-
 #include "ash/status_or.h"
 
 namespace ash {
@@ -55,7 +74,8 @@ status_or<char> input_stream::getc() {
 
 class input_adapter {
  public:
-  explicit input_adapter(input_stream& in) : in_(in) {}
+  input_adapter(input_stream& in)  // NOLINT(runtime/explicit)
+      : in_(in) {}
 
   status_or<std::size_t> read(char* p, std::size_t l) { return in_.read(p, l); }
 
@@ -94,7 +114,8 @@ status output_stream::putc(char c) {
 
 class output_adapter {
  public:
-  explicit output_adapter(output_stream& out) : out_(out) {}
+  output_adapter(output_stream& out)  // NOLINT(runtime/explicit)
+      : out_(out) {}
 
   status write(const char* p, std::size_t l) { return out_.write(p, l); }
 

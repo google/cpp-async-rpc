@@ -79,7 +79,7 @@ struct kk {
   static constexpr int roro = 1;
 };
 
-ASH_DEFINE_HAS_INNER_CONSTANT_CHECKER(roro);
+ASH_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
 int main() {
   f<decltype(kk::roro)>();

@@ -1,3 +1,24 @@
+/// \file
+/// \brief Binary format codecs for serialization.
+///
+/// \copyright
+///   Copyright 2017 by Google Inc. All Rights Reserved.
+///
+/// \copyright
+///   Licensed under the Apache License, Version 2.0 (the "License"); you may
+///   not use this file except in compliance with the License. You may obtain a
+///   copy of the License at
+///
+/// \copyright
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// \copyright
+///   Unless required by applicable law or agreed to in writing, software
+///   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+///   License for the specific language governing permissions and limitations
+///   under the License.
+
 #ifndef INCLUDE_ASH_BINARY_CODECS_H_
 #define INCLUDE_ASH_BINARY_CODECS_H_
 
@@ -14,7 +35,9 @@
 #include "ash/mpt.h"
 #include "ash/registry.h"
 #include "ash/status_or.h"
-#include "ash/traits.h"
+#include "ash/traits/container_traits.h"
+#include "ash/traits/serialization_traits.h"
+#include "ash/traits/type_traits.h"
 #include "ash/type_hash.h"
 
 namespace ash {
@@ -45,7 +68,7 @@ class binary_encoder {
 
   // Serializable scalar.
   template <typename T>
-  typename std::enable_if<traits::is_serializable_scalar<T>::value,
+  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
                           status>::type
   operator()(const T& v) {
     return write_block(&v, 1);
@@ -53,7 +76,7 @@ class binary_encoder {
 
   // Contiguous sequences.
   template <typename T>
-  typename std::enable_if<traits::is_iterable<T>::value &&
+  typename std::enable_if<traits::is_const_iterable<T>::value &&
                               traits::is_contiguous_sequence<T>::value,
                           status>::type
   operator()(const T& sequence) {
@@ -63,7 +86,7 @@ class binary_encoder {
 
   // Non-contiguous iterables.
   template <typename T>
-  typename std::enable_if<traits::is_iterable<T>::value &&
+  typename std::enable_if<traits::is_const_iterable<T>::value &&
                               !traits::is_contiguous_sequence<T>::value,
                           status>::type
   operator()(const T& sequence) {
@@ -224,16 +247,9 @@ class binary_encoder {
   };
 
   template <typename T>
-  typename std::enable_if<traits::has_base_classes<T>::value, status>::type
-  save_base_classes(const T& o) {
-    return apply_until_first_error(typename T::base_classes{},
+  status save_base_classes(const T& o) {
+    return apply_until_first_error(typename traits::get_base_classes<T>::type{},
                                    base_class_saver{}, o, *this);
-  }
-
-  template <typename T>
-  typename std::enable_if<!traits::has_base_classes<T>::value, status>::type
-  save_base_classes(const T& o) {
-    return status::OK;
   }
 
   // Save fields from field_descriptors, if present.
@@ -245,17 +261,10 @@ class binary_encoder {
   };
 
   template <typename T>
-  typename std::enable_if<traits::has_field_descriptors<T>::value, status>::type
-  save_fields(const T& o) {
-    return apply_until_first_error(typename T::field_descriptors{},
-                                   field_saver{}, o, *this);
-  }
-
-  template <typename T>
-  typename std::enable_if<!traits::has_field_descriptors<T>::value,
-                          status>::type
-  save_fields(const T& o) {
-    return status::OK;
+  status save_fields(const T& o) {
+    return apply_until_first_error(
+        typename traits::get_field_descriptors<T>::type{}, field_saver{}, o,
+        *this);
   }
 
   // Invoke the save method, if present.
@@ -292,7 +301,7 @@ class binary_encoder {
   // contiguous
   // memory.
   template <typename T>
-  typename std::enable_if<traits::is_serializable_scalar<T>::value,
+  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
                           status>::type
   write_sequence(const T* p, std::size_t l) {
     return write_block(p, l);
@@ -300,7 +309,7 @@ class binary_encoder {
 
   // For non-trivial objects, call the whole serialization machinery.
   template <typename T>
-  typename std::enable_if<!traits::is_serializable_scalar<T>::value,
+  typename std::enable_if<!traits::is_bit_transferrable_scalar<T>::value,
                           status>::type
   write_sequence(const T* p, std::size_t l) {
     while (l-- > 0) {
@@ -385,7 +394,7 @@ class binary_decoder {
 
   // Serializable scalar.
   template <typename T>
-  typename std::enable_if<traits::is_serializable_scalar<T>::value,
+  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
                           status>::type
   operator()(T& v) {
     return read_block(&v, 1);
@@ -409,8 +418,8 @@ class binary_decoder {
   typename std::enable_if<
       traits::is_iterable<T>::value && !traits::has_static_size<T>::value &&
           traits::is_contiguous_sequence<T>::value &&
-          traits::has_storage_resizing<T>::value &&
-          traits::is_serializable_scalar<typename T::value_type>::value &&
+          traits::can_be_resized<T>::value &&
+          traits::is_bit_transferrable_scalar<typename T::value_type>::value &&
           !traits::is_associative<T>::value,
       status>::type
   operator()(T& sequence) {
@@ -424,21 +433,21 @@ class binary_decoder {
   // Containers where we need to read elements one by one and push_back them.
   // This should apply to deques, lists and vectors of non-scalars.
   template <typename T>
-  typename std::enable_if<
-      traits::is_iterable<T>::value && !traits::has_static_size<T>::value &&
-          (!traits::is_contiguous_sequence<T>::value ||
-           !traits::has_storage_resizing<T>::value ||
-           !traits::is_serializable_scalar<typename T::value_type>::value) &&
-          !traits::is_associative<T>::value,
-      status>::type
+  typename std::enable_if<traits::is_iterable<T>::value &&
+                              !traits::has_static_size<T>::value &&
+                              (!traits::is_contiguous_sequence<T>::value ||
+                               !traits::can_be_resized<T>::value ||
+                               !traits::is_bit_transferrable_scalar<
+                                   typename T::value_type>::value) &&
+                              !traits::is_associative<T>::value,
+                          status>::type
   operator()(T& sequence) {
     std::size_t l;
     ASH_ASSIGN_OR_RETURN(l, read_size());
     sequence.clear();
     maybe_reserve(sequence, l);
     while (l-- > 0) {
-      typename traits::deserializable_value_type<typename T::value_type>::type
-          v;
+      typename traits::writable_value_type<typename T::value_type>::type v;
       ASH_RETURN_IF_ERROR((*this)(v));
       sequence.push_back(std::move(v));
     }
@@ -457,8 +466,7 @@ class binary_decoder {
     sequence.clear();
     maybe_reserve(sequence, l);
     while (l-- > 0) {
-      typename traits::deserializable_value_type<typename T::value_type>::type
-          v;
+      typename traits::writable_value_type<typename T::value_type>::type v;
       ASH_RETURN_IF_ERROR((*this)(v));
       sequence.insert(std::move(v));
     }
@@ -730,14 +738,13 @@ class binary_decoder {
 
   // Reserve space in a container that supports a reserve method.
   template <typename T>
-  typename std::enable_if<traits::has_storage_reservation<T>::value, void>::type
+  typename std::enable_if<traits::can_reserve_capacity<T>::value, void>::type
   maybe_reserve(T& t, typename T::size_type l) {
     t.reserve(l);
   }
 
   template <typename T>
-  typename std::enable_if<!traits::has_storage_reservation<T>::value,
-                          void>::type
+  typename std::enable_if<!traits::can_reserve_capacity<T>::value, void>::type
   maybe_reserve(T& t, typename T::size_type l) {}
 
   status_or<std::size_t> read_size() { return read_variant(); }
@@ -746,7 +753,7 @@ class binary_decoder {
   // contiguous
   // memory.
   template <typename T>
-  typename std::enable_if<traits::is_serializable_scalar<T>::value,
+  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
                           status>::type
   read_sequence(T* p, std::size_t l) {
     return read_block(p, l);
@@ -754,7 +761,7 @@ class binary_decoder {
 
   // For non-trivial objects, call the whole serialization machinery.
   template <typename T>
-  typename std::enable_if<!traits::is_serializable_scalar<T>::value,
+  typename std::enable_if<!traits::is_bit_transferrable_scalar<T>::value,
                           status>::type
   read_sequence(T* p, std::size_t l) {
     while (l-- > 0) {
