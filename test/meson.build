@@ -5,7 +5,7 @@ catch_dependency = catch_subproject.get_variable('proj_dep')
 # This is a lot of machinery to automatically list test files
 # at any subdirectory depth level and running them.
 
-find_tests_output = run_command(find_program_path.path(), meson.current_source_dir(), '-name', 'test*.cpp', '-printf', '%P\n')
+find_tests_output = run_command(find_program_path.path(), meson.current_source_dir(), '-name', '*_test.cpp', '-printf', '%P\n')
 tests_list = find_tests_output.stdout().strip().split('\n')
 foreach test_source : tests_list
   test_source_components = test_source.split('.')
