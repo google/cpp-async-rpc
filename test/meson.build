@@ -1,6 +1,6 @@
 # Import catch.
-catch_subproject = subproject('catch')
-catch_dependency = catch_subproject.get_variable('proj_dep')
+catch_subproject = subproject('catch2')
+catch_dependency = catch_subproject.get_variable('catch2_dep')
 
 # This is a lot of machinery to automatically list test files
 # at any subdirectory depth level and running them.
@@ -15,9 +15,7 @@ foreach test_source : tests_list
     test_source,
     include_directories : includes,
     dependencies : [catch_dependency],
-    # Catch requires exceptions:
-    cpp_args : [cpp_reenable_exceptions_flag],
-    link_args : [cpp_reenable_exceptions_flag]
+    cpp_args: [cpp_catch2_no_exceptions_flag, cpp_catch2_config_main_flag]
   )
   test(test_binary_name, test_executable)
 endforeach

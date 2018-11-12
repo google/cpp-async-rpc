@@ -1,9 +1,7 @@
-#define CATCH_CONFIG_MAIN
-
 #include "ash/container/flat_map.h"
 #include <utility>
 #include <vector>
-#include "catch.hpp"
+#include "catch2/catch.hpp"
 
 TEST_CASE("flat_map tests") {
   using map = ash::flat_map<int, int>;

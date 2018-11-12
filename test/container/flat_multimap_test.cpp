@@ -1,9 +1,7 @@
-#define CATCH_CONFIG_MAIN
-
 #include <utility>
 #include <vector>
 #include "ash/container/flat_map.h"
-#include "catch.hpp"
+#include "catch2/catch.hpp"
 
 TEST_CASE("flat_multimap tests") {
   using map = ash::flat_multimap<int, int>;

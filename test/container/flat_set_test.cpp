@@ -1,9 +1,7 @@
-#define CATCH_CONFIG_MAIN
-
 #include "ash/container/flat_set.h"
 #include <utility>
 #include <vector>
-#include "catch.hpp"
+#include "catch2/catch.hpp"
 
 TEST_CASE("flat_set tests") {
   using set = ash::flat_set<int>;
