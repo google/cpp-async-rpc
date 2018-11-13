@@ -2,7 +2,7 @@
 /// \brief Binary format codecs for serialization.
 ///
 /// \copyright
-///   Copyright 2017 by Google Inc. All Rights Reserved.
+///   Copyright 2018 by Google Inc. All Rights Reserved.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
