@@ -23,8 +23,10 @@
 #define INCLUDE_ASH_TRAITS_CONTAINER_TRAITS_H_
 
 #include <array>
+#include <iterator>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 #include "ash/traits/trait_factories.h"
 
@@ -33,15 +35,30 @@ namespace ash {
 /// Trait classes for type introspection.
 namespace traits {
 
-/// \brief Check if `T` can be iterated over in a non-`const` way.
+/// \brief Check whether a container supports iteration.
 ///
-/// This implementation just checks for a nested `T::iterator` type.
-ASH_MAKE_NESTED_TYPE_CHECKER(is_iterable, iterator);
+/// This implementation checks for an overload of `std::begin(T t)` to apply.
+template <typename T, typename T2 = void>
+struct is_iterable : public std::integral_constant<bool, false> {};
 
-/// \brief Check if `T` can be iterated over in a `const` way.
+/// \copydoc is_iterable
+template <typename T>
+struct is_iterable<
+    T, typename enable_if_type<decltype(std::begin(std::declval<T>()))>::type>
+    : public std::integral_constant<bool, true> {};
+
+/// \brief Check whether a container supports iteration.
 ///
-/// This implementation just checks for a nested `T::const_iterator` type.
-ASH_MAKE_NESTED_TYPE_CHECKER(is_const_iterable, const_iterator);
+/// This implementation checks for an overload of `std::begin(const T t)` to
+/// apply.
+template <typename T, typename T2 = void>
+struct is_const_iterable : public std::integral_constant<bool, false> {};
+
+/// \copydoc is_const_iterable
+template <typename T>
+struct is_const_iterable<T, typename enable_if_type<decltype(
+                                std::begin(std::declval<const T>()))>::type>
+    : public std::integral_constant<bool, true> {};
 
 /// \brief Check if `T` is an associative container.
 ///
@@ -51,6 +68,12 @@ ASH_MAKE_NESTED_TYPE_CHECKER(is_associative, key_type);
 /// \brief Check if `T` is a container storing elements contiguously in memory.
 template <typename T>
 struct is_contiguous_sequence : public std::false_type {};
+
+/// \copydoc is_contiguous_sequence
+///
+/// Specialization for plain arrays.
+template <typename T, std::size_t size>
+struct is_contiguous_sequence<T[size]> : public std::true_type {};
 
 /// \copydoc is_contiguous_sequence
 ///
@@ -114,6 +137,12 @@ struct has_static_size : public std::false_type {};
 /// Specialization for `std::array`.
 template <typename T, std::size_t size>
 struct has_static_size<std::array<T, size>> : public std::true_type {};
+
+/// \copydoc has_static_size
+///
+/// Specialization for plain array.
+template <typename T, std::size_t size>
+struct has_static_size<T[size]> : public std::true_type {};
 
 }  // namespace traits
 
