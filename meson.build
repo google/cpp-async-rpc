@@ -8,13 +8,10 @@ config_data.set('TOP_BUILDDIR', meson.build_root())
 
 # Determine compiler flags.
 cpp_compiler = meson.get_compiler('cpp')
-cpp_no_exceptions_flag = cpp_compiler.first_supported_argument(['/EHs-', '-fno-exceptions'])
-cpp_reenable_exceptions_flag = cpp_compiler.first_supported_argument(['/EHs', '-fexceptions'])
 cpp_no_rtti_flag = cpp_compiler.first_supported_argument(['/GR-', '-fno-rtti'])
-cpp_catch2_no_exceptions_flag = cpp_compiler.first_supported_argument(['/DCATCH_CONFIG_DISABLE_EXCEPTIONS', '-DCATCH_CONFIG_DISABLE_EXCEPTIONS'])
 cpp_catch2_config_main_flag = cpp_compiler.first_supported_argument(['/DCATCH_CONFIG_MAIN', '-DCATCH_CONFIG_MAIN'])
-add_project_arguments(cpp_no_exceptions_flag, cpp_no_rtti_flag, language : 'cpp')
-add_project_link_arguments(cpp_no_exceptions_flag, cpp_no_rtti_flag, language : 'cpp')
+add_project_arguments(cpp_no_rtti_flag, language : 'cpp')
+add_project_link_arguments(cpp_no_rtti_flag, language : 'cpp')
 
 # For reference in the docs target.
 readme_file = files('README.md')

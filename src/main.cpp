@@ -3,10 +3,10 @@
 #include <sstream>
 #include <string>
 #include "ash.h"
+#include "ash/errors.h"
 #include "ash/iostream_adapters.h"
 #include "ash/mpt.h"
 #include "ash/serializable.h"
-#include "ash/status.h"
 #include "ash/type_hash.h"
 
 template <typename R>
@@ -32,14 +32,10 @@ struct V2 : ash::dynamic<V2> {
   ASH_FIELDS(a);
 
   template <typename S>
-  ash::status save(S&) const {
-    return ash::status::OK;
-  }
+  void save(S&) const {}
 
   template <typename S>
-  ash::status load(S&) {
-    return ash::status::OK;
-  }
+  void load(S&) {}
 
   ASH_CUSTOM_SERIALIZATION_VERSION(1);
 };
@@ -68,7 +64,7 @@ struct Z : ash::dynamic<Z, X> {
   ASH_FIELDS(z2, z3);
 };
 ASH_REGISTER(z::Z);
-}
+}  // namespace z
 
 template <typename T>
 void f() {
@@ -82,94 +78,93 @@ struct kk {
 ASH_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
 int main() {
-  f<decltype(kk::roro)>();
-  std::cerr << has_roro<kk, int>::value << std::endl;
-  std::cerr << has_roro<Y, int>::value << std::endl;
+  try {
+    f<decltype(kk::roro)>();
+    std::cerr << has_roro<kk, int>::value << std::endl;
+    std::cerr << has_roro<Y, int>::value << std::endl;
 
-  using A = ash::mpt::pack<>;
-  using B = ash::mpt::insert_into_t<int, A>;
-  using C = ash::mpt::insert_into_t<int, B>;
-  using D = ash::mpt::insert_into_t<double, C>;
-  using E = ash::mpt::insert_into_t<int, D>;
-  f<E>();
+    using A = ash::mpt::pack<>;
+    using B = ash::mpt::insert_into_t<int, A>;
+    using C = ash::mpt::insert_into_t<int, B>;
+    using D = ash::mpt::insert_into_t<double, C>;
+    using E = ash::mpt::insert_into_t<int, D>;
+    f<E>();
 
-  std::cerr << std::hex;
-  std::cerr << ash::traits::get_custom_serialization_version<signed int>::value
-            << std::endl;
+    std::cerr << std::hex;
+    std::cerr
+        << ash::traits::get_custom_serialization_version<signed int>::value
+        << std::endl;
 
-  std::cerr << ash::traits::type_hash<signed int>::value << std::endl;
-  std::cerr << ash::traits::type_hash<std::tuple<int>>::value << std::endl;
+    std::cerr << ash::traits::type_hash<signed int>::value << std::endl;
+    std::cerr << ash::traits::type_hash<std::tuple<int>>::value << std::endl;
 
-  std::cerr << ash::traits::type_hash<V>::value << std::endl;
-  std::cerr << ash::traits::type_hash<V2>::value << std::endl;
-  std::cerr << ash::traits::type_hash<X>::value << std::endl;
-  std::cerr << ash::traits::type_hash<Y>::value << std::endl;
-  std::cerr << ash::traits::type_hash<z::Z>::value << std::endl;
-  std::cerr << ash::traits::type_hash<std::shared_ptr<z::Z>>::value
-            << std::endl;
+    std::cerr << ash::traits::type_hash<V>::value << std::endl;
+    std::cerr << ash::traits::type_hash<V2>::value << std::endl;
+    std::cerr << ash::traits::type_hash<X>::value << std::endl;
+    std::cerr << ash::traits::type_hash<Y>::value << std::endl;
+    std::cerr << ash::traits::type_hash<z::Z>::value << std::endl;
+    std::cerr << ash::traits::type_hash<std::shared_ptr<z::Z>>::value
+              << std::endl;
 
-  // ASH_CHECK(3 == 4);
-  ash::status_or<int> code;
-  ash::status_or<int> code1 = ash::status::FAILED_PRECONDITION;
-  std::shared_ptr<X> x(new X());
-  x->x = 44;
-  x->a = 88;
-  std::shared_ptr<V> v = x;
-  std::weak_ptr<V> w = v;
-  std::unique_ptr<Y> y(new Y());
-  std::shared_ptr<z::Z> z(new z::Z());
-  z->z2 = z;
-  z->z = "rosco";
+    std::shared_ptr<X> x(new X());
+    x->x = 44;
+    x->a = 88;
+    std::shared_ptr<V> v = x;
+    std::weak_ptr<V> w = v;
+    std::unique_ptr<Y> y(new Y());
+    std::shared_ptr<z::Z> z(new z::Z());
+    z->z2 = z;
+    z->z = "rosco";
 
-  ash::binary_sizer bs;
-  ASH_CHECK_OK(bs(code1, ash::verify_structure{}));
-  ASH_CHECK_OK(bs(x));
-  ASH_CHECK_OK(bs(v));
-  ASH_CHECK_OK(bs(v));
-  ASH_CHECK_OK(bs(w));
-  ASH_CHECK_OK(bs(y));
-  ASH_CHECK_OK(bs(z, ash::verify_structure{}));
-  std::cerr << "SIZE: " << bs.size() << std::endl;
+    ash::binary_sizer bs;
+    bs(x);
+    bs(v);
+    bs(v);
+    bs(w);
+    bs(y);
+    bs(z, ash::verify_structure{});
+    std::cerr << "SIZE: " << bs.size() << std::endl;
 
-  std::ostringstream oss;
-  ash::ostream_output_stream osa(oss);
-  ash::native_binary_encoder nbe(osa);
-  ASH_CHECK_OK(nbe(code1, ash::verify_structure{}));
-  ASH_CHECK_OK(nbe(x));
-  ASH_CHECK_OK(nbe(v));
-  ASH_CHECK_OK(nbe(v));
-  ASH_CHECK_OK(nbe(w));
-  ASH_CHECK_OK(nbe(y));
-  ASH_CHECK_OK(nbe(z, ash::verify_structure{}));
+    std::ostringstream oss;
+    ash::ostream_output_stream osa(oss);
+    ash::native_binary_encoder nbe(osa);
+    nbe(x);
+    nbe(v);
+    nbe(v);
+    nbe(w);
+    nbe(y);
+    nbe(z, ash::verify_structure{});
 
-  std::istringstream iss(oss.str());
-  ash::istream_input_stream isa(iss);
-  ash::native_binary_decoder nbd(isa);
+    std::istringstream iss(oss.str());
+    ash::istream_input_stream isa(iss);
+    ash::native_binary_decoder nbd(isa);
 
-  std::shared_ptr<X> x2;
-  std::shared_ptr<V> v2;
-  std::weak_ptr<V> w2;
-  std::unique_ptr<Y> y2;
-  std::shared_ptr<z::Z> z2;
+    std::shared_ptr<X> x2;
+    std::shared_ptr<V> v2;
+    std::weak_ptr<V> w2;
+    std::unique_ptr<Y> y2;
+    std::shared_ptr<z::Z> z2;
 
-  ASH_CHECK_OK(nbd(code, ash::verify_structure{}));
-  ASH_CHECK_OK(nbd(x2));
-  ASH_CHECK_OK(nbd(v2));
-  ASH_CHECK_OK(nbd(v2));
-  ASH_CHECK_OK(nbd(w2));
-  ASH_CHECK_OK(nbd(y2));
-  ASH_CHECK_OK(nbd(z2, ash::verify_structure{}));
+    nbd(x2);
+    nbd(v2);
+    nbd(v2);
+    nbd(w2);
+    nbd(y2);
+    nbd(z2, ash::verify_structure{});
 
-  std::cerr << ash::name(code) << "(" << ash::code(code)
-            << "): " << ash::ok(code) << std::endl;
-  std::cerr << x2->x << ", " << x2->a << std::endl;
-  std::cerr << std::static_pointer_cast<X>(v2)->x << ", "
-            << std::static_pointer_cast<X>(v2)->a << std::endl;
+    std::cerr << x2->x << ", " << x2->a << std::endl;
+    std::cerr << std::static_pointer_cast<X>(v2)->x << ", "
+              << std::static_pointer_cast<X>(v2)->a << std::endl;
 
-  std::cerr << (z2 == z2->z2) << std::endl;
-  std::cerr << (z2 == z) << std::endl;
+    std::cerr << (z2 == z2->z2) << std::endl;
+    std::cerr << (z2 == z) << std::endl;
 
-  std::cout << oss.str();
+    std::cout << oss.str();
+
+    throw ash::errors::io_error("hello");
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+  }
 
   return 0;
 }

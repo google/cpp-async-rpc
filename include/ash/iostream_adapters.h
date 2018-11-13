@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <istream>
 #include <ostream>
-#include <stdexcept>
+#include "ash/errors.h"
 #include "ash/io_adapters.h"
 
 namespace ash {
@@ -13,19 +13,19 @@ class istream_input_stream : public input_stream {
  public:
   explicit istream_input_stream(std::istream& is) : is_(is) {}
 
-  status_or<std::size_t> read(char* p, std::size_t l) override {
+  std::size_t read(char* p, std::size_t l) override {
     is_.read(p, l);
-    if (is_.bad()) return status::IO_ERROR;
+    if (is_.bad()) throw errors::io_error("Bad input stream");
     return static_cast<std::size_t>(is_.gcount());
   }
 
-  status_or<char> getc() override {
+  char getc() override {
     char c;
     if (is_.get(c)) {
       return c;
     }
-    if (is_.bad()) return status::IO_ERROR;
-    return status::END_OF_FILE;
+    if (is_.bad()) throw errors::io_error("Bad input stream");
+    throw errors::eof("EOF");
   }
 
  private:
@@ -36,16 +36,14 @@ class ostream_output_stream : public output_stream {
  public:
   explicit ostream_output_stream(std::ostream& os) : os_(os) {}
 
-  status write(const char* p, std::size_t l) override {
+  void write(const char* p, std::size_t l) override {
     os_.write(p, l);
-    if (os_.bad()) return status::IO_ERROR;
-    return status::OK;
+    if (os_.bad()) throw errors::io_error("Bad output stream");
   }
 
-  status putc(char c) override {
+  void putc(char c) override {
     os_.put(c);
-    if (os_.bad()) return status::IO_ERROR;
-    return status::OK;
+    if (os_.bad()) throw errors::io_error("Bad output stream");
   }
 
  private:

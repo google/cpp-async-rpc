@@ -31,10 +31,10 @@
 #include <utility>
 #include <vector>
 #include "ash/container/flat_map.h"
+#include "ash/errors.h"
 #include "ash/io_adapters.h"
 #include "ash/mpt.h"
 #include "ash/registry.h"
-#include "ash/status_or.h"
 #include "ash/traits/container_traits.h"
 #include "ash/traits/serialization_traits.h"
 #include "ash/traits/type_traits.h"
@@ -53,95 +53,94 @@ class binary_encoder {
 
   // Tag processing variant that'll write a structure hash to the output.
   template <typename T, typename... Tags>
-  status operator()(const T& o, verify_structure, Tags... tags) {
+  void operator()(const T& o, verify_structure, Tags... tags) {
     const std::uint32_t type_hash = traits::type_hash<T>::value;
-    ASH_RETURN_IF_ERROR((*this)(type_hash));
+    (*this)(type_hash);
     return (*this)(o, tags...);
   }
 
   // Special case for const char*, compatible with std::string de-serialization.
-  status operator()(const char* s) {
+  void operator()(const char* s) {
     std::size_t l = std::strlen(s);
-    ASH_RETURN_IF_ERROR(write_variant(l));
-    return write_block(s, l);
+    write_variant(l);
+    write_block(s, l);
   }
 
   // Serializable scalar.
   template <typename T>
   typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          status>::type
+                          void>::type
   operator()(const T& v) {
-    return write_block(&v, 1);
+    write_block(&v, 1);
   }
 
   // Contiguous sequences.
   template <typename T>
   typename std::enable_if<traits::is_const_iterable<T>::value &&
                               traits::is_contiguous_sequence<T>::value,
-                          status>::type
+                          void>::type
   operator()(const T& sequence) {
-    ASH_RETURN_IF_ERROR(maybe_write_size(sequence));
-    return write_sequence(&(*sequence.cbegin()), sequence.size());
+    maybe_write_size(sequence);
+    write_sequence(&(*sequence.cbegin()), sequence.size());
   }
 
   // Non-contiguous iterables.
   template <typename T>
   typename std::enable_if<traits::is_const_iterable<T>::value &&
                               !traits::is_contiguous_sequence<T>::value,
-                          status>::type
+                          void>::type
   operator()(const T& sequence) {
-    ASH_RETURN_IF_ERROR(maybe_write_size(sequence));
+    maybe_write_size(sequence);
     for (const auto& i : sequence) {
-      ASH_RETURN_IF_ERROR((*this)(i));
+      (*this)(i);
     }
-    return status::OK;
   }
 
   // Pairs.
   template <typename U, typename V>
-  status operator()(const std::pair<U, V>& p) {
-    ASH_RETURN_IF_ERROR((*this)(p.first));
-    return (*this)(p.second);
+  void operator()(const std::pair<U, V>& p) {
+    (*this)(p.first);
+    (*this)(p.second);
   }
 
   // Tuples.
   template <typename... T>
-  status operator()(const std::tuple<T...>& t) {
-    return apply_until_first_error(t, tuple_element_saver(), *this);
+  void operator()(const std::tuple<T...>& t) {
+    mpt::for_each(t, tuple_element_saver(), *this);
   }
 
   // Plain old arrays.
   template <typename T, std::size_t N>
-  status operator()(const T (&a)[N]) {
-    return write_sequence(&a[0], N);
+  void operator()(const T (&a)[N]) {
+    write_sequence(&a[0], N);
   }
 
   // Saveable objects.
   template <typename T>
-  typename std::enable_if<traits::can_be_serialized<T>::value, status>::type
+  typename std::enable_if<traits::can_be_serialized<T>::value, void>::type
   operator()(const T& o) {
-    ASH_RETURN_IF_ERROR(save_base_classes(o));
-    ASH_RETURN_IF_ERROR(save_fields(o));
-    return invoke_save(o);
+    save_base_classes(o);
+    save_fields(o);
+    invoke_save(o);
   }
 
   // Unique pointers.
   template <typename T, typename Deleter>
-  status operator()(const std::unique_ptr<T, Deleter>& p) {
+  void operator()(const std::unique_ptr<T, Deleter>& p) {
     bool present = (p != nullptr);
-    ASH_RETURN_IF_ERROR((*this)(present));
+    (*this)(present);
     if (present) {
-      ASH_RETURN_IF_ERROR(save_object_reference(*p));
+      save_object_reference(*p);
     }
-    return status::OK;
   }
 
   // Shared pointers.
   template <typename T>
-  status operator()(const std::shared_ptr<T>& p) {
+  void operator()(const std::shared_ptr<T>& p) {
     // Short-circuit nullptr.
     if (!p) {
-      return write_variant(0);
+      write_variant(0);
+      return;
     }
 
     auto it = shared_object_map_.find(p.get());
@@ -151,18 +150,17 @@ class binary_encoder {
       it = shared_object_map_.emplace(p.get(), next_object_id).first;
       first_time = true;
     }
-    ASH_RETURN_IF_ERROR(write_variant(it->second));
+    write_variant(it->second);
     if (first_time) {
-      ASH_RETURN_IF_ERROR(save_object_reference(*p));
+      save_object_reference(*p);
     }
-    return status::OK;
   }
 
   // Weak pointers.
   template <typename T>
-  status operator()(const std::weak_ptr<T>& p) {
+  void operator()(const std::weak_ptr<T>& p) {
     std::shared_ptr<T> shared = p.lock();
-    return (*this)(shared);
+    (*this)(shared);
   }
 
  private:
@@ -179,122 +177,114 @@ class binary_encoder {
   // clear.
   //
   // For convenience, this is always represented in little endian format.
-  status write_variant(std::size_t l) {
+  void write_variant(std::size_t l) {
     do {
       uint8_t o = static_cast<uint8_t>(l & 0x7f);
       l >>= 7;
       if (l) {
         o |= 0x80;
       }
-      ASH_RETURN_IF_ERROR((*this)(o));
+      (*this)(o);
     } while (l);
-    return status::OK;
   }
 
-  status save_dynamic_object_reference(const ::ash::dynamic_base_class& o) {
+  void save_dynamic_object_reference(const ::ash::dynamic_base_class& o) {
     const char* class_name = o.portable_class_name();
     auto it = class_info_map_.find(class_name);
     if (it == class_info_map_.end()) {
       // Not cached yet. Need to interrogate the registries for this class.
       typename registry::dynamic_object_factory::info class_info;
       typename registry::dynamic_encoder_registry<MyClass>::info encoder_info;
-      ASH_ASSIGN_OR_RETURN(class_info,
-                           registry::dynamic_object_factory::get()[class_name]);
-      ASH_ASSIGN_OR_RETURN(
-          encoder_info,
-          registry::dynamic_encoder_registry<MyClass>::get()[class_name]);
+      class_info = registry::dynamic_object_factory::get()[class_name];
+      encoder_info =
+          registry::dynamic_encoder_registry<MyClass>::get()[class_name];
       std::size_t next_class_id = class_info_map_.size();
       it = class_info_map_
                .emplace(class_name,
                         seen_class_info{next_class_id,
                                         encoder_info.encoder_function})
                .first;
-      ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
-      ASH_RETURN_IF_ERROR((*this)(class_name));
-      ASH_RETURN_IF_ERROR((*this)(class_info.type_hash));
+      write_variant(it->second.class_id);
+      (*this)(class_name);
+      (*this)(class_info.type_hash);
     } else {
-      ASH_RETURN_IF_ERROR(write_variant(it->second.class_id));
+      write_variant(it->second.class_id);
     }
-    return it->second.encoder_function(static_cast<MyClass&>(*this), o);
+    it->second.encoder_function(static_cast<MyClass&>(*this), o);
   }
 
   template <typename T>
-  typename std::enable_if<!is_dynamic<T>::value, status>::type
+  typename std::enable_if<!is_dynamic<T>::value, void>::type
   save_object_reference(const T& o) {
-    return (*this)(o);
+    (*this)(o);
   }
 
   template <typename T>
-  typename std::enable_if<is_dynamic<T>::value, status>::type
+  typename std::enable_if<is_dynamic<T>::value, void>::type
   save_object_reference(const T& o) {
-    return save_dynamic_object_reference(o);
+    save_dynamic_object_reference(o);
   }
 
   struct tuple_element_saver {
     template <typename T, typename S>
-    status operator()(const T& v, S& s) {
-      return s(v);
+    void operator()(const T& v, S& s) {
+      s(v);
     }
   };
 
   // Save base classes, if they exist.
   struct base_class_saver {
     template <typename T, typename B, typename S>
-    status operator()(mpt::wrap_type<B>, const T& o, S& s) {
+    void operator()(mpt::wrap_type<B>, const T& o, S& s) {
       const B& base = static_cast<const B&>(o);
-      return s(base);
+      s(base);
     }
   };
 
   template <typename T>
-  status save_base_classes(const T& o) {
-    return apply_until_first_error(typename traits::get_base_classes<T>::type{},
-                                   base_class_saver{}, o, *this);
+  void save_base_classes(const T& o) {
+    mpt::for_each(typename traits::get_base_classes<T>::type{},
+                  base_class_saver{}, o, *this);
   }
 
   // Save fields from field_descriptors, if present.
   struct field_saver {
     template <typename T, typename FD, typename S>
-    status operator()(mpt::wrap_type<FD>, const T& o, S& s) {
-      return s(o.*(FD::member_pointer));
+    void operator()(mpt::wrap_type<FD>, const T& o, S& s) {
+      s(o.*(FD::member_pointer));
     }
   };
 
   template <typename T>
-  status save_fields(const T& o) {
-    return apply_until_first_error(
-        typename traits::get_field_descriptors<T>::type{}, field_saver{}, o,
-        *this);
+  void save_fields(const T& o) {
+    mpt::for_each(typename traits::get_field_descriptors<T>::type{},
+                  field_saver{}, o, *this);
   }
 
   // Invoke the save method, if present.
   template <typename T>
   typename std::enable_if<traits::has_custom_serialization<T>::value,
-                          status>::type
+                          void>::type
   invoke_save(const T& o) {
     static_assert(traits::get_custom_serialization_version<T>::value != 0,
                   "Custom serialization version must be non-zero.");
-    return o.save(*this);
+    o.save(*this);
   }
 
   template <typename T>
   typename std::enable_if<!traits::has_custom_serialization<T>::value,
-                          status>::type
-  invoke_save(const T& o) {
-    return status::OK;
-  }
+                          void>::type
+  invoke_save(const T& o) {}
 
   // Write some container's size... or not (if it's known at compile time).
   template <typename T>
-  typename std::enable_if<traits::has_static_size<T>::value, status>::type
-  maybe_write_size(const T& t) {
-    return status::OK;
-  }
+  typename std::enable_if<traits::has_static_size<T>::value, void>::type
+  maybe_write_size(const T& t) {}
 
   template <typename T>
-  typename std::enable_if<!traits::has_static_size<T>::value, status>::type
+  typename std::enable_if<!traits::has_static_size<T>::value, void>::type
   maybe_write_size(const T& t) {
-    return write_variant(t.size());
+    write_variant(t.size());
   }
 
   // For contiguous sequences of scalars, just treat them as a block of
@@ -302,43 +292,41 @@ class binary_encoder {
   // memory.
   template <typename T>
   typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          status>::type
+                          void>::type
   write_sequence(const T* p, std::size_t l) {
-    return write_block(p, l);
+    write_block(p, l);
   }
 
   // For non-trivial objects, call the whole serialization machinery.
   template <typename T>
   typename std::enable_if<!traits::is_bit_transferrable_scalar<T>::value,
-                          status>::type
+                          void>::type
   write_sequence(const T* p, std::size_t l) {
     while (l-- > 0) {
-      ASH_RETURN_IF_ERROR((*this)(*p++));
+      (*this)(*p++);
     }
-    return status::OK;
   }
 
   // If we need to reverse the data, write it out byte by byte.
   template <typename T>
-  typename std::enable_if<reverse_bytes && sizeof(T) != 1, status>::type
+  typename std::enable_if<reverse_bytes && sizeof(T) != 1, void>::type
   write_block(const T* p_, std::size_t l) {
     const char* p = reinterpret_cast<const char*>(p_);
     constexpr std::size_t data_size = sizeof(T);
     for (std::size_t i = 0; i < l; i++, p += data_size) {
       for (std::size_t j = 1; j <= data_size; j++) {
-        ASH_RETURN_IF_ERROR(out_.putc(p[data_size - j]));
+        out_.putc(p[data_size - j]);
       }
     }
-    return status::OK;
   }
 
   // Just write out a whole block of memory if we don't need to reverse,
   // either because memory has the right endianness or the data type is
   // byte-sized.
   template <typename T>
-  typename std::enable_if<!reverse_bytes || sizeof(T) == 1, status>::type
+  typename std::enable_if<!reverse_bytes || sizeof(T) == 1, void>::type
   write_block(const T* p, std::size_t l) {
-    return out_.write(reinterpret_cast<const char*>(p), l * sizeof(T));
+    out_.write(reinterpret_cast<const char*>(p), l * sizeof(T));
   }
 
   // Here we depend on portable_class_name() returning identical pointers for
@@ -383,21 +371,21 @@ class binary_decoder {
   // Tag processing variant that'll read a structure hash to the input and
   // verify it.
   template <typename T, typename... Tags>
-  status operator()(T& o, verify_structure, Tags... tags) {
+  void operator()(T& o, verify_structure, Tags... tags) {
     std::uint32_t type_hash;
-    ASH_RETURN_IF_ERROR((*this)(type_hash));
+    (*this)(type_hash);
     if (type_hash != traits::type_hash<T>::value) {
-      return status::INVALID_ARGUMENT;
+      throw errors::data_mismatch("Wrong type hash in verified read");
     }
-    return (*this)(o, tags...);
+    (*this)(o, tags...);
   }
 
   // Serializable scalar.
   template <typename T>
   typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          status>::type
+                          void>::type
   operator()(T& v) {
-    return read_block(&v, 1);
+    read_block(&v, 1);
   }
 
   // Contiguous sequences with fixed size (that is, std::array).
@@ -405,9 +393,9 @@ class binary_decoder {
   typename std::enable_if<traits::is_iterable<T>::value &&
                               traits::is_contiguous_sequence<T>::value &&
                               traits::has_static_size<T>::value,
-                          status>::type
+                          void>::type
   operator()(T& sequence) {
-    return read_sequence(&(*sequence.begin()), sequence.size());
+    read_sequence(&(*sequence.begin()), sequence.size());
   }
 
   // Contiguous sequences that can be resized, and contain just scalars.
@@ -421,13 +409,12 @@ class binary_decoder {
           traits::can_be_resized<T>::value &&
           traits::is_bit_transferrable_scalar<typename T::value_type>::value &&
           !traits::is_associative<T>::value,
-      status>::type
+      void>::type
   operator()(T& sequence) {
-    std::size_t l;
-    ASH_ASSIGN_OR_RETURN(l, read_size());
+    std::size_t l = read_size();
     // No need to reserve as we are setting the size directly.
     sequence.resize(l);
-    return read_sequence(&(*sequence.begin()), sequence.size());
+    read_sequence(&(*sequence.begin()), sequence.size());
   }
 
   // Containers where we need to read elements one by one and push_back them.
@@ -440,18 +427,16 @@ class binary_decoder {
                                !traits::is_bit_transferrable_scalar<
                                    typename T::value_type>::value) &&
                               !traits::is_associative<T>::value,
-                          status>::type
+                          void>::type
   operator()(T& sequence) {
-    std::size_t l;
-    ASH_ASSIGN_OR_RETURN(l, read_size());
+    std::size_t l = read_size();
     sequence.clear();
     maybe_reserve(sequence, l);
     while (l-- > 0) {
       typename traits::writable_value_type<typename T::value_type>::type v;
-      ASH_RETURN_IF_ERROR((*this)(v));
+      (*this)(v);
       sequence.push_back(std::move(v));
     }
-    return status::OK;
   }
 
   // Associative containers.
@@ -459,72 +444,68 @@ class binary_decoder {
   typename std::enable_if<traits::is_iterable<T>::value &&
                               !traits::has_static_size<T>::value &&
                               traits::is_associative<T>::value,
-                          status>::type
+                          void>::type
   operator()(T& sequence) {
-    std::size_t l;
-    ASH_ASSIGN_OR_RETURN(l, read_size());
+    std::size_t l = read_size();
     sequence.clear();
     maybe_reserve(sequence, l);
     while (l-- > 0) {
       typename traits::writable_value_type<typename T::value_type>::type v;
-      ASH_RETURN_IF_ERROR((*this)(v));
+      (*this)(v);
       sequence.insert(std::move(v));
     }
-    return status::OK;
   }
 
   // Pairs.
   template <typename U, typename V>
-  status operator()(std::pair<U, V>& p) {
-    ASH_RETURN_IF_ERROR((*this)(p.first));
-    return (*this)(p.second);
+  void operator()(std::pair<U, V>& p) {
+    (*this)(p.first);
+    (*this)(p.second);
   }
 
   // Tuples.
   template <typename... T>
-  status operator()(std::tuple<T...>& t) {
-    return apply_until_first_error(t, tuple_element_loader(), *this);
+  void operator()(std::tuple<T...>& t) {
+    mpt::for_each(t, tuple_element_loader(), *this);
   }
 
   // Plain old arrays.
   template <typename T, std::size_t N>
-  status operator()(T (&a)[N]) {
-    return read_sequence(&a[0], N);
+  void operator()(T (&a)[N]) {
+    read_sequence(&a[0], N);
   }
 
   // Loadable objects.
   template <typename T>
-  typename std::enable_if<traits::can_be_serialized<T>::value, status>::type
+  typename std::enable_if<traits::can_be_serialized<T>::value, void>::type
   operator()(T& o) {
-    ASH_RETURN_IF_ERROR(load_base_classes(o));
-    ASH_RETURN_IF_ERROR(load_fields(o));
-    return invoke_load(o);
+    load_base_classes(o);
+    load_fields(o);
+    invoke_load(o);
   }
 
   // Unique pointers.
   template <typename T, typename Deleter>
-  status operator()(std::unique_ptr<T, Deleter>& p) {
+  void operator()(std::unique_ptr<T, Deleter>& p) {
     bool present;
-    ASH_RETURN_IF_ERROR((*this)(present));
+    (*this)(present);
     if (present) {
-      return load_object_reference(p, no_pointer_update());
+      load_object_reference(p, no_pointer_update());
     } else {
       p.reset();
-      return status::OK;
     }
   }
 
   // Shared pointers.
   template <typename T>
-  status operator()(std::shared_ptr<T>& p) {
+  void operator()(std::shared_ptr<T>& p) {
     // Read the object numeric ID for this stream.
-    std::size_t object_id;
-    ASH_ASSIGN_OR_RETURN(object_id, read_variant());
+    std::size_t object_id = read_variant();
 
     // Short-circuit nullptr.
     if (object_id == 0) {
       p.reset();
-      return status::OK;
+      return;
     }
 
     // Are we reading a new object?
@@ -533,7 +514,7 @@ class binary_decoder {
     // Check for garbage (unsorted object IDs) in the input.
     if (object_id > shared_object_vector_.size()) {
       // We didn't get either a known ID or the next one to assign.
-      return status::OUT_OF_RANGE;
+      throw errors::data_mismatch("Wrong object_id in stream");
     }
 
     // Enter a new object pointer if needed.
@@ -548,28 +529,26 @@ class binary_decoder {
 
     if (first_time) {
       // Deserialize the object the first time.
-      return load_object_reference(p, update_pointer(object_info.ptr));
+      load_object_reference(p, update_pointer(object_info.ptr));
     } else {
       // Check for type compatibility.
       if (object_info.type_id != registry::get_type_id<T>() ||
           !registry::check_dynamic_compatibility<T>(object_info.ptr.get())) {
         // We recorded an incompatible type when we saw this object before,
         // or the object's dynamic type can't be stored in this pointer.
-        return status::INVALID_ARGUMENT;
+        throw errors::data_mismatch("Data shared among incompatible pointers");
       }
       // Cast the object reference we already had.
       p = std::static_pointer_cast<T>(object_info.ptr);
-      return status::OK;
     }
   }
 
   // Weak pointers.
   template <typename T>
-  status operator()(std::weak_ptr<T>& p) {
+  void operator()(std::weak_ptr<T>& p) {
     std::shared_ptr<T> shared;
-    ASH_RETURN_IF_ERROR((*this)(shared));
+    (*this)(shared);
     p = shared;
-    return status::OK;
   }
 
  private:
@@ -587,11 +566,11 @@ class binary_decoder {
   // clear.
   //
   // For convenience, this is always represented in little endian format.
-  status_or<std::size_t> read_variant() {
+  std::size_t read_variant() {
     std::size_t l = 0;
     uint8_t o;
     do {
-      ASH_RETURN_IF_ERROR((*this)(o));
+      (*this)(o);
       l <<= 7;
       l |= (static_cast<std::size_t>(o) & 0x7f);
     } while ((o & 0x80) != 0);
@@ -599,17 +578,16 @@ class binary_decoder {
   }
 
   template <typename P, typename O>
-  status load_dynamic_object_reference(P& ptr, O o) {
+  void load_dynamic_object_reference(P& ptr, O o) {
     using T = typename P::element_type;
 
     // Read the class numeric ID for this stream.
-    std::size_t class_id;
-    ASH_ASSIGN_OR_RETURN(class_id, read_variant());
+    std::size_t class_id = read_variant();
 
     // Check for garbage (unsorted class IDs) in the input.
     if (class_id > class_info_vector_.size()) {
       // We didn't get either a known ID or the next one to assign.
-      return status::OUT_OF_RANGE;
+      throw errors::data_mismatch("Received wrong class_id in stream");
     }
 
     // Construct the required info structure if needed.
@@ -617,19 +595,16 @@ class binary_decoder {
       // Not seen yet. Need to read a class name and interrogate the
       // dynamic_object_factory and dynamic_decoder_registry for this class.
       std::string class_name;
-      ASH_RETURN_IF_ERROR((*this)(class_name));
+      (*this)(class_name);
       std::uint32_t type_hash;
-      ASH_RETURN_IF_ERROR((*this)(type_hash));
+      (*this)(type_hash);
       registry::dynamic_object_factory::info class_info;
       typename registry::dynamic_decoder_registry<MyClass>::info decoder_info;
-      ASH_ASSIGN_OR_RETURN(
-          class_info,
-          registry::dynamic_object_factory::get()[class_name.c_str()]);
-      ASH_ASSIGN_OR_RETURN(decoder_info,
-                           registry::dynamic_decoder_registry<
-                               MyClass>::get()[class_name.c_str()]);
+      class_info = registry::dynamic_object_factory::get()[class_name.c_str()];
+      decoder_info = registry::dynamic_decoder_registry<
+          MyClass>::get()[class_name.c_str()];
       if (type_hash != class_info.type_hash) {
-        return status::INVALID_ARGUMENT;
+        throw errors::data_mismatch("Wrong type hash in dynamic class");
       }
       class_info_vector_.push_back(
           seen_class_info{class_name, class_info.factory_function,
@@ -642,85 +617,83 @@ class binary_decoder {
     // Check that the subclass is compatible (slow).
     if (!registry::dynamic_subclass_registry<T>::get().is_subclass(
             info.class_name.c_str()))
-      return status::INVALID_ARGUMENT;
+      throw errors::data_mismatch(
+          "The class that was read is not a subclass of pointed-to type");
 
     // Instantiate the object.
     ptr.reset(static_cast<T*>(info.factory_function()));
     o(ptr);
 
     // Perform the decoding.
-    return info.decoder_function(static_cast<MyClass&>(*this), *ptr);
+    info.decoder_function(static_cast<MyClass&>(*this), *ptr);
   }
 
   template <typename P, typename O>
   typename std::enable_if<!is_dynamic<typename P::element_type>::value,
-                          status>::type
+                          void>::type
   load_object_reference(P& ptr, O o) {
     ptr.reset(new typename P::element_type());
     o(ptr);
-    return (*this)(*ptr);
+    (*this)(*ptr);
   }
 
   template <typename P, typename O>
   typename std::enable_if<is_dynamic<typename P::element_type>::value,
-                          status>::type
+                          void>::type
   load_object_reference(P& ptr, O o) {
-    return load_dynamic_object_reference(ptr, o);
+    load_dynamic_object_reference(ptr, o);
   }
 
   struct tuple_element_loader {
     template <typename T, typename S>
-    status operator()(T& v, S& s) {
-      return s(v);
+    void operator()(T& v, S& s) {
+      s(v);
     }
   };
 
   // Load base classes, if they exist.
   struct base_class_loader {
     template <typename T, typename B, typename S>
-    status operator()(mpt::wrap_type<B>, T& o, S& s) {
+    void operator()(mpt::wrap_type<B>, T& o, S& s) {
       B& base = static_cast<B&>(o);
-      return s(base);
+      s(base);
     }
   };
 
   template <typename T>
-  status load_base_classes(T& o) {
-    return apply_until_first_error(typename traits::get_base_classes<T>::type{},
-                                   base_class_loader{}, o, *this);
+  void load_base_classes(T& o) {
+    mpt::for_each(typename traits::get_base_classes<T>::type{},
+                  base_class_loader{}, o, *this);
   }
 
   // Load fields from field_descriptors, if present.
   struct field_loader {
     template <typename T, typename FD, typename S>
-    status operator()(mpt::wrap_type<FD>, T& o, S& s) {
-      return s(o.*(FD::member_pointer));
+    void operator()(mpt::wrap_type<FD>, T& o, S& s) {
+      s(o.*(FD::member_pointer));
     }
   };
 
   template <typename T>
-  status load_fields(T& o) {
-    return apply_until_first_error(
-        typename traits::get_field_descriptors<T>::type{}, field_loader{}, o,
-        *this);
+  void load_fields(T& o) {
+    mpt::for_each(typename traits::get_field_descriptors<T>::type{},
+                  field_loader{}, o, *this);
   }
 
   // Invoke the load method, if present.
   template <typename T>
   typename std::enable_if<traits::has_custom_serialization<T>::value,
-                          status>::type
+                          void>::type
   invoke_load(T& o) {
     static_assert(traits::get_custom_serialization_version<T>::value != 0,
                   "Custom serialization version must be non-zero.");
-    return o.load(*this);
+    o.load(*this);
   }
 
   template <typename T>
   typename std::enable_if<!traits::has_custom_serialization<T>::value,
-                          status>::type
-  invoke_load(T& o) {
-    return status::OK;
-  }
+                          void>::type
+  invoke_load(T& o) {}
 
   // Reserve space in a container that supports a reserve method.
   template <typename T>
@@ -733,50 +706,46 @@ class binary_decoder {
   typename std::enable_if<!traits::can_reserve_capacity<T>::value, void>::type
   maybe_reserve(T& t, typename T::size_type l) {}
 
-  status_or<std::size_t> read_size() { return read_variant(); }
+  std::size_t read_size() { return read_variant(); }
 
   // For contiguous sequences of scalars, just treat them as a block of
   // contiguous
   // memory.
   template <typename T>
   typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          status>::type
+                          void>::type
   read_sequence(T* p, std::size_t l) {
-    return read_block(p, l);
+    read_block(p, l);
   }
 
   // For non-trivial objects, call the whole serialization machinery.
   template <typename T>
   typename std::enable_if<!traits::is_bit_transferrable_scalar<T>::value,
-                          status>::type
+                          void>::type
   read_sequence(T* p, std::size_t l) {
     while (l-- > 0) {
-      ASH_RETURN_IF_ERROR((*this)(*p++));
+      (*this)(*p++);
     }
-    return status::OK;
   }
 
-  // If we need to reverse the data, read it out byte by byte.
+  // If we need to reverse the data, read it into place and reverse.
   template <typename T>
-  typename std::enable_if<reverse_bytes && sizeof(T) != 1, status>::type
-  read_block(T* p_, std::size_t l) {
-    char* p = reinterpret_cast<char*>(p_);
-    constexpr std::size_t data_size = sizeof(T);
-    for (std::size_t i = 0; i < l; i++, p += data_size) {
-      for (std::size_t j = 1; j <= data_size; j++) {
-        ASH_ASSIGN_OR_RETURN(p[data_size - j], in_.getc());
-      }
+  typename std::enable_if<reverse_bytes && sizeof(T) != 1, void>::type
+  read_block(T* p, std::size_t l) {
+    in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
+    for (std::size_t i = 0; i < l; i++, p++) {
+      char* bp = reinterpret_cast<char*>(p);
+      std::reverse(bp, bp + sizeof(T));
     }
-    return status::OK;
   }
 
   // Just read out a whole block of memory if we don't need to reverse,
   // either because memory has the right endianness or the data type is
   // byte-sized.
   template <typename T>
-  typename std::enable_if<!reverse_bytes || sizeof(T) == 1, status>::type
+  typename std::enable_if<!reverse_bytes || sizeof(T) == 1, void>::type
   read_block(T* p, std::size_t l) {
-    return in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
+    in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
   }
 
   std::vector<seen_class_info> class_info_vector_;

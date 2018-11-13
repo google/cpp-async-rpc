@@ -10,8 +10,8 @@
 #include "ash/container/flat_map.h"
 #include "ash/container/flat_set.h"
 #include "ash/dynamic_base_class.h"
+#include "ash/errors.h"
 #include "ash/singleton.h"
-#include "ash/status_or.h"
 #include "ash/type_hash.h"
 
 namespace ash {
@@ -59,8 +59,7 @@ void dynamic_subclass_registry<T>::register_subclass(const char* class_name) {
 template <typename S>
 class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
  public:
-  using encoder_function_type = status (*)(S&,
-                                           const ::ash::dynamic_base_class&);
+  using encoder_function_type = void (*)(S&, const ::ash::dynamic_base_class&);
   struct info {
     encoder_function_type encoder_function;
   };
@@ -71,12 +70,14 @@ class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
       return s(static_cast<const T&>(o));
     };
 
-    ASH_CHECK(encoder_info_map_.emplace(class_name, info{(f)}).second);
+    if (!encoder_info_map_.emplace(class_name, info{(f)}).second)
+      throw errors::key_error("Duplicate encoder function registered");
   }
 
-  status_or<info> operator[](const char* class_name) const {
+  info operator[](const char* class_name) const {
     const auto it = encoder_info_map_.find(class_name);
-    if (it == encoder_info_map_.end()) return status::NOT_FOUND;
+    if (it == encoder_info_map_.end())
+      throw errors::key_error("Encoder function not found");
     return it->second;
   }
 
@@ -98,7 +99,7 @@ struct register_encoder {
 template <typename S>
 class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
  public:
-  using decoder_function_type = status (*)(S&, ::ash::dynamic_base_class&);
+  using decoder_function_type = void (*)(S&, ::ash::dynamic_base_class&);
   struct info {
     decoder_function_type decoder_function;
   };
@@ -109,12 +110,14 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
       return s(static_cast<T&>(o));
     };
 
-    ASH_CHECK(decoder_info_map_.emplace(class_name, info{(f)}).second);
+    if (!decoder_info_map_.emplace(class_name, info{(f)}).second)
+      throw errors::key_error("Duplicate decoder function registered");
   }
 
-  status_or<info> operator[](const char* class_name) const {
+  info operator[](const char* class_name) const {
     const auto it = decoder_info_map_.find(class_name);
-    if (it == decoder_info_map_.end()) return status::NOT_FOUND;
+    if (it == decoder_info_map_.end())
+      throw errors::key_error("Decoder function not found");
     return it->second;
   }
 
@@ -151,9 +154,10 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
     factory_function_type f = []() {
       return static_cast<::ash::dynamic_base_class*>(new T());
     };
-    ASH_CHECK(factory_function_map_
-                  .emplace(class_name, info{(f), traits::type_hash<T>::value})
-                  .second);
+    if (!factory_function_map_
+             .emplace(class_name, info{(f), traits::type_hash<T>::value})
+             .second)
+      throw errors::key_error("Duplicate class registration");
 
     // Register the class into the class hierarchy.
     dynamic_subclass_registry<T>::get().register_subclass(class_name);
@@ -167,9 +171,10 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
     return class_name;
   }
 
-  status_or<info> operator[](const char* class_name) const {
+  info operator[](const char* class_name) const {
     const auto it = factory_function_map_.find(class_name);
-    if (it == factory_function_map_.end()) return status::NOT_FOUND;
+    if (it == factory_function_map_.end())
+      throw errors::key_error("Class factory function not found");
     return it->second;
   }
 

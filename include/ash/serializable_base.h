@@ -3,9 +3,9 @@
 
 #include <cstdint>
 #include "ash/dynamic_base_class.h"
+#include "ash/errors.h"
 #include "ash/mpt.h"
 #include "ash/preprocessor.h"
-#include "ash/status.h"
 
 namespace ash {
 
@@ -43,7 +43,8 @@ struct serializable_mixin<true, OwnType, Bases...>
   // Implement the virtual function that returns the name of our type.
   const char* portable_class_name_internal() const override {
     using Descriptor = ash::detail::dynamic_class_descriptor<OwnType>;
-    ASH_CHECK(Descriptor::class_name != nullptr);
+    if (Descriptor::class_name == nullptr)
+      throw errors::invalid_state("Dynamic class had no name set");
     return Descriptor::class_name;
   }
 };

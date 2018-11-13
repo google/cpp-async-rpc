@@ -15,7 +15,7 @@ foreach test_source : tests_list
     test_source,
     include_directories : includes,
     dependencies : [catch_dependency],
-    cpp_args: [cpp_catch2_no_exceptions_flag, cpp_catch2_config_main_flag]
+    cpp_args: [cpp_catch2_config_main_flag]
   )
   test(test_binary_name, test_executable)
 endforeach
