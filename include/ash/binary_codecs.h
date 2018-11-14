@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -81,7 +82,8 @@ class binary_encoder {
                           void>::type
   operator()(const T& sequence) {
     maybe_write_size(sequence);
-    write_sequence(&(*sequence.cbegin()), sequence.size());
+    write_sequence(&*std::begin(sequence),
+                   std::end(sequence) - std::begin(sequence));
   }
 
   // Non-contiguous iterables.
@@ -107,12 +109,6 @@ class binary_encoder {
   template <typename... T>
   void operator()(const std::tuple<T...>& t) {
     mpt::for_each(t, tuple_element_saver(), *this);
-  }
-
-  // Plain old arrays.
-  template <typename T, std::size_t N>
-  void operator()(const T (&a)[N]) {
-    write_sequence(&a[0], N);
   }
 
   // Saveable objects.
@@ -395,7 +391,7 @@ class binary_decoder {
                               traits::has_static_size<T>::value,
                           void>::type
   operator()(T& sequence) {
-    read_sequence(&(*sequence.begin()), sequence.size());
+    read_sequence(&*std::begin(sequence), traits::static_size<T>::value);
   }
 
   // Contiguous sequences that can be resized, and contain just scalars.
@@ -414,7 +410,7 @@ class binary_decoder {
     std::size_t l = read_size();
     // No need to reserve as we are setting the size directly.
     sequence.resize(l);
-    read_sequence(&(*sequence.begin()), sequence.size());
+    read_sequence(&*std::begin(sequence), sequence.size());
   }
 
   // Containers where we need to read elements one by one and push_back them.
@@ -467,12 +463,6 @@ class binary_decoder {
   template <typename... T>
   void operator()(std::tuple<T...>& t) {
     mpt::for_each(t, tuple_element_loader(), *this);
-  }
-
-  // Plain old arrays.
-  template <typename T, std::size_t N>
-  void operator()(T (&a)[N]) {
-    read_sequence(&a[0], N);
   }
 
   // Loadable objects.

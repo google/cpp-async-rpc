@@ -44,8 +44,8 @@ TEST_CASE("is_iterable tests") {
     REQUIRE(ash::traits::is_iterable<char(&)[10]>::value);
   }
 
-  SECTION("true for char array value") {
-    REQUIRE(ash::traits::is_iterable<char[10]>::value);
+  SECTION("false for char array value") {
+    REQUIRE_FALSE(ash::traits::is_iterable<char[10]>::value);
   }
 
   SECTION("true for std::array<char, 10>") {

@@ -42,7 +42,7 @@ struct V2 : ash::dynamic<V2> {
 ASH_REGISTER(V2);
 
 struct X : ash::dynamic<X, V> {
-  int x = 1, y = 2;
+  int x[10] = {1}, y = 2;
   std::string z = "pasta";
 
   ASH_FIELDS(x, y, z);
@@ -107,7 +107,7 @@ int main() {
               << std::endl;
 
     std::shared_ptr<X> x(new X());
-    x->x = 44;
+    x->x[0] = 44;
     x->a = 88;
     std::shared_ptr<V> v = x;
     std::weak_ptr<V> w = v;

@@ -75,10 +75,9 @@ constexpr std::uint32_t type_hash_compose(std::uint32_t base,
 constexpr std::uint32_t type_hash_add(std::uint32_t base, type_family type,
                                       bool is_signed, std::size_t size) {
   return type_hash_compose(
-      base,
-      (static_cast<std::uint32_t>(type) << detail::FAMILY_OFFSET) |
-          (static_cast<std::uint32_t>(is_signed) << detail::SIGN_OFFSET) |
-          (static_cast<std::uint32_t>(size) << detail::SIZE_OFFSET));
+      base, (static_cast<std::uint32_t>(type) << detail::FAMILY_OFFSET) |
+                (static_cast<std::uint32_t>(is_signed) << detail::SIGN_OFFSET) |
+                (static_cast<std::uint32_t>(size) << detail::SIZE_OFFSET));
 }
 
 template <std::uint32_t base, typename Seen, typename... T>
@@ -137,16 +136,6 @@ struct type_hash<T, Seen, base,
       base, detail::type_family::ENUM, std::is_signed<T>::value, sizeof(T));
 };
 
-template <typename T, typename Seen, std::uint32_t base>
-struct type_hash<T, Seen, base,
-                 typename std::enable_if<std::is_array<T>::value &&
-                                         !mpt::is_in<T, Seen>::value>::type> {
-  static constexpr std::uint32_t value = detail::compose_with_types<
-      detail::type_hash_add(base, detail::type_family::ARRAY, false,
-                            std::extent<T>::value),
-      mpt::insert_into_t<T, Seen>, typename std::remove_extent<T>::type>::value;
-};
-
 template <typename U, typename V, typename Seen, std::uint32_t base>
 struct type_hash<
     std::pair<U, V>, Seen, base,
@@ -173,8 +162,10 @@ struct type_hash<T, Seen, base,
                                          !mpt::is_in<T, Seen>::value>::type> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::ARRAY, false,
-                            std::tuple_size<T>::value),
-      mpt::insert_into_t<T, Seen>, typename T::value_type>::value;
+                            static_size<T>::value),
+      mpt::insert_into_t<T, Seen>,
+      typename std::iterator_traits<decltype(
+          std::begin(std::declval<T&>()))>::value_type>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>

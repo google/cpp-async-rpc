@@ -25,6 +25,7 @@
 #include <array>
 #include <iterator>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -44,7 +45,7 @@ struct is_iterable : public std::integral_constant<bool, false> {};
 /// \copydoc is_iterable
 template <typename T>
 struct is_iterable<
-    T, typename enable_if_type<decltype(std::begin(std::declval<T>()))>::type>
+    T, typename enable_if_type<decltype(std::begin(std::declval<T&>()))>::type>
     : public std::integral_constant<bool, true> {};
 
 /// \brief Check whether a container supports iteration.
@@ -57,7 +58,7 @@ struct is_const_iterable : public std::integral_constant<bool, false> {};
 /// \copydoc is_const_iterable
 template <typename T>
 struct is_const_iterable<T, typename enable_if_type<decltype(
-                                std::begin(std::declval<const T>()))>::type>
+                                std::begin(std::declval<const T&>()))>::type>
     : public std::integral_constant<bool, true> {};
 
 /// \brief Check if `T` is an associative container.
@@ -143,6 +144,18 @@ struct has_static_size<std::array<T, size>> : public std::true_type {};
 /// Specialization for plain array.
 template <typename T, std::size_t size>
 struct has_static_size<T[size]> : public std::true_type {};
+
+/// \brief Get a container's static size at compile time.
+template <typename T>
+struct static_size
+    : public std::integral_constant<std::size_t, std::tuple_size<T>::value> {};
+
+/// \copydoc static_size
+///
+/// Specialization for plain array.
+template <typename T, std::size_t size>
+struct static_size<T[size]> : public std::integral_constant<std::size_t, size> {
+};
 
 }  // namespace traits
 
