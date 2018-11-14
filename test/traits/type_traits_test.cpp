@@ -27,7 +27,7 @@
 #include "ash/preprocessor.h"
 #include "catch2/catch.hpp"
 
-TEST_CASE("is_transferrable_scalar") {
+TEST_CASE("is_bit_transferrable_scalar") {
 #define IS_NOT_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST(...)                 \
   SECTION("false for " #__VA_ARGS__) {                                 \
     REQUIRE_FALSE(                                                     \
