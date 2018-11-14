@@ -39,7 +39,7 @@ constexpr bool target_is_little_endian =
 constexpr bool target_is_big_endian = (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
 
 static_assert(target_is_little_endian ^ target_is_big_endian,
-              "Target endianness isn't clearly big or little endian.");
+              "Target endianness isn't either big or little endian.");
 
 /// Enable type `R` if `T` evaluates to a type.
 ///
@@ -50,7 +50,7 @@ struct enable_if_type {
   using type = R;
 };
 
-/// \brief Check wether `T` is a POD scalar that can be transferred as-is
+/// \brief Check whether `T` is a POD scalar that can be transferred as-is
 /// between memory and a file.
 ///
 /// The `value` is true when `T` is a scalar type that has a stable meaning when
@@ -60,8 +60,26 @@ struct enable_if_type {
 /// \param T the type to check.
 template <typename T>
 struct is_bit_transferrable_scalar
-    : public std::integral_constant<
-          bool, std::is_arithmetic<T>::value || std::is_enum<T>::value> {};
+    : public std::integral_constant<bool, std::is_arithmetic<T>::value ||
+                                              std::is_enum<T>::value> {};
+
+namespace detail {
+template <typename T>
+struct writable_value_type {
+  using type = typename std::remove_cv<T>::type;
+};
+
+template <typename U, typename V>
+struct writable_value_type<std::pair<U, V>> {
+  using type = std::pair<typename std::remove_cv<U>::type,
+                         typename std::remove_cv<V>::type>;
+};
+
+template <typename... U>
+struct writable_value_type<std::tuple<U...>> {
+  using type = std::tuple<typename std::remove_cv<U>::type...>;
+};
+}  // namespace detail
 
 /// \brief Create a type derived of `T` suitable to create a temporary onto
 /// which we can read data from a stream.
@@ -70,26 +88,8 @@ struct is_bit_transferrable_scalar
 /// `const`-qualified) but the serialization format is compatible to the one for
 /// the original type `T`.
 template <typename T>
-struct writable_value_type {
-  using type = typename std::remove_const<T>::type;
-};
-
-/// \copydoc writable_value_type
-///
-/// Specialization for `std::pair`.
-template <typename U, typename V>
-struct writable_value_type<std::pair<U, V>> {
-  using type = std::pair<typename std::remove_const<U>::type,
-                         typename std::remove_const<V>::type>;
-};
-
-/// \copydoc writable_value_type
-///
-/// Specialization for `std::tuple`.
-template <typename... U>
-struct writable_value_type<std::tuple<U...>> {
-  using type = std::tuple<typename std::remove_const<U>::type...>;
-};
+using writable_value_type = detail::writable_value_type<
+    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
 
 }  // namespace traits
 

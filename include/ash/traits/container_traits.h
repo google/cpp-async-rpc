@@ -66,35 +66,29 @@ struct is_const_iterable<T, typename enable_if_type<decltype(
 /// This implementation just checks for a nested `T::key_type` type.
 ASH_MAKE_NESTED_TYPE_CHECKER(is_associative, key_type);
 
-/// \brief Check if `T` is a container storing elements contiguously in memory.
+namespace detail {
 template <typename T>
 struct is_contiguous_sequence : public std::false_type {};
 
-/// \copydoc is_contiguous_sequence
-///
-/// Specialization for plain arrays.
 template <typename T, std::size_t size>
 struct is_contiguous_sequence<T[size]> : public std::true_type {};
 
-/// \copydoc is_contiguous_sequence
-///
-/// Specialization for `std::array`.
 template <typename T, std::size_t size>
 struct is_contiguous_sequence<std::array<T, size>> : public std::true_type {};
 
-/// \copydoc is_contiguous_sequence
-///
-/// Specialization for `std::vector`.
 template <typename T, typename Allocator>
 struct is_contiguous_sequence<std::vector<T, Allocator>>
     : public std::true_type {};
 
-/// \copydoc is_contiguous_sequence
-///
-/// Specialization for `std::basic_string`.
 template <typename CharT, typename Traits, typename Allocator>
 struct is_contiguous_sequence<std::basic_string<CharT, Traits, Allocator>>
     : public std::true_type {};
+}  // namespace detail
+
+/// \brief Check if `T` is a container storing elements contiguously in memory.
+template <typename T>
+using is_contiguous_sequence = detail::is_contiguous_sequence<
+    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
 
 namespace detail {
 ASH_MAKE_METHOD_CHECKER(has_reserve, reserve);
@@ -129,35 +123,38 @@ struct can_be_resized<T, typename enable_if_type<typename T::size_type>::type>
     : public std::integral_constant<
           bool, detail::has_resize<T, void(typename T::size_type)>::value> {};
 
-/// \brief Check whether a container has a size known at compile time.
+namespace detail {
 template <typename T>
 struct has_static_size : public std::false_type {};
 
-/// \copydoc has_static_size
-///
-/// Specialization for `std::array`.
 template <typename T, std::size_t size>
 struct has_static_size<std::array<T, size>> : public std::true_type {};
 
-/// \copydoc has_static_size
-///
-/// Specialization for plain array.
 template <typename T, std::size_t size>
 struct has_static_size<T[size]> : public std::true_type {};
+}  // namespace detail
 
-/// \brief Get a container's static size at compile time.
+/// \brief Check whether a container has a size known at compile time.
+template <typename T>
+using has_static_size = detail::has_static_size<
+    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+
+namespace detail {
 template <typename T>
 struct static_size
     : public std::integral_constant<std::size_t, std::tuple_size<T>::value> {};
 
-/// \copydoc static_size
-///
-/// Specialization for plain array.
 template <typename T, std::size_t size>
 struct static_size<T[size]> : public std::integral_constant<std::size_t, size> {
 };
 
-}  // namespace traits
+}  // namespace detail
+/// \brief Get a container's static size at compile time.
+template <typename T>
+using static_size = detail::static_size<
+    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+
+};  // namespace traits
 
 }  // namespace ash
 
