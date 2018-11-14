@@ -337,3 +337,13 @@ TEST_CASE("has_static_size tests") {
     REQUIRE_FALSE(ash::traits::has_static_size<std::string>::value);
   }
 }
+
+TEST_CASE("static_size tests") {
+  SECTION("5 for int[5]") {
+    REQUIRE(5 == ash::traits::static_size<int[5]>::value);
+  }
+
+  SECTION("5 for std::array<int, 5>") {
+    REQUIRE(5 == ash::traits::static_size<std::array<int, 5>>::value);
+  }
+}
