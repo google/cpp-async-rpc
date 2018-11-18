@@ -24,55 +24,41 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include "ash/preprocessor.h"
+#include "ash/testing/static_checks.h"
 #include "catch2/catch.hpp"
 
+template <typename T, bool v>
+using check_is_bit_transferrable_scalar = ash::testing::check_value<
+    bool, ash::traits::is_bit_transferrable_scalar<T>::value, v>;
+
 TEST_CASE("is_bit_transferrable_scalar") {
-#define IS_NOT_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST(...)                 \
-  SECTION("false for " #__VA_ARGS__) {                                 \
-    REQUIRE_FALSE(                                                     \
-        ash::traits::is_bit_transferrable_scalar<__VA_ARGS__>::value); \
-  }
+  check_is_bit_transferrable_scalar<std::string, false>();
+  check_is_bit_transferrable_scalar<std::pair<int, char>, false>();
 
-#define IS_NOT_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST2(...) \
-  ASH_NO_PARENS(IS_NOT_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST, __VA_ARGS__)
-
-  ASH_FOREACH(IS_NOT_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST2, ASH_EMPTY,
-              (std::string), (std::pair<int, char>));
-
-#define IS_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST(...)                         \
-  SECTION("true for " #__VA_ARGS__) {                                      \
-    REQUIRE(ash::traits::is_bit_transferrable_scalar<__VA_ARGS__>::value); \
-  }
-
-#define IS_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST2(...) \
-  ASH_NO_PARENS(IS_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST, __VA_ARGS__)
-
-  ASH_FOREACH(IS_BIT_TRANSFERRABLE_SCALAR_TYPE_TEST2, ASH_EMPTY, (char),
-              (signed char), (unsigned char), (int), (signed int),
-              (unsigned int), (long), (signed long), (unsigned long), (float),
-              (double));
+  check_is_bit_transferrable_scalar<char, true>();
+  check_is_bit_transferrable_scalar<signed char, true>();
+  check_is_bit_transferrable_scalar<unsigned char, true>();
+  check_is_bit_transferrable_scalar<bool, true>();
+  check_is_bit_transferrable_scalar<int, true>();
+  check_is_bit_transferrable_scalar<signed int, true>();
+  check_is_bit_transferrable_scalar<unsigned int, true>();
+  check_is_bit_transferrable_scalar<long, true>();
+  check_is_bit_transferrable_scalar<signed long, true>();
+  check_is_bit_transferrable_scalar<unsigned long, true>();
+  check_is_bit_transferrable_scalar<long long, true>();
+  check_is_bit_transferrable_scalar<signed long long, true>();
+  check_is_bit_transferrable_scalar<unsigned long long, true>();
 }
 
+template <typename T1, typename T2>
+using check_writable_value_type = ash::testing::check_type<
+    typename ash::traits::writable_value_type<T1>::type, T2>;
+
 TEST_CASE("writable_value_type tests") {
-  SECTION("int for const int&") {
-    REQUIRE(std::is_same<
-            int, ash::traits::writable_value_type<const int&>::type>::value);
-  }
-
-  SECTION("std::pair<int, char> for const std::pair<const int, const char>") {
-    REQUIRE(
-        std::is_same<std::pair<int, char>,
-                     ash::traits::writable_value_type<
-                         const std::pair<const int, const char>>::type>::value);
-  }
-
-  SECTION(
-      "std::tuple<int, char, std::string> for const std::tuple<const int, "
-      "const char, const std::string>&") {
-    REQUIRE(std::is_same<
-            std::tuple<int, char, std::string>,
-            ash::traits::writable_value_type<const std::tuple<
-                const int, const char, const std::string>&>::type>::value);
-  }
+  check_writable_value_type<const int&, int>();
+  check_writable_value_type<const std::pair<const int, const char>,
+                            std::pair<int, char>>();
+  check_writable_value_type<
+      const std::tuple<const int, const char, const std::string>&,
+      std::tuple<int, char, std::string>>();
 }
