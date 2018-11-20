@@ -54,7 +54,7 @@ template <typename T1, typename T2>
 using check_writable_value_type = ash::testing::check_type<
     typename ash::traits::writable_value_type<T1>::type, T2>;
 
-TEST_CASE("writable_value_type tests") {
+TEST_CASE("writable_value_type") {
   check_writable_value_type<const int&, int>();
   check_writable_value_type<const std::pair<const int, const char>,
                             std::pair<int, char>>();
