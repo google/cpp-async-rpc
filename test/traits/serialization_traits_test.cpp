@@ -39,8 +39,7 @@ struct B : ash::serializable<B, A> {
 };
 
 struct C : ash::serializable<C> {
-  static constexpr ash::traits::custom_serialization_version_type
-      custom_serialization_version = 33;
+  ASH_CUSTOM_SERIALIZATION_VERSION(33);
 };
 
 struct D {};

@@ -8,7 +8,7 @@
 /// headers needed for the main functionality in ash.
 
 #include "ash/binary_codecs.h"
-#include "ash/interfaces.h"
+#include "ash/interface.h"
 #include "ash/io_adapters.h"
 #include "ash/mpt.h"
 #include "ash/serializable.h"

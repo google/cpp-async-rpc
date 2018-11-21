@@ -4,6 +4,7 @@
 #include <string>
 #include "ash.h"
 #include "ash/errors.h"
+#include "ash/interface.h"
 #include "ash/iostream_adapters.h"
 #include "ash/mpt.h"
 #include "ash/serializable.h"
@@ -77,7 +78,13 @@ struct kk {
 
 ASH_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
+struct MyInterface : ash::interface<MyInterface> {
+  virtual void Method(int x) = 0;
+  ASH_METHODS(Method);
+};
+
 int main() {
+  f<MyInterface::method_descriptors>();
   try {
     f<decltype(kk::roro)>();
     std::cerr << has_roro<kk, int>::value << std::endl;
