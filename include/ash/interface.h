@@ -1,3 +1,24 @@
+/// \file
+/// \brief Classes for defining RPC interfaces.
+///
+/// \copyright
+///   Copyright 2018 by Google Inc. All Rights Reserved.
+///
+/// \copyright
+///   Licensed under the Apache License, Version 2.0 (the "License"); you may
+///   not use this file except in compliance with the License. You may obtain a
+///   copy of the License at
+///
+/// \copyright
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// \copyright
+///   Unless required by applicable law or agreed to in writing, software
+///   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+///   License for the specific language governing permissions and limitations
+///   under the License.
+
 #ifndef INCLUDE_ASH_INTERFACE_H_
 #define INCLUDE_ASH_INTERFACE_H_
 
@@ -47,6 +68,13 @@ struct interface : Bases... {
       ASH_FOREACH(ASH_METHOD_NAME, ASH_METHOD_NAME_SEP, __VA_ARGS__)}; \
   using method_descriptors =                                           \
       ::ash::mpt::pack<ASH_FOREACH(ASH_METHOD, ASH_METHOD_SEP, __VA_ARGS__)>
+
+/// Get the method name associated to a method descriptor.
+template <typename MethodDescriptor>
+constexpr const char *method_name() {
+  return MethodDescriptor::class_type::field_names[mpt::at<0>(
+      mpt::find_if(typename MethodDescriptor::class_type::method_descriptors{},
+                   mpt::is<MethodDescriptor>{}))];
 
 }  // namespace ash
 

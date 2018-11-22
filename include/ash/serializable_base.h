@@ -1,3 +1,24 @@
+/// \file
+/// \brief Header defining a base class for serializable data.
+///
+/// \copyright
+///   Copyright 2018 by Google Inc. All Rights Reserved.
+///
+/// \copyright
+///   Licensed under the Apache License, Version 2.0 (the "License"); you may
+///   not use this file except in compliance with the License. You may obtain a
+///   copy of the License at
+///
+/// \copyright
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// \copyright
+///   Unless required by applicable law or agreed to in writing, software
+///   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+///   License for the specific language governing permissions and limitations
+///   under the License.
+
 #ifndef INCLUDE_ASH_SERIALIZABLE_BASE_H_
 #define INCLUDE_ASH_SERIALIZABLE_BASE_H_
 
@@ -82,14 +103,18 @@ using dynamic = mpt::conditional_t<
 #define ASH_FIELD(NAME) \
   ::ash::field_descriptor<decltype(&own_type::NAME), &own_type::NAME>
 #define ASH_FIELD_SEP() ,
+#define ASH_FIELD_NAME(NAME) #NAME
+#define ASH_FIELD_NAME_SEP() ,
 
 /// Needed to find our own type in template classes, as the base class is
 /// dependent.
 #define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define ASH_FIELDS(...)     \
-  using field_descriptors = \
+#define ASH_FIELDS(...)                                              \
+  static constexpr const char* field_names[] = {                     \
+      ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)}; \
+  using field_descriptors =                                          \
       ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>
 
 /// Version of the load/save methods.
@@ -97,6 +122,14 @@ using dynamic = mpt::conditional_t<
   static_assert(VERSION != 0,                                      \
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION
+
+/// Get the field name associated to a field descriptor.
+template <typename FieldDescriptor>
+constexpr const char* field_name() {
+  return FieldDescriptor::class_type::field_names[mpt::at<0>(
+      mpt::find_if(typename FieldDescriptor::class_type::field_descriptors{},
+                   mpt::is<FieldDescriptor>{}))];
+}
 
 }  // namespace ash
 

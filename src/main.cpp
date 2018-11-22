@@ -85,7 +85,12 @@ struct MyInterface : ash::interface<MyInterface> {
 };
 
 int main() {
-  f<MyInterface::method_descriptors>();
+  std::cerr << ash::field_name<decltype(
+                   ash::mpt::at<0>(z::Z::field_descriptors{}))::type>()
+            << std::endl;
+  std::cerr << ash::field_name<decltype(
+                   ash::mpt::at<1>(z::Z::field_descriptors{}))::type>()
+            << std::endl;
   try {
     std::string data = "Hello";
     std::uint64_t key[4] = {1, 2, 3, 4};
