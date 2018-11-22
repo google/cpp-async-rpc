@@ -4,6 +4,7 @@
 #include <string>
 #include "ash.h"
 #include "ash/errors.h"
+#include "ash/highway_hash.h"
 #include "ash/interface.h"
 #include "ash/iostream_adapters.h"
 #include "ash/mpt.h"
@@ -86,6 +87,19 @@ struct MyInterface : ash::interface<MyInterface> {
 int main() {
   f<MyInterface::method_descriptors>();
   try {
+    std::string data = "Hello";
+    std::uint64_t key[4] = {1, 2, 3, 4};
+    std::cerr << std::hex
+              << ash::highway_hash::hash64(
+                     reinterpret_cast<const uint8_t*>(data.data()), data.size(),
+                     key)
+              << std::dec << std::endl;
+    data = "Hell!";
+    std::cerr << std::hex
+              << ash::highway_hash::hash64(
+                     reinterpret_cast<const uint8_t*>(data.data()), data.size(),
+                     key)
+              << std::dec << std::endl;
     f<decltype(kk::roro)>();
     std::cerr << has_roro<kk, int>::value << std::endl;
     std::cerr << has_roro<Y, int>::value << std::endl;
