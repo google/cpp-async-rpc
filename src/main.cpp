@@ -8,6 +8,7 @@
 #include "ash/interface.h"
 #include "ash/iostream_adapters.h"
 #include "ash/mpt.h"
+#include "ash/packet_codecs.h"
 #include "ash/serializable.h"
 #include "ash/type_hash.h"
 
@@ -86,6 +87,18 @@ struct MyInterface : ash::interface<MyInterface> {
 };
 
 int main() {
+  std::uint64_t key[4] = {1, 2, 3, 4};
+
+  std::string data = "Hello";
+  ash::mac_codec mac(key);
+
+  std::cerr << data << std::endl;
+  mac.encode(data);
+  std::cerr << data << std::endl;
+  data[3]++;
+  mac.decode(data);
+  std::cerr << data << std::endl;
+
   std::cerr << decltype(
                    ash::mpt::at<0>(z::Z::field_descriptors{}))::type::name()
             << std::endl;
@@ -102,7 +115,6 @@ int main() {
 
   try {
     std::string data = "Hello";
-    std::uint64_t key[4] = {1, 2, 3, 4};
     std::cerr << std::hex
               << ash::highway_hash::hash64(
                      reinterpret_cast<const uint8_t*>(data.data()), data.size(),
