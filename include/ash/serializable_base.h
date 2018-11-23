@@ -22,6 +22,7 @@
 #ifndef INCLUDE_ASH_SERIALIZABLE_BASE_H_
 #define INCLUDE_ASH_SERIALIZABLE_BASE_H_
 
+#include <array>
 #include <cstdint>
 #include "ash/dynamic_base_class.h"
 #include "ash/errors.h"
@@ -82,7 +83,14 @@ struct field_descriptor<T C::*, m_ptr> {
   using class_type = C;
   using member_type = T;
   static constexpr auto member_pointer = m_ptr;
-};
+
+  /// Get the field's name.
+  static const char* name() {
+    return class_type::field_names()[mpt::at<0>(
+        mpt::find_if(typename class_type::field_descriptors{},
+                     mpt::is<field_descriptor<T C::*, m_ptr>>{}))];
+  }
+};  // namespace ash
 
 /// Inherit publicly from this in serializable classes, specifying own type and
 /// public bases.
@@ -111,25 +119,23 @@ using dynamic = mpt::conditional_t<
 #define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define ASH_FIELDS(...)                                              \
-  static constexpr const char* field_names[] = {                     \
-      ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)}; \
-  using field_descriptors =                                          \
-      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>
+#define ASH_FIELDS(...)                                                      \
+  using field_descriptors =                                                  \
+      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;  \
+  static const std::array<const char*,                                       \
+                          ::ash::mpt::size<field_descriptors>::value>&       \
+  field_names() {                                                            \
+    static const std::array<const char*,                                     \
+                            ::ash::mpt::size<field_descriptors>::value>      \
+        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)}; \
+    return names;                                                            \
+  }
 
 /// Version of the load/save methods.
 #define ASH_CUSTOM_SERIALIZATION_VERSION(VERSION)                  \
   static_assert(VERSION != 0,                                      \
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION
-
-/// Get the field name associated to a field descriptor.
-template <typename FieldDescriptor>
-constexpr const char* field_name() {
-  return FieldDescriptor::class_type::field_names[mpt::at<0>(
-      mpt::find_if(typename FieldDescriptor::class_type::field_descriptors{},
-                   mpt::is<FieldDescriptor>{}))];
-}
 
 }  // namespace ash
 

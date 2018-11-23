@@ -22,6 +22,7 @@
 #ifndef INCLUDE_ASH_INTERFACE_H_
 #define INCLUDE_ASH_INTERFACE_H_
 
+#include <array>
 #include "ash/mpt.h"
 #include "ash/preprocessor.h"
 
@@ -32,13 +33,20 @@ template <typename MPtr, MPtr m_ptr>
 struct method_descriptor;
 
 template <typename C, typename Result, typename... Args,
-          Result (C::*m_ptr)(const Args &...)>
-struct method_descriptor<Result (C::*)(const Args &...), m_ptr> {
+          Result (C::*m_ptr)(Args...)>
+struct method_descriptor<Result (C::*)(Args...), m_ptr> {
   using class_type = C;
   using result_type = Result;
-  using method_type_ptr = Result (C::*)(const Args &...);
-  using method_type = Result(const Args &&...);
-  static constexpr Result (C::*method)(const Args &...) = m_ptr;
+  using method_type_ptr = Result (C::*)(Args...);
+  using method_type = Result(Args...);
+  static constexpr Result (C::*method)(Args...) = m_ptr;
+
+  /// Get the method's name.
+  static const char *name() {
+    return class_type::method_names()[mpt::at<0>(
+        mpt::find_if(typename class_type::method_descriptors{},
+                     mpt::is<method_descriptor<method_type_ptr, m_ptr>>{}))];
+  }
 };
 
 template <typename OwnInterface, typename... Bases>
@@ -63,11 +71,17 @@ struct interface : Bases... {
 #define ASH_OWN_INTERFACE(...) using own_interface = __VA_ARGS__
 
 /// Define the list of `method_descriptor` elements for the current interface.
-#define ASH_METHODS(...)                                               \
-  static constexpr const char *method_names[] = {                      \
-      ASH_FOREACH(ASH_METHOD_NAME, ASH_METHOD_NAME_SEP, __VA_ARGS__)}; \
-  using method_descriptors =                                           \
-      ::ash::mpt::pack<ASH_FOREACH(ASH_METHOD, ASH_METHOD_SEP, __VA_ARGS__)>
+#define ASH_METHODS(...)                                                       \
+  using method_descriptors =                                                   \
+      ::ash::mpt::pack<ASH_FOREACH(ASH_METHOD, ASH_METHOD_SEP, __VA_ARGS__)>;  \
+  static const std::array<const char *,                                        \
+                          ::ash::mpt::size<method_descriptors>::value>         \
+      &method_names() {                                                        \
+    static const std::array<const char *,                                      \
+                            ::ash::mpt::size<method_descriptors>::value>       \
+        names{ASH_FOREACH(ASH_METHOD_NAME, ASH_METHOD_NAME_SEP, __VA_ARGS__)}; \
+    return names;                                                              \
+  }
 
 /// Get the method name associated to a method descriptor.
 template <typename MethodDescriptor>
@@ -75,7 +89,7 @@ constexpr const char *method_name() {
   return MethodDescriptor::class_type::field_names[mpt::at<0>(
       mpt::find_if(typename MethodDescriptor::class_type::method_descriptors{},
                    mpt::is<MethodDescriptor>{}))];
-
+}
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_INTERFACE_H_

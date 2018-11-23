@@ -80,17 +80,26 @@ struct kk {
 ASH_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
 struct MyInterface : ash::interface<MyInterface> {
-  virtual void Method(int x) = 0;
-  ASH_METHODS(Method);
+  virtual void Method1(int x) = 0;
+  virtual int Method2(int x, int y) = 0;
+  ASH_METHODS(Method1, Method2);
 };
 
 int main() {
-  std::cerr << ash::field_name<decltype(
-                   ash::mpt::at<0>(z::Z::field_descriptors{}))::type>()
+  std::cerr << decltype(
+                   ash::mpt::at<0>(z::Z::field_descriptors{}))::type::name()
             << std::endl;
-  std::cerr << ash::field_name<decltype(
-                   ash::mpt::at<1>(z::Z::field_descriptors{}))::type>()
+  std::cerr << decltype(
+                   ash::mpt::at<1>(z::Z::field_descriptors{}))::type::name()
             << std::endl;
+
+  std::cerr << decltype(ash::mpt::at<0>(
+                   MyInterface::method_descriptors{}))::type::name()
+            << std::endl;
+  std::cerr << decltype(ash::mpt::at<1>(
+                   MyInterface::method_descriptors{}))::type::name()
+            << std::endl;
+
   try {
     std::string data = "Hello";
     std::uint64_t key[4] = {1, 2, 3, 4};
