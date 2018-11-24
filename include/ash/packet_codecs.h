@@ -23,6 +23,7 @@
 #define INCLUDE_ASH_PACKET_CODECS_H_
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <random>
 #include <string>
@@ -39,6 +40,8 @@ class packet_codec {
   virtual void decode(std::string& data) = 0;
 };
 
+/// Codec provides a HighwayHash-based MAC encapsulation based on a 256-bit
+/// secret and a random nonce.
 class mac_codec : public packet_codec {
  public:
   explicit mac_codec(std::uint64_t key[4])
@@ -58,8 +61,11 @@ class mac_codec : public packet_codec {
     }
 
     // Get the hash; append it.
-    std::uint64_t hash = highway_hash::hash64(
-        reinterpret_cast<const uint8_t*>(data.data()), original_size + 8, key_);
+    highway_hash hasher(key_);
+    hasher.append(reinterpret_cast<const uint8_t*>(data.data()) + original_size,
+                  8);
+    hasher.append(reinterpret_cast<const uint8_t*>(data.data()), original_size);
+    std::uint64_t hash = hasher.finish64();
     for (std::size_t i = 0; i < 8; i++) {
       data.push_back(hash & 0xff);
       hash >>= 8;
@@ -72,8 +78,12 @@ class mac_codec : public packet_codec {
     }
     std::size_t original_size = data.size() - 16;
 
-    std::uint64_t hash = highway_hash::hash64(
-        reinterpret_cast<const uint8_t*>(data.data()), original_size + 8, key_);
+    // Get the hash; verify it.
+    highway_hash hasher(key_);
+    hasher.append(reinterpret_cast<const uint8_t*>(data.data()) + original_size,
+                  8);
+    hasher.append(reinterpret_cast<const uint8_t*>(data.data()), original_size);
+    std::uint64_t hash = hasher.finish64();
     const uint8_t* ptr =
         reinterpret_cast<const uint8_t*>(data.data()) + original_size + 8;
     for (std::size_t i = 0; i < 8; i++) {
@@ -91,6 +101,75 @@ class mac_codec : public packet_codec {
   std::uint64_t key_[4];
   std::mt19937 gen_;
   std::uniform_int_distribution<int> dis_;
+};
+
+/// Codec that applies Consistent Overhead Byte Stuffing.
+class cobs_codec : public packet_codec {
+ public:
+  void encode(std::string& data) override {
+    // For n < 254 we'll need 1 extra byte (the ending 0 can be overwritten with
+    // the first span counter). For n = 254 we'll need 2 extra bytes (as we'll
+    // be using a second span). So we'll have a max overhead of 1 + (length /
+    // 254).
+    std::size_t original_size = data.size();
+    std::size_t overhead = 1 + original_size / 254;
+    data.resize(original_size + overhead * 2);
+    data[original_size] = '\0';
+    auto next_counter = data.rbegin();
+    auto current_char = data.begin();
+    auto end = current_char + original_size;
+    std::size_t zeroes = 0;
+    while (current_char < end) {
+      std::size_t run_length = 0;
+      while (*current_char && run_length < 254) {
+        ++current_char;
+        ++run_length;
+      }
+      *next_counter++ = run_length;
+      if (run_length < 254) {
+        // Skip the zero.
+        ++current_char;
+        ++zeroes;
+      }
+    }
+    std::size_t num_counters = next_counter - data.rbegin();
+    auto source_char = data.begin() + original_size;
+    current_char = source_char + num_counters - zeroes;
+    next_counter--;
+    for (std::size_t c = 0; c < num_counters; ++c) {
+      auto counter = static_cast<std::uint8_t>(*next_counter--);
+      for (std::size_t i = 0; i < counter; ++i) {
+        *--current_char = *--source_char;
+      }
+      *--current_char = 1 + counter;
+      if (counter < 254) {
+        --source_char;
+      }
+    }
+
+    assert(current_char == data.begin());
+    assert(source_char == data.begin());
+
+    data.resize(original_size + num_counters - zeroes);
+  }
+
+  void decode(std::string& data) override {
+    auto src = data.begin();
+    auto dst = data.begin();
+    while (src < data.end()) {
+      std::size_t count = static_cast<std::uint8_t>(*src++) - 1;
+      for (std::size_t i = 0; i < count; i++) {
+        if (src >= data.end()) {
+          throw errors::eof("Truncated COBS-encoded data.");
+        }
+        *dst++ = *src++;
+      }
+      if (count < 254) {
+        *dst++ = '\0';
+      }
+    }
+    data.resize(dst - data.begin());
+  }
 };
 }  // namespace ash
 

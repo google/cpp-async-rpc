@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -86,18 +87,62 @@ struct MyInterface : ash::interface<MyInterface> {
   ASH_METHODS(Method1, Method2);
 };
 
+void xxd(const std::string& data) {
+  std::size_t i = 0;
+  while (i < data.size()) {
+    std::cerr << std::hex << std::setw(8) << i << ": ";
+
+    for (std::size_t j = 0; j < 16; j++) {
+      if (i + j < data.size()) {
+        std::cerr << std::hex << std::setw(2)
+                  << static_cast<std::uint16_t>(
+                         static_cast<std::uint8_t>(data[i + j]))
+                  << ' ';
+
+      } else {
+        std::cerr << "   ";
+      }
+    }
+    for (std::size_t j = 0; j < 16; j++) {
+      if (i + j < data.size()) {
+        auto c = data[i + j];
+        if (c < ' ' || static_cast<int>(c) >= 0x80) {
+          c = '.';
+        }
+        std::cerr << c;
+      } else {
+        std::cerr << ' ';
+      }
+    }
+    std::cerr << std::dec << std::endl;
+    i += 16;
+  }
+  std::cerr << std::endl;
+}
+
 int main() {
   std::uint64_t key[4] = {1, 2, 3, 4};
 
   std::string data = "Hello";
-  ash::mac_codec mac(key);
 
-  std::cerr << data << std::endl;
+  ash::mac_codec mac(key);
+  xxd(data);
   mac.encode(data);
-  std::cerr << data << std::endl;
-  data[3]++;
+  xxd(data);
   mac.decode(data);
-  std::cerr << data << std::endl;
+  xxd(data);
+
+  for (std::string s :
+       {std::string(""), std::string(1, '\0'), std::string(2, '\0'),
+        std::string(254, 'x'), std::string(1, '\0') + std::string(254, 'x'),
+        std::string("Hello")}) {
+    ash::cobs_codec cobs;
+    xxd(s);
+    cobs.encode(s);
+    xxd(s);
+    cobs.decode(s);
+    xxd(s);
+  }
 
   std::cerr << decltype(
                    ash::mpt::at<0>(z::Z::field_descriptors{}))::type::name()
