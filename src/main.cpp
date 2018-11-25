@@ -132,10 +132,12 @@ int main() {
   mac.decode(data);
   xxd(data);
 
+  int index = 0;
   for (std::string s :
        {std::string(""), std::string(1, '\0'), std::string(2, '\0'),
         std::string(254, 'x'), std::string(1, '\0') + std::string(254, 'x'),
         std::string("Hello")}) {
+    std::cerr << "TEST " << ++index << std::endl;
     ash::cobs_codec cobs;
     xxd(s);
     cobs.encode(s);
