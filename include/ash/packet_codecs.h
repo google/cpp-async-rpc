@@ -40,7 +40,7 @@ class packet_codec {
   virtual void decode(std::string& data) = 0;
 };
 
-/// Codec provides a HighwayHash-based MAC encapsulation based on a 256-bit
+/// Codec that provides a HighwayHash-based MAC encapsulation based on a 256-bit
 /// shared secret.
 ///
 /// Please notice that this scheme doesn't protect against replay attacks (no

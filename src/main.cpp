@@ -10,6 +10,7 @@
 #include "ash/iostream_adapters.h"
 #include "ash/mpt.h"
 #include "ash/packet_codecs.h"
+#include "ash/packet_protocols.h"
 #include "ash/serializable.h"
 #include "ash/type_hash.h"
 
@@ -123,7 +124,29 @@ void xxd(const std::string& data) {
 int main() {
   std::uint64_t key[4] = {1, 2, 3, 4};
 
-  std::string data = "Hello";
+  std::string data =
+      std::string("Hello") + std::string(2, '\0') + std::string("World");
+
+  std::stringstream xs;
+  ash::protected_stream_packet_protocol<ash::big_endian_binary_encoder,
+                                        ash::big_endian_binary_decoder>
+      pspp(xs);
+  xxd(data);
+  pspp.send(data);
+  xxd(xs.str());
+  data = pspp.receive();
+  xxd(data);
+
+  xs.str("");
+  xs.seekg(0);
+  xs.seekp(0);
+
+  ash::serial_line_packet_protocol<> slpp(xs);
+  xxd(data);
+  slpp.send(data);
+  xxd(xs.str());
+  data = slpp.receive();
+  xxd(data);
 
   ash::mac_codec mac(key);
   xxd(data);
