@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <random>
 #include <string>
 #include <vector>
 #include "ash/errors.h"
@@ -42,52 +41,51 @@ class packet_codec {
 };
 
 /// Codec provides a HighwayHash-based MAC encapsulation based on a 256-bit
-/// secret and a random nonce.
+/// shared secret.
+///
+/// Please notice that this scheme doesn't protect against replay attacks (no
+/// nonces are added by the scheme itself; the user of this codec should embed
+/// adequately obtained nonces in the data if this aspect is important.
+///
+/// A default key value is provided in `default_key`
 class mac_codec : public packet_codec {
  public:
-  explicit mac_codec(std::uint64_t key[4])
-      : gen_(std::random_device()()), dis_(0, 255) {
+  /// Convenience "random" default key.
+  static constexpr std::uint64_t default_key[4] = {
+      0xb6b9bb544bfd7e87ULL, 0xd5c3f7ccc7c7dfd4ULL, 0x807dbb0023c7c781ULL,
+      0x13473d620bd5426cULL};
+
+  explicit mac_codec(const std::uint64_t key[4] = default_key) {
     std::copy(key, key + 4, key_);
   }
 
   void encode(std::string& data) override {
     std::size_t original_size = data.size();
 
-    // Add space for the nonce and the hash.
-    data.reserve(original_size + 16);
-
-    // Add a nonce.
-    for (std::size_t i = 0; i < 8; i++) {
-      data.push_back(dis_(gen_));
-    }
+    // Add space for the hash.
+    data.reserve(original_size + sizeof(std::uint64_t));
 
     // Get the hash; append it.
-    highway_hash hasher(key_);
-    hasher.append(reinterpret_cast<const uint8_t*>(data.data()) + original_size,
-                  8);
-    hasher.append(reinterpret_cast<const uint8_t*>(data.data()), original_size);
-    std::uint64_t hash = hasher.finish64();
-    for (std::size_t i = 0; i < 8; i++) {
+    std::uint64_t hash = highway_hash::hash64(
+        reinterpret_cast<const uint8_t*>(data.data()), original_size, key_);
+    for (std::size_t i = 0; i < sizeof(std::uint64_t); i++) {
       data.push_back(hash & 0xff);
       hash >>= 8;
     }
   }
 
   void decode(std::string& data) override {
-    if (data.size() < 16) {
+    if (data.size() < 8) {
       throw errors::data_mismatch("Packet too short for MAC decode");
     }
-    std::size_t original_size = data.size() - 16;
+    std::size_t original_size = data.size() - sizeof(std::uint64_t);
 
     // Get the hash; verify it.
-    highway_hash hasher(key_);
-    hasher.append(reinterpret_cast<const uint8_t*>(data.data()) + original_size,
-                  8);
-    hasher.append(reinterpret_cast<const uint8_t*>(data.data()), original_size);
-    std::uint64_t hash = hasher.finish64();
+    std::uint64_t hash = highway_hash::hash64(
+        reinterpret_cast<const uint8_t*>(data.data()), original_size, key_);
     const uint8_t* ptr =
-        reinterpret_cast<const uint8_t*>(data.data()) + original_size + 8;
-    for (std::size_t i = 0; i < 8; i++) {
+        reinterpret_cast<const uint8_t*>(data.data()) + original_size;
+    for (std::size_t i = 0; i < sizeof(std::uint64_t); i++) {
       if (*ptr++ != (hash & 0xff)) {
         throw errors::data_mismatch("Hash mismatch in MAC decode");
       }
@@ -100,9 +98,8 @@ class mac_codec : public packet_codec {
 
  private:
   std::uint64_t key_[4];
-  std::mt19937 gen_;
-  std::uniform_int_distribution<int> dis_;
 };
+constexpr std::uint64_t mac_codec::default_key[4];
 
 /// Codec that applies Consistent Overhead Byte Stuffing.
 class cobs_codec : public packet_codec {

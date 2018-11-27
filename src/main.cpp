@@ -132,6 +132,13 @@ int main() {
   mac.decode(data);
   xxd(data);
 
+  ash::mac_codec mac2;
+  xxd(data);
+  mac2.encode(data);
+  xxd(data);
+  mac2.decode(data);
+  xxd(data);
+
   int index = 0;
   for (std::string s :
        {std::string(""), std::string(1, '\0'), std::string(2, '\0'),
