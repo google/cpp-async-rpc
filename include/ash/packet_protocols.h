@@ -46,15 +46,12 @@ class stream_packet_protocol : public packet_protocol<max_packet_size> {
  public:
   virtual ~stream_packet_protocol() {}
 
-  explicit stream_packet_protocol(std::iostream& in_out)
-      : in_(in_out), out_(in_out) {}
-
-  stream_packet_protocol(std::istream& in, std::ostream& out)
+  stream_packet_protocol(input_stream& in, output_stream& out)
       : in_(in), out_(out) {}
 
  protected:
-  istream_input_stream in_;
-  ostream_output_stream out_;
+  input_stream& in_;
+  output_stream& out_;
 };
 
 template <std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
@@ -71,6 +68,7 @@ class serial_line_packet_protocol
     cobs_.encode(packet);
     this->out_.write(packet.data(), packet.size());
     this->out_.putc('\0');
+    this->out_.flush();
   }
 
   std::string receive() override {
@@ -98,17 +96,15 @@ class protected_stream_packet_protocol
  public:
   virtual ~protected_stream_packet_protocol() {}
 
-  explicit protected_stream_packet_protocol(std::iostream& in_out)
-      : stream_packet_protocol<max_packet_size>(in_out),
-        decoder_(this->in_),
-        encoder_(this->out_) {}
-
-  protected_stream_packet_protocol(std::istream& in, std::ostream& out)
+  protected_stream_packet_protocol(input_stream& in, output_stream& out)
       : stream_packet_protocol<max_packet_size>(in, out),
         decoder_(this->in_),
         encoder_(this->out_) {}
 
-  void send(const std::string& data) override { encoder_(data); }
+  void send(const std::string& data) override {
+    encoder_(data);
+    this->out_.flush();
+  }
 
   std::string receive() override {
     std::string packet;

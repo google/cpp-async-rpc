@@ -46,6 +46,11 @@ class input_stream {
   // Try to read one more char, or block.
   virtual char getc() = 0;
 
+  // Close the stream so that no further read will succeed, but raise EOF
+  // instead. This only "closes" the input_stream, but doesn't necessarily close
+  // any underlying file or socket.
+  virtual void close() = 0;
+
   virtual ~input_stream() {}
 };
 
@@ -93,6 +98,16 @@ class output_stream {
 
   // Write c out.
   virtual void putc(char c) = 0;
+
+  // Flush any data and close the stream so that no further write will succeed,
+  // but raise EOF instead. This only "closes" the output_stream, but doesn't
+  // necessarily close any underlying file or socket.
+  virtual void close() = 0;
+
+  // Close the stream so that no further write will succeed, but raise EOF
+  // instead. This only "closes" the output_stream, but doesn't necessarily
+  // close any underlying file or socket.
+  virtual void flush() = 0;
 
   virtual ~output_stream() {}
 };

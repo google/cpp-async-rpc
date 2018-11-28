@@ -128,9 +128,11 @@ int main() {
       std::string("Hello") + std::string(2, '\0') + std::string("World");
 
   std::stringstream xs;
+  ash::istream_input_stream xsi(xs);
+  ash::ostream_output_stream xso(xs);
   ash::protected_stream_packet_protocol<ash::big_endian_binary_encoder,
                                         ash::big_endian_binary_decoder>
-      pspp(xs);
+      pspp(xsi, xso);
   xxd(data);
   pspp.send(data);
   xxd(xs.str());
@@ -141,7 +143,7 @@ int main() {
   xs.seekg(0);
   xs.seekp(0);
 
-  ash::serial_line_packet_protocol<> slpp(xs);
+  ash::serial_line_packet_protocol<> slpp(xsi, xso);
   xxd(data);
   slpp.send(data);
   xxd(xs.str());

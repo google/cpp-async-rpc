@@ -24,8 +24,12 @@ class istream_input_stream : public input_stream {
     if (is_.get(c)) {
       return c;
     }
-    if (is_.bad()) throw errors::io_error("Bad input stream");
+    if (is_.fail()) throw errors::io_error("Bad input stream");
     throw errors::eof("EOF");
+  }
+
+  virtual void close() {
+    throw errors::not_implemented("Close not implemented");
   }
 
  private:
@@ -37,14 +41,19 @@ class ostream_output_stream : public output_stream {
   explicit ostream_output_stream(std::ostream& os) : os_(os) {}
 
   void write(const char* p, std::size_t l) override {
-    os_.write(p, l);
-    if (os_.bad()) throw errors::io_error("Bad output stream");
+    if (!os_.write(p, l)) throw errors::io_error("Bad output stream");
   }
 
   void putc(char c) override {
-    os_.put(c);
-    if (os_.bad()) throw errors::io_error("Bad output stream");
+    if (!os_.put(c)) throw errors::io_error("Bad output stream");
   }
+
+  virtual void close() {
+    flush();
+    throw errors::not_implemented("Close not implemented");
+  }
+
+  virtual void flush() { os_.flush(); }
 
  private:
   std::ostream& os_;

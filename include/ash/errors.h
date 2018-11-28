@@ -37,6 +37,7 @@ ERROR_CLASS(key_error);
 ERROR_CLASS(invalid_state);
 ERROR_CLASS(data_mismatch);
 ERROR_CLASS(out_of_range);
+ERROR_CLASS(not_implemented);
 }  // namespace errors
 }  // namespace ash
 
