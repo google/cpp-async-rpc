@@ -231,7 +231,11 @@ int main() {
     std::cerr << ash::traits::type_hash<z::Z>::value << std::endl;
     std::cerr << ash::traits::type_hash<std::shared_ptr<z::Z>>::value
               << std::endl;
+    std::cerr << std::dec;
 
+    int h1 = 333;
+    double h2 = 444;
+    std::tuple<const int&, const double&> tup(h1, h2);
     std::shared_ptr<X> x(new X());
     x->x[0] = 44;
     x->a = 88;
@@ -243,6 +247,7 @@ int main() {
     z->z = "rosco";
 
     ash::binary_sizer bs;
+    bs(tup, ash::verify_structure{});
     bs(x);
     bs(v);
     bs(v);
@@ -254,6 +259,7 @@ int main() {
     std::ostringstream oss;
     ash::ostream_output_stream osa(oss);
     ash::native_binary_encoder nbe(osa);
+    nbe(tup, ash::verify_structure{});
     nbe(x);
     nbe(v);
     nbe(v);
@@ -265,18 +271,22 @@ int main() {
     ash::istream_input_stream isa(iss);
     ash::native_binary_decoder nbd(isa);
 
+    std::tuple<int, double> tup2;
     std::shared_ptr<X> x2;
     std::shared_ptr<V> v2;
     std::weak_ptr<V> w2;
     std::unique_ptr<Y> y2;
     std::shared_ptr<z::Z> z2;
 
+    nbd(tup2, ash::verify_structure{});
     nbd(x2);
     nbd(v2);
     nbd(v2);
     nbd(w2);
     nbd(y2);
     nbd(z2, ash::verify_structure{});
+
+    std::cerr << std::get<0>(tup2) << ", " << std::get<1>(tup2) << std::endl;
 
     std::cerr << x2->x << ", " << x2->a << std::endl;
     std::cerr << std::static_pointer_cast<X>(v2)->x << ", "

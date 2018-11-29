@@ -96,8 +96,11 @@ struct compose_with_types<base, Seen> {
 
 template <std::uint32_t base, typename Seen, typename T, typename... TN>
 struct compose_with_types<base, Seen, T, TN...> {
-  static constexpr std::uint32_t value =
-      compose_with_types<type_hash<T, Seen, base>::value, Seen, TN...>::value;
+  static constexpr std::uint32_t value = compose_with_types<
+      type_hash<typename std::remove_cv<
+                    typename std::remove_reference<T>::type>::type,
+                Seen, base>::value,
+      Seen, TN...>::value;
 };
 }  // namespace detail
 
