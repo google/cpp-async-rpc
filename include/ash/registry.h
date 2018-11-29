@@ -71,13 +71,13 @@ class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
     };
 
     if (!encoder_info_map_.emplace(class_name, info{(f)}).second)
-      throw errors::key_error("Duplicate encoder function registered");
+      throw errors::invalid_state("Duplicate encoder function registered");
   }
 
   info operator[](const char* class_name) const {
     const auto it = encoder_info_map_.find(class_name);
     if (it == encoder_info_map_.end())
-      throw errors::key_error("Encoder function not found");
+      throw errors::not_found("Encoder function not found");
     return it->second;
   }
 
@@ -111,13 +111,13 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
     };
 
     if (!decoder_info_map_.emplace(class_name, info{(f)}).second)
-      throw errors::key_error("Duplicate decoder function registered");
+      throw errors::not_found("Duplicate decoder function registered");
   }
 
   info operator[](const char* class_name) const {
     const auto it = decoder_info_map_.find(class_name);
     if (it == decoder_info_map_.end())
-      throw errors::key_error("Decoder function not found");
+      throw errors::not_found("Decoder function not found");
     return it->second;
   }
 
@@ -157,7 +157,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
     if (!factory_function_map_
              .emplace(class_name, info{(f), traits::type_hash<T>::value})
              .second)
-      throw errors::key_error("Duplicate class registration");
+      throw errors::not_found("Duplicate class registration");
 
     // Register the class into the class hierarchy.
     dynamic_subclass_registry<T>::get().register_subclass(class_name);
@@ -174,7 +174,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
   info operator[](const char* class_name) const {
     const auto it = factory_function_map_.find(class_name);
     if (it == factory_function_map_.end())
-      throw errors::key_error("Class factory function not found");
+      throw errors::not_found("Class factory function not found");
     return it->second;
   }
 

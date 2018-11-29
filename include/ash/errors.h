@@ -33,7 +33,8 @@ namespace ash {
 namespace errors {
 ERROR_CLASS(eof);
 ERROR_CLASS(io_error);
-ERROR_CLASS(key_error);
+ERROR_CLASS(not_found);
+ERROR_CLASS(invalid_argument);
 ERROR_CLASS(invalid_state);
 ERROR_CLASS(data_mismatch);
 ERROR_CLASS(out_of_range);
