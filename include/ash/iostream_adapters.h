@@ -24,8 +24,8 @@ class istream_input_stream : public input_stream {
     if (is_.get(c)) {
       return c;
     }
-    if (is_.fail()) throw errors::io_error("Bad input stream");
-    throw errors::eof("EOF");
+    if (is_.eof()) throw errors::eof("EOF");
+    throw errors::io_error("Bad input stream");
   }
 
   virtual void close() {

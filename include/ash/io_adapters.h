@@ -47,8 +47,7 @@ class input_stream {
   virtual char getc() = 0;
 
   // Close the stream so that no further read will succeed, but raise EOF
-  // instead. This only "closes" the input_stream, but doesn't necessarily close
-  // any underlying file or socket.
+  // instead.
   virtual void close() = 0;
 
   virtual ~input_stream() {}
@@ -104,9 +103,7 @@ class output_stream {
   // necessarily close any underlying file or socket.
   virtual void close() = 0;
 
-  // Close the stream so that no further write will succeed, but raise EOF
-  // instead. This only "closes" the output_stream, but doesn't necessarily
-  // close any underlying file or socket.
+  // Close the stream so that no further write will succeed.
   virtual void flush() = 0;
 
   virtual ~output_stream() {}

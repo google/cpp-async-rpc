@@ -157,7 +157,7 @@ class cobs_codec : public packet_codec {
       std::size_t count = static_cast<std::uint8_t>(*src++) - 1;
       for (std::size_t i = 0; i < count; i++) {
         if (src >= data.end()) {
-          throw errors::eof("Truncated COBS-encoded data.");
+          throw errors::data_mismatch("Truncated COBS-encoded data.");
         }
         *dst++ = *src++;
       }

@@ -26,28 +26,34 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include "ash/binary_codecs.h"
 #include "ash/errors.h"
-#include "ash/iostream_adapters.h"
+#include "ash/io_adapters.h"
 #include "ash/packet_codecs.h"
 
 /// Base class for all packet protocols.
 namespace ash {
-template <std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
 class packet_protocol {
  public:
   virtual ~packet_protocol() {}
 
   virtual void send(const std::string& data) = 0;
   virtual std::string receive() = 0;
+  virtual void close() = 0;
 };
 
 template <std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
-class stream_packet_protocol : public packet_protocol<max_packet_size> {
+class stream_packet_protocol : public packet_protocol {
  public:
   virtual ~stream_packet_protocol() {}
 
   stream_packet_protocol(input_stream& in, output_stream& out)
       : in_(in), out_(out) {}
+
+  void close() override {
+    in_.close();
+    out_.close();
+  }
 
  protected:
   input_stream& in_;
@@ -89,7 +95,8 @@ class serial_line_packet_protocol
   cobs_codec cobs_;
 };
 
-template <typename Encoder, typename Decoder,
+template <typename Encoder = little_endian_binary_encoder,
+          typename Decoder = little_endian_binary_decoder,
           std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
 class protected_stream_packet_protocol
     : public stream_packet_protocol<max_packet_size> {

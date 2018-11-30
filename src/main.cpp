@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include "ash.h"
+#include "ash/client.h"
 #include "ash/errors.h"
 #include "ash/highway_hash.h"
 #include "ash/interface.h"
@@ -91,11 +92,11 @@ struct MyInterface : ash::interface<MyInterface> {
 void xxd(const std::string& data) {
   std::size_t i = 0;
   while (i < data.size()) {
-    std::cerr << std::hex << std::setw(8) << i << ": ";
+    std::cerr << std::hex << std::setfill('0') << std::setw(8) << i << ": ";
 
     for (std::size_t j = 0; j < 16; j++) {
       if (i + j < data.size()) {
-        std::cerr << std::hex << std::setw(2)
+        std::cerr << std::hex << std::setfill('0') << std::setw(2)
                   << static_cast<std::uint16_t>(
                          static_cast<std::uint8_t>(data[i + j]))
                   << ' ';
@@ -122,6 +123,20 @@ void xxd(const std::string& data) {
 }
 
 int main() {
+  std::stringstream req, res;
+  std::string sss = std::string(1, '\001') + std::string(1, '\000');
+  // res.str(sss);
+  ash::ostream_output_stream req_os(req);
+  ash::istream_input_stream res_is(res);
+  ash::serial_line_packet_protocol<> slpprpc(res_is, req_os);
+  // xxd(slpprpc.receive());
+  // return 0;
+  ash::client_connection<> cc(slpprpc);
+  auto obj = cc["default"];
+  obj.ASH_CALL(MyInterface::Method1)(133);
+
+  xxd(req.str());
+
   std::uint64_t key[4] = {1, 2, 3, 4};
 
   std::string data =

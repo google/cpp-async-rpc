@@ -45,7 +45,8 @@ struct type_hash;
 namespace detail {
 
 enum class type_family : std::uint8_t {
-  INTEGER = 1,
+  VOID = 0,
+  INTEGER,
   FLOAT,
   ENUM,
   ARRAY,
@@ -113,6 +114,14 @@ struct type_hash<T, Seen, base,
   static constexpr std::uint32_t value = detail::type_hash_add(
       base, detail::type_family::SEEN_TYPE_BACKREFERENCE, false,
       mpt::head(mpt::find_if(Seen{}, mpt::is<T>{})));
+};
+
+template <typename Seen, std::uint32_t base>
+struct type_hash<
+    void, Seen, base,
+    typename std::enable_if<!mpt::is_in<void, Seen>::value>::type> {
+  static constexpr std::uint32_t value =
+      detail::type_hash_add(base, detail::type_family::VOID, false, 0);
 };
 
 template <typename T, typename Seen, std::uint32_t base>

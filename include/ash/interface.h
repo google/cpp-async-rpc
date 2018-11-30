@@ -90,6 +90,20 @@ constexpr const char *method_name() {
       mpt::find_if(typename MethodDescriptor::class_type::method_descriptors{},
                    mpt::is<MethodDescriptor>{}))];
 }
+
+/// Get the method descriptor for a given member function pointer.
+template <typename MFP, MFP p>
+struct get_method_descriptor;
+
+/// Get the method descriptor for a given member function pointer.
+template <typename C, typename R, typename... A, R (C::*mptr)(A...)>
+struct get_method_descriptor<R (C::*)(A...), mptr> {
+  static constexpr auto method_descriptor_index = mpt::at<0>(
+      mpt::find_if(typename C::method_descriptors{},
+                   mpt::is<method_descriptor<R (C::*)(A...), mptr>>{}));
+  using type = typename decltype(
+      mpt::at<method_descriptor_index>(typename C::method_descriptors{}))::type;
+};
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_INTERFACE_H_

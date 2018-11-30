@@ -13,34 +13,34 @@ namespace ash {
 namespace mpt {
 
 /// Backport `constexpr` version of `std::forward_as_tuple` to c++11.
-template <class... Types>
+template <typename... Types>
 constexpr std::tuple<Types&&...> forward_as_tuple(Types&&... args) {
   return std::tuple<Types&&...>{std::forward<Types>(args)...};
 }
 
 /// Backport of `std::conditional_t` to c++11.
-template <bool B, class T, class F>
+template <bool B, typename T, typename F>
 using conditional_t = typename std::conditional<B, T, F>::type;
 
 /// Backport of `std::conjunction` to c++11.
-template <class...>
+template <typename...>
 struct conjunction : std::true_type {};
 /// Backport of `std::conjunction` to c++11.
-template <class B1>
+template <typename B1>
 struct conjunction<B1> : B1 {};
 /// Backport of `std::conjunction` to c++11.
-template <class B1, class... Bn>
+template <typename B1, typename... Bn>
 struct conjunction<B1, Bn...>
     : conditional_t<bool(B1::value), conjunction<Bn...>, B1> {};
 
 /// Backport of `std::disjunction` to c++11.
-template <class...>
+template <typename...>
 struct disjunction : std::false_type {};
 /// Backport of `std::disjunction` to c++11.
-template <class B1>
+template <typename B1>
 struct disjunction<B1> : B1 {};
 /// Backport of `std::disjunction` to c++11.
-template <class B1, class... Bn>
+template <typename B1, typename... Bn>
 struct disjunction<B1, Bn...>
     : conditional_t<bool(B1::value), B1, disjunction<Bn...>> {};
 

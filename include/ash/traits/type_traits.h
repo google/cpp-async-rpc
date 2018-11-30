@@ -91,6 +91,23 @@ template <typename T>
 using writable_value_type = detail::writable_value_type<
     typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
 
+template <typename MFP, MFP mptr>
+struct member_function_pointer_traits;
+
+template <typename C, typename R, typename... A, R (C::*mptr)(A...)>
+struct member_function_pointer_traits<R (C::*)(A...), mptr> {
+  using return_type = R;
+  using owner_class = C;
+  using args_ref_tuple_type = std::tuple<const typename std::remove_cv<
+      typename std::remove_reference<A>::type>::type&...>;
+  using args_tuple_type = std::tuple<typename std::remove_cv<
+      typename std::remove_reference<A>::type>::type...>;
+  using return_tuple_type =
+      typename std::conditional<std::is_same<void, R>::value, std::tuple<>,
+                                std::tuple<R>>::type;
+  using method_type = std::pair<return_tuple_type, args_tuple_type>;
+};
+
 }  // namespace traits
 
 }  // namespace ash
