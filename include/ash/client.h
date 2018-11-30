@@ -52,8 +52,8 @@ class client_connection {
  private:
   friend class remote_object<Encoder, Decoder>;
 
-  std::string send(const std::string& request) {
-    protocol_.send(request);
+  std::string send(std::string&& request) {
+    protocol_.send(std::move(request));
     return protocol_.receive();
   }
 

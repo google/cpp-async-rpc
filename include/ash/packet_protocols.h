@@ -37,7 +37,7 @@ class packet_protocol {
  public:
   virtual ~packet_protocol() {}
 
-  virtual void send(const std::string& data) = 0;
+  virtual void send(std::string data) = 0;
   virtual std::string receive() = 0;
   virtual void close() = 0;
 };
@@ -68,8 +68,8 @@ class serial_line_packet_protocol
 
   using stream_packet_protocol<max_packet_size>::stream_packet_protocol;
 
-  void send(const std::string& data) override {
-    std::string packet = data;
+  void send(std::string data) override {
+    std::string packet = std::move(data);
     mac_.encode(packet);
     cobs_.encode(packet);
     this->out_.write(packet.data(), packet.size());
@@ -108,8 +108,9 @@ class protected_stream_packet_protocol
         decoder_(this->in_),
         encoder_(this->out_) {}
 
-  void send(const std::string& data) override {
-    encoder_(data);
+  void send(std::string data) override {
+    std::string packet = std::move(data);
+    encoder_(packet);
     this->out_.flush();
   }
 

@@ -133,7 +133,7 @@ int main() {
   // return 0;
   ash::client_connection<> cc(slpprpc);
   auto obj = cc["default"];
-  obj.ASH_CALL(MyInterface::Method1)(133);
+  obj.ASH_CALL(MyInterface::Method2)(133, 22);
 
   xxd(req.str());
 
