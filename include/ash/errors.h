@@ -75,6 +75,7 @@ struct error_class_descriptor {
 class base_error : public std::runtime_error {
  public:
   using std::runtime_error::runtime_error;
+  virtual ~base_error() {}
 
   const char* portable_error_class_name() const {
     return portable_error_class_name_internal();
