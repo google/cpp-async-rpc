@@ -13,6 +13,7 @@
 #include "ash/packet_codecs.h"
 #include "ash/packet_protocols.h"
 #include "ash/serializable.h"
+#include "ash/string_adapters.h"
 #include "ash/type_hash.h"
 
 template <typename R>
@@ -123,19 +124,23 @@ void xxd(const std::string& data) {
 }
 
 int main() {
-  std::stringstream req, res;
-  std::string sss = std::string(1, '\001') + std::string(1, '\000');
-  // res.str(sss);
-  ash::ostream_output_stream req_os(req);
-  ash::istream_input_stream res_is(res);
+  try {
+    ash::error_factory::get().throw_error("out_of_range", "It's way off!");
+  } catch (const ash::errors::out_of_range& oor) {
+    std::cerr << "CAUGHT! " << oor.portable_error_class_name() << ": "
+              << oor.what() << std::endl;
+  }
+  std::string req, res;
+  ash::string_output_stream req_os(req);
+  ash::string_input_stream res_is(res);
   ash::serial_line_packet_protocol<> slpprpc(res_is, req_os);
   // xxd(slpprpc.receive());
   // return 0;
-  ash::client_connection<> cc(slpprpc);
-  auto obj = cc["default"];
+  ash::client_connection<> conn(slpprpc);
+  auto obj = conn.object("default");
   obj.ASH_CALL(MyInterface::Method2)(133, 22);
 
-  xxd(req.str());
+  xxd(req);
 
   std::uint64_t key[4] = {1, 2, 3, 4};
 

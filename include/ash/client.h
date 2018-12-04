@@ -29,8 +29,8 @@
 #include <utility>
 #include "ash/binary_codecs.h"
 #include "ash/interface.h"
-#include "ash/iostream_adapters.h"
 #include "ash/packet_protocols.h"
+#include "ash/string_adapters.h"
 #include "ash/traits/type_traits.h"
 #include "ash/type_hash.h"
 
@@ -47,7 +47,7 @@ class client_connection {
  public:
   explicit client_connection(packet_protocol& protocol) : protocol_(protocol) {}
 
-  remote_object<Encoder, Decoder> operator[](const std::string& name);
+  remote_object<Encoder, Decoder> object(const std::string& name);
 
  private:
   friend class remote_object<Encoder, Decoder>;
@@ -77,8 +77,8 @@ class remote_object {
     args_ref_tuple_type args_refs(args...);
 
     // Serialize to a string.
-    std::stringstream request;
-    ostream_output_stream request_os(request);
+    std::string request;
+    string_output_stream request_os(request);
     Encoder encoder(request_os);
     // Name of the remote object.
     encoder(name_);
@@ -92,8 +92,8 @@ class remote_object {
     encoder(args_refs);
 
     // Send the request, receive and deserialize the result.
-    std::stringstream response(connection_.send(std::move(request).str()));
-    istream_input_stream response_is(response);
+    std::string response(connection_.send(std::move(request)));
+    string_input_stream response_is(response);
     Decoder decoder(response_is);
     return decode<return_type>(decoder);
   }
@@ -122,7 +122,7 @@ class remote_object {
 };
 
 template <typename Encoder, typename Decoder>
-remote_object<Encoder, Decoder> client_connection<Encoder, Decoder>::operator[](
+remote_object<Encoder, Decoder> client_connection<Encoder, Decoder>::object(
     const std::string& name) {
   return {*this, name};
 }

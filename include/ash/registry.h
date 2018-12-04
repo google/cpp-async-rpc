@@ -28,6 +28,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include "ash/const_char_ptr_compare.h"
 #include "ash/container/flat_map.h"
 #include "ash/container/flat_set.h"
 #include "ash/dynamic_base_class.h"
@@ -39,14 +40,6 @@ namespace ash {
 
 namespace registry {
 
-namespace detail {
-struct const_char_ptr_compare {
-  bool operator()(const char* a, const char* b) const {
-    return std::strcmp(a, b) < 0;
-  }
-};
-}  // namespace detail
-
 template <typename T>
 class dynamic_subclass_registry
     : public singleton<dynamic_subclass_registry<T>> {
@@ -57,8 +50,7 @@ class dynamic_subclass_registry
   }
 
  private:
-  ash::flat_set<const char*, detail::const_char_ptr_compare>
-      dynamic_subclass_set_;
+  ash::flat_set<const char*, const_char_ptr_compare> dynamic_subclass_set_;
 };
 
 namespace detail {
@@ -103,8 +95,7 @@ class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
   }
 
  private:
-  ash::flat_map<const char*, info, detail::const_char_ptr_compare>
-      encoder_info_map_;
+  ash::flat_map<const char*, info, const_char_ptr_compare> encoder_info_map_;
 };
 
 namespace detail {
@@ -132,7 +123,7 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
     };
 
     if (!decoder_info_map_.emplace(class_name, info{(f)}).second)
-      throw errors::not_found("Duplicate decoder function registered");
+      throw errors::invalid_state("Duplicate decoder function registered");
   }
 
   info operator[](const char* class_name) const {
@@ -143,8 +134,7 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
   }
 
  private:
-  ash::flat_map<const char*, info, detail::const_char_ptr_compare>
-      decoder_info_map_;
+  ash::flat_map<const char*, info, const_char_ptr_compare> decoder_info_map_;
 };
 
 namespace detail {
@@ -178,7 +168,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
     if (!factory_function_map_
              .emplace(class_name, info{(f), traits::type_hash<T>::value})
              .second)
-      throw errors::not_found("Duplicate class registration");
+      throw errors::invalid_state("Duplicate class registration");
 
     // Register the class into the class hierarchy.
     dynamic_subclass_registry<T>::get().register_subclass(class_name);
@@ -200,7 +190,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
   }
 
  private:
-  ash::flat_map<const char*, info, detail::const_char_ptr_compare>
+  ash::flat_map<const char*, info, const_char_ptr_compare>
       factory_function_map_;
 };
 
