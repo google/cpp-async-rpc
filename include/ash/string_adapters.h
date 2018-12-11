@@ -50,8 +50,6 @@ class string_input_stream : public input_stream {
     return is_[pos_++];
   }
 
-  void close() override {}
-
   std::size_t pos() const { return pos_; }
 
   void pos(std::size_t new_pos) {
@@ -73,8 +71,6 @@ class string_output_stream : public output_stream {
   void write(const char* p, std::size_t l) override { os_.append(p, l); }
 
   void putc(char c) override { os_.push_back(c); }
-
-  void close() override {}
 
   void flush() override {}
 

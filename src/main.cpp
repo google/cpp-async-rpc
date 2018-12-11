@@ -4,11 +4,13 @@
 #include <sstream>
 #include <string>
 #include "ash.h"
-#include "ash/client.h"
+// #include "ash/client.h"
+#include "ash/connection.h"
 #include "ash/errors.h"
 #include "ash/highway_hash.h"
 #include "ash/interface.h"
 #include "ash/iostream_adapters.h"
+#include "ash/linux/connection.h"
 #include "ash/mpt.h"
 #include "ash/packet_codecs.h"
 #include "ash/packet_protocols.h"
@@ -130,6 +132,24 @@ int main() {
     std::cerr << "CAUGHT! " << oor.portable_error_class_name() << ": "
               << oor.what() << std::endl;
   }
+
+  ash::char_dev_connection cdc("/dev/tty");
+  cdc.connect();
+
+  std::string buf("hello\n");
+  cdc.write(buf.data(), buf.size());
+  cdc.read(&buf[0], 3);
+  std::cerr << buf << std::endl;
+  cdc.disconnect();
+
+  ash::packet_connection_impl<ash::char_dev_connection,
+                              ash::serial_line_packet_protocol<>>
+      slpci("/dev/tty");
+  slpci.connect();
+  slpci.send("hello");
+  slpci.disconnect();
+
+  /*
   std::string req, res;
   ash::string_output_stream req_os(req);
   ash::string_input_stream res_is(res);
@@ -141,6 +161,7 @@ int main() {
   obj.ASH_CALL(MyInterface::Method2)(133, 22);
 
   xxd(req);
+  */
 
   std::uint64_t key[4] = {1, 2, 3, 4};
 
@@ -152,22 +173,22 @@ int main() {
   ash::ostream_output_stream xso(xs);
   ash::protected_stream_packet_protocol<ash::big_endian_binary_encoder,
                                         ash::big_endian_binary_decoder>
-      pspp(xsi, xso);
+      pspp;
   xxd(data);
-  pspp.send(data);
+  pspp.send(xso, data);
   xxd(xs.str());
-  data = pspp.receive();
+  data = pspp.receive(xsi);
   xxd(data);
 
   xs.str("");
   xs.seekg(0);
   xs.seekp(0);
 
-  ash::serial_line_packet_protocol<> slpp(xsi, xso);
+  ash::serial_line_packet_protocol<> slpp;
   xxd(data);
-  slpp.send(data);
+  slpp.send(xso, data);
   xxd(xs.str());
-  data = slpp.receive();
+  data = slpp.receive(xsi);
   xxd(data);
 
   ash::mac_codec mac(key);

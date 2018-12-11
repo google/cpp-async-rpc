@@ -33,53 +33,22 @@
 
 /// Base class for all packet protocols.
 namespace ash {
-class packet_protocol {
- public:
-  virtual ~packet_protocol() {}
-
-  virtual void send(std::string data) = 0;
-  virtual std::string receive() = 0;
-  virtual void close() = 0;
-};
 
 template <std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
-class stream_packet_protocol : public packet_protocol {
+class serial_line_packet_protocol {
  public:
-  virtual ~stream_packet_protocol() {}
-
-  stream_packet_protocol(input_stream& in, output_stream& out)
-      : in_(in), out_(out) {}
-
-  void close() override {
-    in_.close();
-    out_.close();
-  }
-
- protected:
-  input_stream& in_;
-  output_stream& out_;
-};
-
-template <std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
-class serial_line_packet_protocol
-    : public stream_packet_protocol<max_packet_size> {
- public:
-  virtual ~serial_line_packet_protocol() {}
-
-  using stream_packet_protocol<max_packet_size>::stream_packet_protocol;
-
-  void send(std::string data) override {
+  void send(output_stream& out, std::string data) {
     std::string packet = std::move(data);
     mac_.encode(packet);
     cobs_.encode(packet);
-    this->out_.write(packet.data(), packet.size());
-    this->out_.putc('\0');
-    this->out_.flush();
+    out.write(packet.data(), packet.size());
+    out.putc('\0');
+    out.flush();
   }
 
-  std::string receive() override {
+  std::string receive(input_stream& in) {
     std::string packet;
-    while (char c = this->in_.getc()) {
+    while (char c = in.getc()) {
       if (packet.size() >= max_packet_size) {
         throw errors::out_of_range("Exceeded max packet size when reading.");
       }
@@ -96,35 +65,24 @@ class serial_line_packet_protocol
 };
 
 template <typename Encoder = little_endian_binary_encoder,
-          typename Decoder = little_endian_binary_decoder,
-          std::size_t max_packet_size = std::numeric_limits<std::size_t>::max()>
-class protected_stream_packet_protocol
-    : public stream_packet_protocol<max_packet_size> {
+          typename Decoder = little_endian_binary_decoder>
+class protected_stream_packet_protocol {
  public:
   virtual ~protected_stream_packet_protocol() {}
 
-  protected_stream_packet_protocol(input_stream& in, output_stream& out)
-      : stream_packet_protocol<max_packet_size>(in, out),
-        decoder_(this->in_),
-        encoder_(this->out_) {}
-
-  void send(std::string data) override {
+  void send(output_stream& out, std::string data) {
     std::string packet = std::move(data);
-    encoder_(packet);
-    this->out_.flush();
+    Encoder encoder(out);
+    encoder(packet);
+    out.flush();
   }
 
-  std::string receive() override {
+  std::string receive(input_stream& in) {
     std::string packet;
-    decoder_(packet);
+    Decoder decoder(in);
+    decoder(packet);
     return packet;
   }
-
- private:
-  Decoder decoder_;
-  Encoder encoder_;
-  mac_codec mac_;
-  cobs_codec cobs_;
 };
 
 }  // namespace ash
