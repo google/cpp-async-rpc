@@ -54,22 +54,16 @@ class fd_connection : public connection {
     }
 
     ~fd_lock() {
-      bool closed = false;
+      bool last = false;
 
       {
         std::lock_guard<std::mutex> lock(conn_.mu_);
         if (!--conn_.lock_count_) {
-          if (conn_.closing_) {
-            if (::close(conn_.fd_) | ::close(conn_.pipe_[0]))
-              detail::throw_io_error("Error closing file descriptor");
-            conn_.fd_ = -1;
-            conn_.closing_ = false;
-            closed = true;
-          }
+          last = true;
         }
       }
 
-      if (closed) conn_.closed_.notify_all();
+      if (last) conn_.idle_.notify_all();
     }
 
    private:
@@ -81,8 +75,13 @@ class fd_connection : public connection {
  public:
   ~fd_connection() override { disconnect(); }
 
+  bool connected() override {
+    std::lock_guard<std::mutex> lock(mu_);
+    return (fd_ >= 0);
+  }
+
   void connect() override {
-    fd_lock lock(*this);
+    std::lock_guard<std::mutex> lock(mu_);
     if (fd_ >= 0) {
       // Already connected.
       return;
@@ -97,26 +96,26 @@ class fd_connection : public connection {
   }
 
   void disconnect() override {
-    {
-      std::lock_guard<std::mutex> lock(mu_);
-      if (fd_ < 0) {
-        // Already disconnected.
-        return;
-      }
-      if (!closing_) {
-        closing_ = true;
-        if (::close(pipe_[1]))
-          detail::throw_io_error("Error signaling control pipe");
-      }
+    std::unique_lock<std::mutex> lock(mu_);
+    if (fd_ < 0) {
+      // Already disconnected.
+      return;
     }
 
-    // Force closing if nobody else is waiting.
-    { fd_lock lock(*this); }
+    if (!closing_) {
+      closing_ = true;
+      if (::close(pipe_[1]))
+        detail::throw_io_error("Error signaling control pipe");
+    }
 
-    // Wait for the closing to complete.
-    {
-      std::unique_lock<std::mutex> lock(mu_);
-      closed_.wait(lock, [this] { return fd_ < 0; });
+    // Wait for all shared owners to go away.
+    idle_.wait(lock, [this] { return lock_count_ == 0; });
+
+    if (closing_) {
+      if (::close(fd_) | ::close(pipe_[0]))
+        detail::throw_io_error("Error closing file descriptor");
+      fd_ = -1;
+      closing_ = false;
     }
   }
 
@@ -134,10 +133,8 @@ class fd_connection : public connection {
       if (::select(1 + std::max(fd_, pipe_[0]), &fdrs, &fdws, nullptr,
                    nullptr) < 0)
         detail::throw_io_error("Error in select");
-      if (FD_ISSET(pipe_[0], &fdrs)) {
-        closing_ = true;
+      if (FD_ISSET(pipe_[0], &fdrs))
         throw errors::shutting_down("Write interrupted by connection shutdown");
-      }
 
       if (FD_ISSET(fd_, &fdws)) {
         auto written = ::write(fd_, data, size);
@@ -166,10 +163,8 @@ class fd_connection : public connection {
       if (::select(1 + std::max(fd_, pipe_[0]), &fdrs, nullptr, nullptr,
                    nullptr) < 0)
         detail::throw_io_error("Error in select");
-      if (FD_ISSET(pipe_[0], &fdrs)) {
-        closing_ = true;
+      if (FD_ISSET(pipe_[0], &fdrs))
         throw errors::shutting_down("Read interrupted by connection shutdown");
-      }
 
       if (FD_ISSET(fd_, &fdrs)) {
         auto read = ::read(fd_, data, size);
@@ -192,10 +187,10 @@ class fd_connection : public connection {
 
  protected:
   void check_connected() {
-    if (fd_ < 0) throw errors::io_error("Connection is closed");
+    if (closing_ || fd_ < 0) throw errors::io_error("Connection is closed");
   }
   std::mutex mu_;
-  std::condition_variable closed_;
+  std::condition_variable idle_;
   int fd_ = -1;
   int pipe_[2];
   bool closing_ = false;

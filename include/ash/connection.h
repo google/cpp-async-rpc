@@ -38,6 +38,9 @@ class connection : public input_stream, public output_stream {
 
   /// Disconnect if the connection was active.
   virtual void disconnect() = 0;
+
+  /// Check whether the connection is active.
+  virtual bool connected() = 0;
 };
 
 class packet_connection {
@@ -50,6 +53,9 @@ class packet_connection {
 
   /// Disconnect if the connection was active.
   virtual void disconnect() = 0;
+
+  /// Check whether the connection is active.
+  virtual bool connected() = 0;
 
   /// Send a packet.
   virtual void send(std::string data) = 0;
@@ -68,6 +74,7 @@ class packet_connection_impl : public packet_connection {
 
   void connect() override { connection_.connect(); }
   void disconnect() override { connection_.disconnect(); }
+  bool connected() override { return connection_.connected(); }
   void send(std::string data) override {
     protocol_.send(connection_, std::move(data));
   };
