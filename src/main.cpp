@@ -1,8 +1,10 @@
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include "ash.h"
 // #include "ash/client.h"
 #include "ash/connection.h"
@@ -134,13 +136,26 @@ int main() {
   }
 
   ash::char_dev_connection cdc("/dev/tty");
-  cdc.connect();
 
-  std::string buf("hello\n");
-  cdc.write(buf.data(), buf.size());
-  cdc.read(&buf[0], 3);
-  std::cerr << buf << std::endl;
+  std::thread t1([&cdc] {
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    cdc.disconnect();
+  });
+
+  try {
+    cdc.connect();
+
+    std::string buf("hello\n");
+    cdc.write(buf.data(), buf.size());
+    cdc.read(&buf[0], 3);
+    std::cerr << buf << std::endl;
+  } catch (const ash::errors::shutting_down& sd) {
+    std::cerr << "CAUGHT! " << sd.portable_error_class_name() << ": "
+              << sd.what() << std::endl;
+  }
   cdc.disconnect();
+
+  t1.join();
 
   ash::packet_connection_impl<ash::char_dev_connection,
                               ash::serial_line_packet_protocol<>>

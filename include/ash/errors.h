@@ -89,6 +89,7 @@ class base_error : public std::runtime_error {
 
 ERROR_CLASS(unknown_error);
 ERROR_CLASS(eof);
+ERROR_CLASS(shutting_down);
 ERROR_CLASS(io_error);
 ERROR_CLASS(not_found);
 ERROR_CLASS(invalid_argument);

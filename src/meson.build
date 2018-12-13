@@ -1,1 +1,1 @@
-main = executable('main', 'main.cpp', include_directories : includes)
+main = executable('main', 'main.cpp', include_directories : includes, link_args : '-lpthread')

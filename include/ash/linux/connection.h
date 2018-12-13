@@ -24,9 +24,13 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <algorithm>
+#include <condition_variable>
+#include <mutex>
 #include <string>
 #include <utility>
 #include "ash/connection.h"
@@ -40,31 +44,108 @@ void throw_io_error(const std::string& message) {
 }
 }  // namespace detail
 
-class char_dev_connection : public connection {
+class fd_connection : public connection {
+ protected:
+  class fd_lock {
+   public:
+    explicit fd_lock(fd_connection& conn) : conn_(conn) {
+      std::lock_guard<std::mutex> lock(conn_.mu_);
+      conn_.lock_count_++;
+    }
+
+    ~fd_lock() {
+      bool closed = false;
+
+      {
+        std::lock_guard<std::mutex> lock(conn_.mu_);
+        if (!--conn_.lock_count_) {
+          if (conn_.closing_) {
+            if (::close(conn_.fd_) | ::close(conn_.pipe_[0]))
+              detail::throw_io_error("Error closing file descriptor");
+            conn_.fd_ = -1;
+            conn_.closing_ = false;
+            closed = true;
+          }
+        }
+      }
+
+      if (closed) conn_.closed_.notify_all();
+    }
+
+   private:
+    fd_connection& conn_;
+  };
+
+  virtual int make_fd() = 0;
+
  public:
-  explicit char_dev_connection(std::string path) : path_(std::move(path)) {}
-  ~char_dev_connection() override { disconnect(); }
+  ~fd_connection() override { disconnect(); }
 
   void connect() override {
-    disconnect();
-    fd_ = open(path_.c_str(), O_RDWR);
-    if (fd_ < 0) detail::throw_io_error(std::string("Error opening ") + path_);
+    fd_lock lock(*this);
+    if (fd_ >= 0) {
+      // Already connected.
+      return;
+    }
+
+    fd_ = make_fd();
+    if (::pipe(pipe_)) {
+      ::close(fd_);
+      fd_ = -1;
+      detail::throw_io_error("Error creating control pipe");
+    }
   }
 
   void disconnect() override {
-    if (fd_ >= 0) {
-      if (::close(fd_)) detail::throw_io_error("Error closing file descriptor");
-      fd_ = -1;
+    {
+      std::lock_guard<std::mutex> lock(mu_);
+      if (fd_ < 0) {
+        // Already disconnected.
+        return;
+      }
+      if (!closing_) {
+        closing_ = true;
+        if (::close(pipe_[1]))
+          detail::throw_io_error("Error signaling control pipe");
+      }
+    }
+
+    // Force closing if nobody else is waiting.
+    { fd_lock lock(*this); }
+
+    // Wait for the closing to complete.
+    {
+      std::unique_lock<std::mutex> lock(mu_);
+      closed_.wait(lock, [this] { return fd_ < 0; });
     }
   }
 
   void write(const char* data, std::size_t size) override {
-    check_open();
+    fd_lock lock(*this);
+    check_connected();
+
+    fd_set fdrs, fdws;
+
     while (size > 0) {
-      auto written = ::write(fd_, data, size);
-      if (written < 0) detail::throw_io_error("Error writing");
-      size -= written;
-      data += written;
+      FD_ZERO(&fdrs);
+      FD_ZERO(&fdws);
+      FD_SET(pipe_[0], &fdrs);
+      FD_SET(fd_, &fdws);
+      if (select(1 + std::max(fd_, pipe_[0]), &fdrs, &fdws, nullptr, nullptr) <
+          0)
+        detail::throw_io_error("Error in select");
+      if (FD_ISSET(pipe_[0], &fdrs)) {
+        closing_ = true;
+        throw errors::shutting_down("Write interrupted by connection shutdown");
+      }
+
+      if (FD_ISSET(fd_, &fdws)) {
+        auto written = ::write(fd_, data, size);
+        if (written < 0 && errno == EAGAIN) continue;
+        if (written < 0) detail::throw_io_error("Error writing");
+        size -= written;
+        data += written;
+      }
     }
   }
 
@@ -73,15 +154,32 @@ class char_dev_connection : public connection {
   void flush() override {}
 
   std::size_t read(char* data, std::size_t size) override {
-    check_open();
+    fd_lock lock(*this);
+    check_connected();
+
     std::size_t total_read = 0;
+    fd_set fdrs;
     while (size > 0) {
-      auto read = ::read(fd_, data, size);
-      if (read < 0) detail::throw_io_error("Error writing");
-      if (read == 0) return total_read;
-      size -= read;
-      data += read;
-      total_read += read;
+      FD_ZERO(&fdrs);
+      FD_SET(pipe_[0], &fdrs);
+      FD_SET(fd_, &fdrs);
+      if (select(1 + std::max(fd_, pipe_[0]), &fdrs, nullptr, nullptr,
+                 nullptr) < 0)
+        detail::throw_io_error("Error in select");
+      if (FD_ISSET(pipe_[0], &fdrs)) {
+        closing_ = true;
+        throw errors::shutting_down("Read interrupted by connection shutdown");
+      }
+
+      if (FD_ISSET(fd_, &fdrs)) {
+        auto read = ::read(fd_, data, size);
+        if (read < 0 && errno == EAGAIN) continue;
+        if (read < 0) detail::throw_io_error("Error reading");
+        if (read == 0) return total_read;
+        size -= read;
+        data += read;
+        total_read += read;
+      }
     }
     return total_read;
   }
@@ -92,12 +190,30 @@ class char_dev_connection : public connection {
     return c;
   }
 
- private:
-  void check_open() {
+ protected:
+  void check_connected() {
     if (fd_ < 0) throw errors::io_error("Connection is closed");
   }
-  std::string path_;
+  std::mutex mu_;
+  std::condition_variable closed_;
   int fd_ = -1;
+  int pipe_[2];
+  bool closing_ = false;
+  int lock_count_ = 0;
+};  // namespace ash
+
+class char_dev_connection : public fd_connection {
+ public:
+  explicit char_dev_connection(std::string path) : path_(std::move(path)) {}
+
+  int make_fd() override {
+    int fd = open(path_.c_str(), O_RDWR | O_NONBLOCK);
+    if (fd < 0) detail::throw_io_error(std::string("Error opening ") + path_);
+    return fd;
+  }
+
+ private:
+  std::string path_;
 };
 
 }  // namespace ash
