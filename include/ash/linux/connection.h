@@ -131,8 +131,8 @@ class fd_connection : public connection {
       FD_ZERO(&fdws);
       FD_SET(pipe_[0], &fdrs);
       FD_SET(fd_, &fdws);
-      if (select(1 + std::max(fd_, pipe_[0]), &fdrs, &fdws, nullptr, nullptr) <
-          0)
+      if (::select(1 + std::max(fd_, pipe_[0]), &fdrs, &fdws, nullptr,
+                   nullptr) < 0)
         detail::throw_io_error("Error in select");
       if (FD_ISSET(pipe_[0], &fdrs)) {
         closing_ = true;
@@ -163,8 +163,8 @@ class fd_connection : public connection {
       FD_ZERO(&fdrs);
       FD_SET(pipe_[0], &fdrs);
       FD_SET(fd_, &fdrs);
-      if (select(1 + std::max(fd_, pipe_[0]), &fdrs, nullptr, nullptr,
-                 nullptr) < 0)
+      if (::select(1 + std::max(fd_, pipe_[0]), &fdrs, nullptr, nullptr,
+                   nullptr) < 0)
         detail::throw_io_error("Error in select");
       if (FD_ISSET(pipe_[0], &fdrs)) {
         closing_ = true;
