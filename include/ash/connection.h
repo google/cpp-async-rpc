@@ -24,6 +24,7 @@
 
 #include <string>
 #include <utility>
+#include "ash/errors.h"
 #include "ash/io_adapters.h"
 
 namespace ash {
@@ -34,7 +35,9 @@ class connection : public input_stream, public output_stream {
   virtual ~connection() {}
 
   /// (Re)connect to the connection's target.
-  virtual void connect() = 0;
+  virtual void connect() {
+    throw errors::not_implemented("Constructor-only connection");
+  }
 
   /// Disconnect if the connection was active.
   virtual void disconnect() = 0;
@@ -49,7 +52,9 @@ class packet_connection {
   virtual ~packet_connection() {}
 
   /// (Re)connect to the connection's target.
-  virtual void connect() = 0;
+  virtual void connect() {
+    throw errors::not_implemented("Constructor-only connection");
+  }
 
   /// Disconnect if the connection was active.
   virtual void disconnect() = 0;

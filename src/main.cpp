@@ -143,8 +143,6 @@ int main() {
   });
 
   try {
-    cdc.connect();
-
     std::string buf("hello\n");
     cdc.write(buf.data(), buf.size());
     cdc.read(&buf[0], 3);
@@ -160,7 +158,6 @@ int main() {
   ash::packet_connection_impl<ash::char_dev_connection,
                               ash::serial_line_packet_protocol<>>
       slpci("/dev/tty");
-  slpci.connect();
   slpci.send("hello");
   slpci.disconnect();
 

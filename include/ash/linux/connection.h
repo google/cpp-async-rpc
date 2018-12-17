@@ -70,29 +70,20 @@ class fd_connection : public connection {
     fd_connection& conn_;
   };
 
-  virtual int make_fd() = 0;
-
  public:
-  ~fd_connection() override { disconnect(); }
-
-  bool connected() override {
-    std::lock_guard<std::mutex> lock(mu_);
-    return (fd_ >= 0);
-  }
-
-  void connect() override {
-    std::lock_guard<std::mutex> lock(mu_);
-    if (fd_ >= 0) {
-      // Already connected.
-      return;
-    }
-
-    fd_ = make_fd();
+  explicit fd_connection(int fd) : fd_(fd) {
     if (::pipe(pipe_)) {
       ::close(fd_);
       fd_ = -1;
       detail::throw_io_error("Error creating control pipe");
     }
+  }
+
+  ~fd_connection() override { disconnect(); }
+
+  bool connected() override {
+    std::lock_guard<std::mutex> lock(mu_);
+    return (fd_ >= 0);
   }
 
   void disconnect() override {
@@ -199,16 +190,15 @@ class fd_connection : public connection {
 
 class char_dev_connection : public fd_connection {
  public:
-  explicit char_dev_connection(std::string path) : path_(std::move(path)) {}
+  explicit char_dev_connection(const std::string& path)
+      : fd_connection(open_path(path)) {}
 
-  int make_fd() override {
-    int fd = open(path_.c_str(), O_RDWR | O_NONBLOCK);
-    if (fd < 0) detail::throw_io_error(std::string("Error opening ") + path_);
+ protected:
+  static int open_path(const std::string& path) {
+    int fd = ::open(path.c_str(), O_RDWR | O_NONBLOCK);
+    if (fd < 0) detail::throw_io_error(std::string("Error opening ") + path);
     return fd;
   }
-
- private:
-  std::string path_;
 };
 
 }  // namespace ash
