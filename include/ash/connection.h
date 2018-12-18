@@ -22,10 +22,13 @@
 #ifndef INCLUDE_ASH_CONNECTION_H_
 #define INCLUDE_ASH_CONNECTION_H_
 
+#include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include "ash/errors.h"
 #include "ash/io_adapters.h"
+#include "ash/mpt.h"
 
 namespace ash {
 
@@ -44,6 +47,72 @@ class connection : public input_stream, public output_stream {
 
   /// Check whether the connection is active.
   virtual bool connected() = 0;
+};
+
+namespace detail {
+template <typename C, typename T, typename S>
+struct from_tuple;
+
+template <typename C, typename T, std::size_t... S>
+struct from_tuple<C, T, mpt::index_sequence<S...>> {
+  static C* make_new(const T& t) { return new C(mpt::at<S>(t)...); }
+};
+}  // namespace detail
+
+template <typename Connection, typename... Args>
+class reconnectable_connection : public connection {
+ private:
+  using arg_tuple_type = std::tuple<Args...>;
+
+  std::shared_ptr<Connection> get() {
+    auto res = connection_;
+    if (!res) throw errors::io_error("Connection is closed");
+    return res;
+  }
+
+ public:
+  explicit reconnectable_connection(Args&&... args)
+      : connection_args_(std::forward<Args>(args)...) {
+    connect();
+  }
+
+  ~reconnectable_connection() override { disconnect(); }
+
+  void connect() override {
+    auto c = connection_;
+    if (!c || !c->connected()) {
+      connection_.reset(
+          detail::from_tuple<
+              Connection, arg_tuple_type,
+              mpt::make_index_sequence<mpt::size<arg_tuple_type>::value>>::
+              make_new(connection_args_));
+    }
+  }
+
+  void disconnect() override { connection_.reset(); }
+
+  bool connected() override {
+    auto c = connection_;
+    return c && c->connected();
+  }
+
+  void write(const char* data, std::size_t size) override {
+    get()->write(data, size);
+  }
+
+  void putc(char c) override { get()->putc(c); }
+
+  void flush() override { get()->flush(); }
+
+  std::size_t read(char* data, std::size_t size) override {
+    return get()->read(data, size);
+  }
+
+  char getc() override { return get()->getc(); }
+
+ private:
+  std::shared_ptr<Connection> connection_;
+  arg_tuple_type connection_args_;
 };
 
 class packet_connection {

@@ -161,6 +161,25 @@ int main() {
   slpci.send("hello");
   slpci.disconnect();
 
+  ash::reconnectable_connection<ash::char_dev_connection, std::string> cdc2(
+      "/dev/tty");
+  std::string buf2("hello\n");
+  cdc2.write(buf2.data(), buf2.size());
+  cdc2.disconnect();
+  cdc2.connect();
+  cdc2.write(buf2.data(), buf2.size());
+  cdc2.disconnect();
+
+  ash::packet_connection_impl<
+      ash::reconnectable_connection<ash::char_dev_connection, std::string>,
+      ash::protected_stream_packet_protocol<>>
+      slpci2("/dev/tty");
+  slpci2.send("hello");
+  slpci2.disconnect();
+  slpci2.connect();
+  slpci2.send("hello");
+  slpci2.disconnect();
+
   /*
   std::string req, res;
   ash::string_output_stream req_os(req);
