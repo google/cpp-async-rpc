@@ -22,9 +22,9 @@
 #ifndef INCLUDE_ASH_CONNECTION_H_
 #define INCLUDE_ASH_CONNECTION_H_
 
+#include <functional>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <utility>
 #include "ash/errors.h"
 #include "ash/io_adapters.h"
@@ -49,21 +49,9 @@ class connection : public input_stream, public output_stream {
   virtual bool connected() = 0;
 };
 
-namespace detail {
-template <typename C, typename T, typename S>
-struct from_tuple;
-
-template <typename C, typename T, std::size_t... S>
-struct from_tuple<C, T, mpt::index_sequence<S...>> {
-  static C* make_new(const T& t) { return new C(mpt::at<S>(t)...); }
-};
-}  // namespace detail
-
-template <typename Connection, typename... Args>
+template <typename Connection>
 class reconnectable_connection : public connection {
  private:
-  using arg_tuple_type = std::tuple<Args...>;
-
   std::shared_ptr<Connection> get() {
     auto res = connection_;
     if (!res) throw errors::io_error("Connection is closed");
@@ -71,8 +59,11 @@ class reconnectable_connection : public connection {
   }
 
  public:
-  explicit reconnectable_connection(Args&&... args)
-      : connection_args_(std::forward<Args>(args)...) {
+  template <typename... Args>
+  explicit reconnectable_connection(const Args&... args)
+      : connection_factory_([=]() {
+          return std::unique_ptr<Connection>(new Connection(args...));
+        }) {
     connect();
   }
 
@@ -81,11 +72,7 @@ class reconnectable_connection : public connection {
   void connect() override {
     auto c = connection_;
     if (!c || !c->connected()) {
-      connection_.reset(
-          detail::from_tuple<
-              Connection, arg_tuple_type,
-              mpt::make_index_sequence<mpt::size<arg_tuple_type>::value>>::
-              make_new(connection_args_));
+      connection_ = connection_factory_();
     }
   }
 
@@ -112,7 +99,7 @@ class reconnectable_connection : public connection {
 
  private:
   std::shared_ptr<Connection> connection_;
-  arg_tuple_type connection_args_;
+  std::function<std::unique_ptr<Connection>()> connection_factory_;
 };
 
 class packet_connection {
