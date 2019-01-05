@@ -21,7 +21,7 @@ license_file = files('LICENSE.md')
 subdir('include')
 subdir('src')
 subdir('test')
-subdir('doc')
+# subdir('doc')
 
 # Declare this project as a dependency for others to use.
 proj_dep = declare_dependency(include_directories : includes)
