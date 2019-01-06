@@ -28,8 +28,9 @@
 #include "catch2/catch.hpp"
 
 template <typename T, bool v>
-using check_is_bit_transferrable_scalar = ash::testing::check_value<
-    bool, ash::traits::is_bit_transferrable_scalar<T>::value, v>;
+using check_is_bit_transferrable_scalar =
+    ash::testing::check_value<bool,
+                              ash::traits::is_bit_transferrable_scalar_v<T>, v>;
 
 TEST_CASE("is_bit_transferrable_scalar") {
   check_is_bit_transferrable_scalar<std::string, false>();
@@ -51,8 +52,9 @@ TEST_CASE("is_bit_transferrable_scalar") {
 }
 
 template <typename T1, typename T2>
-using check_writable_value_type = ash::testing::check_type<
-    typename ash::traits::writable_value_type<T1>::type, T2>;
+using check_writable_value_type =
+    ash::testing::check_type<typename ash::traits::writable_value_type_t<T1>,
+                             T2>;
 
 TEST_CASE("writable_value_type") {
   check_writable_value_type<const int&, int>();

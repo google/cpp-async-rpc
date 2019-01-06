@@ -429,7 +429,7 @@ class binary_decoder {
     sequence.clear();
     maybe_reserve(sequence, l);
     while (l-- > 0) {
-      typename traits::writable_value_type<typename T::value_type>::type v;
+      traits::writable_value_type_t<typename T::value_type> v;
       (*this)(v);
       sequence.push_back(std::move(v));
     }
@@ -446,7 +446,7 @@ class binary_decoder {
     sequence.clear();
     maybe_reserve(sequence, l);
     while (l-- > 0) {
-      typename traits::writable_value_type<typename T::value_type>::type v;
+      traits::writable_value_type_t<typename T::value_type> v;
       (*this)(v);
       sequence.insert(std::move(v));
     }

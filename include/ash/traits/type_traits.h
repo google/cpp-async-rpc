@@ -60,8 +60,11 @@ struct enable_if_type {
 /// \param T the type to check.
 template <typename T>
 struct is_bit_transferrable_scalar
-    : public std::integral_constant<bool, std::is_arithmetic<T>::value ||
-                                              std::is_enum<T>::value> {};
+    : public std::integral_constant<bool, std::is_arithmetic_v<T> ||
+                                              std::is_enum_v<T>> {};
+template <typename T>
+static inline constexpr bool is_bit_transferrable_scalar_v =
+    is_bit_transferrable_scalar<T>::value;
 
 namespace detail {
 template <typename T>
@@ -80,7 +83,6 @@ struct writable_value_type<std::tuple<U...>> {
   using type = std::tuple<typename std::remove_cv<U>::type...>;
 };
 }  // namespace detail
-
 /// \brief Create a type derived of `T` suitable to create a temporary onto
 /// which we can read data from a stream.
 ///
@@ -90,6 +92,9 @@ struct writable_value_type<std::tuple<U...>> {
 template <typename T>
 using writable_value_type = detail::writable_value_type<
     typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+
+template <typename T>
+using writable_value_type_t = typename writable_value_type<T>::type;
 
 template <typename MFP, MFP mptr>
 struct member_function_pointer_traits;

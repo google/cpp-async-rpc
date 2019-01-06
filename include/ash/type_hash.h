@@ -189,7 +189,7 @@ struct type_hash<
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SEQUENCE, false, 0),
       mpt::insert_into_t<T, Seen>,
-      typename writable_value_type<typename T::value_type>::type>::value;
+      writable_value_type_t<typename T::value_type>>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
@@ -203,7 +203,7 @@ struct type_hash<
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::MAP, false, 0),
       mpt::insert_into_t<T, Seen>,
-      typename writable_value_type<typename T::value_type>::type>::value;
+      writable_value_type_t<typename T::value_type>>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
@@ -217,7 +217,7 @@ struct type_hash<
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SET, false, 0),
       mpt::insert_into_t<T, Seen>,
-      typename writable_value_type<typename T::value_type>::type>::value;
+      writable_value_type_t<typename T::value_type>>::value;
 };
 
 template <typename T, typename Seen, typename Deleter, std::uint32_t base>
