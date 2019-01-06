@@ -163,6 +163,7 @@ int main() {
 
   ash::reconnectable_connection<ash::char_dev_connection> cdc2("/dev/tty");
   std::string buf2("hello\n");
+  cdc2.connect();
   cdc2.write(buf2.data(), buf2.size());
   cdc2.disconnect();
   cdc2.connect();
@@ -173,6 +174,7 @@ int main() {
       ash::reconnectable_connection<ash::char_dev_connection>,
       ash::protected_stream_packet_protocol<>>
       slpci2("/dev/tty");
+  slpci2.connect();
   slpci2.send("hello");
   slpci2.disconnect();
   slpci2.connect();

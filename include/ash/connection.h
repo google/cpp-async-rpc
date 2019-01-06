@@ -25,6 +25,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include "ash/errors.h"
 #include "ash/io_adapters.h"
@@ -60,12 +61,15 @@ class reconnectable_connection : public connection {
 
  public:
   template <typename... Args>
-  explicit reconnectable_connection(const Args&... args)
-      : connection_factory_([=]() {
-          return std::unique_ptr<Connection>(new Connection(args...));
-        }) {
-    connect();
-  }
+  explicit reconnectable_connection(Args&&... args)
+      : connection_factory_(
+            [args_tuple = std::make_tuple(std::move<Args>(args)...)]() {
+              return std::apply(
+                  [](const auto&... args) {
+                    return std::make_unique<Connection>(args...);
+                  },
+                  args_tuple);
+            }) {}
 
   ~reconnectable_connection() override { disconnect(); }
 
