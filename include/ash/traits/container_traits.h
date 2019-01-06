@@ -48,6 +48,9 @@ struct is_iterable<
     T, typename enable_if_type<decltype(std::begin(std::declval<T&>()))>::type>
     : public std::integral_constant<bool, true> {};
 
+template <typename T>
+inline constexpr bool is_iterable_v = is_iterable<T>::value;
+
 /// \brief Check whether a container supports iteration.
 ///
 /// This implementation checks for an overload of `std::begin(const T t)` to
@@ -60,6 +63,9 @@ template <typename T>
 struct is_const_iterable<T, typename enable_if_type<decltype(
                                 std::begin(std::declval<const T&>()))>::type>
     : public std::integral_constant<bool, true> {};
+
+template <typename T>
+inline constexpr bool is_const_iterable_v = is_const_iterable<T>::value;
 
 /// \brief Check if `T` is an associative container.
 ///
@@ -90,6 +96,10 @@ template <typename T>
 using is_contiguous_sequence = detail::is_contiguous_sequence<
     typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
 
+template <typename T>
+inline constexpr bool is_contiguous_sequence_v =
+    is_contiguous_sequence<T>::value;
+
 namespace detail {
 ASH_MAKE_METHOD_CHECKER(has_reserve, reserve);
 }  // namespace detail
@@ -107,6 +117,9 @@ struct can_reserve_capacity<
     : public std::integral_constant<
           bool, detail::has_reserve<T, void(typename T::size_type)>::value> {};
 
+template <typename T>
+inline constexpr bool can_reserve_capacity_v = can_reserve_capacity<T>::value;
+
 namespace detail {
 ASH_MAKE_METHOD_CHECKER(has_resize, resize);
 }  // namespace detail
@@ -122,6 +135,9 @@ template <typename T>
 struct can_be_resized<T, typename enable_if_type<typename T::size_type>::type>
     : public std::integral_constant<
           bool, detail::has_resize<T, void(typename T::size_type)>::value> {};
+
+template <typename T>
+inline constexpr bool can_be_resized_v = can_be_resized<T>::value;
 
 namespace detail {
 template <typename T>
@@ -139,6 +155,9 @@ template <typename T>
 using has_static_size = detail::has_static_size<
     typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
 
+template <typename T>
+inline constexpr bool has_static_size_v = has_static_size<T>::value;
+
 namespace detail {
 template <typename T>
 struct static_size
@@ -153,6 +172,9 @@ struct static_size<T[size]> : public std::integral_constant<std::size_t, size> {
 template <typename T>
 using static_size = detail::static_size<
     typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+
+template <typename T>
+inline constexpr std::size_t static_size_v = static_size<T>::value;
 
 };  // namespace traits
 
