@@ -96,13 +96,28 @@ using writable_value_type = detail::writable_value_type<
 template <typename T>
 using writable_value_type_t = typename writable_value_type<T>::type;
 
-template <typename MFP, MFP mptr>
+template <auto mptr>
+struct member_data_pointer_traits;
+
+template <typename C, typename T, T(C::*mptr)>
+struct member_data_pointer_traits<mptr> {
+  static constexpr auto data_ptr = mptr;
+  using data_ptr_type = decltype(mptr);
+  using data_type = T;
+  using class_type = C;
+};
+
+template <auto mptr>
 struct member_function_pointer_traits;
 
 template <typename C, typename R, typename... A, R (C::*mptr)(A...)>
-struct member_function_pointer_traits<R (C::*)(A...), mptr> {
+struct member_function_pointer_traits<mptr> {
+  static constexpr auto method_ptr = mptr;
+  static constexpr bool is_const = false;
+  using method_ptr_type = decltype(mptr);
+  using method_type = R(A...);
   using return_type = R;
-  using owner_class = C;
+  using class_type = C;
   using args_ref_tuple_type = std::tuple<const typename std::remove_cv<
       typename std::remove_reference<A>::type>::type&...>;
   using args_tuple_type = std::tuple<typename std::remove_cv<
@@ -110,7 +125,23 @@ struct member_function_pointer_traits<R (C::*)(A...), mptr> {
   using return_tuple_type =
       typename std::conditional<std::is_same<void, R>::value, std::tuple<>,
                                 std::tuple<R>>::type;
-  using method_type = std::pair<return_tuple_type, args_tuple_type>;
+};
+
+template <typename C, typename R, typename... A, R (C::*mptr)(A...) const>
+struct member_function_pointer_traits<mptr> {
+  static constexpr auto method_ptr = mptr;
+  static constexpr bool is_const = true;
+  using method_ptr_type = decltype(mptr);
+  using method_type = R(A...) const;
+  using return_type = R;
+  using class_type = C;
+  using args_ref_tuple_type = std::tuple<const typename std::remove_cv<
+      typename std::remove_reference<A>::type>::type&...>;
+  using args_tuple_type = std::tuple<typename std::remove_cv<
+      typename std::remove_reference<A>::type>::type...>;
+  using return_tuple_type =
+      typename std::conditional<std::is_same<void, R>::value, std::tuple<>,
+                                std::tuple<R>>::type;
 };
 
 }  // namespace traits

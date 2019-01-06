@@ -25,27 +25,19 @@
 #include <array>
 #include "ash/mpt.h"
 #include "ash/preprocessor.h"
+#include "ash/traits/type_traits.h"
 
 namespace ash {
 
 // A method_descriptor type specifies one remotely callable interface method.
-template <typename MPtr, MPtr m_ptr>
-struct method_descriptor;
-
-template <typename C, typename Result, typename... Args,
-          Result (C::*m_ptr)(Args...)>
-struct method_descriptor<Result (C::*)(Args...), m_ptr> {
-  using class_type = C;
-  using result_type = Result;
-  using method_type_ptr = Result (C::*)(Args...);
-  using method_type = Result(Args...);
-  static constexpr Result (C::*method)(Args...) = m_ptr;
-
+template <auto mptr>
+struct method_descriptor : public traits::member_function_pointer_traits<mptr> {
   /// Get the method's name.
   static const char *name() {
+    using class_type = typename method_descriptor<mptr>::class_type;
     return class_type::method_names()[mpt::at<0>(
         mpt::find_if(typename class_type::method_descriptors{},
-                     mpt::is<method_descriptor<method_type_ptr, m_ptr>>{}))];
+                     mpt::is<method_descriptor<mptr>>{}))];
   }
 };
 
@@ -60,8 +52,7 @@ struct interface : Bases... {
 };
 
 /// Define a `method_descriptor` type for a method named `NAME`.
-#define ASH_METHOD(NAME) \
-  ::ash::method_descriptor<decltype(&own_interface::NAME), &own_interface::NAME>
+#define ASH_METHOD(NAME) ::ash::method_descriptor<&own_interface::NAME>
 #define ASH_METHOD_SEP() ,
 #define ASH_METHOD_NAME(NAME) #NAME
 #define ASH_METHOD_NAME_SEP() ,
@@ -83,26 +74,16 @@ struct interface : Bases... {
     return names;                                                              \
   }
 
-/// Get the method name associated to a method descriptor.
-template <typename MethodDescriptor>
-constexpr const char *method_name() {
-  return MethodDescriptor::class_type::field_names[mpt::at<0>(
-      mpt::find_if(typename MethodDescriptor::class_type::method_descriptors{},
-                   mpt::is<MethodDescriptor>{}))];
-}
-
 /// Get the method descriptor for a given member function pointer.
-template <typename MFP, MFP p>
-struct get_method_descriptor;
-
-/// Get the method descriptor for a given member function pointer.
-template <typename C, typename R, typename... A, R (C::*mptr)(A...)>
-struct get_method_descriptor<R (C::*)(A...), mptr> {
-  static constexpr auto method_descriptor_index = mpt::at<0>(
-      mpt::find_if(typename C::method_descriptors{},
-                   mpt::is<method_descriptor<R (C::*)(A...), mptr>>{}));
-  using type = typename decltype(
-      mpt::at<method_descriptor_index>(typename C::method_descriptors{}))::type;
+template <auto mptr>
+struct get_method_descriptor {
+  using class_type =
+      typename traits::member_function_pointer_traits<mptr>::class_type;
+  static constexpr auto method_descriptor_index =
+      mpt::at<0>(mpt::find_if(typename class_type::method_descriptors{},
+                              mpt::is<method_descriptor<mptr>>{}));
+  using type = typename decltype(mpt::at<method_descriptor_index>(
+      typename class_type::method_descriptors{}))::type;
 };
 }  // namespace ash
 

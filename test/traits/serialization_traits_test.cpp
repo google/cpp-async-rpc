@@ -85,10 +85,10 @@ using check_get_field_descriptors = ash::testing::check_type<
     typename ash::traits::get_field_descriptors<T1>::type, T2>;
 
 TEST_CASE("get_field_descriptors") {
-  check_get_field_descriptors<
-      A, ash::mpt::pack<ash::field_descriptor<int A::*, &A::x>>>();
-  check_get_field_descriptors<
-      B, ash::mpt::pack<ash::field_descriptor<int B::*, &B::y>>>();
+  check_get_field_descriptors<A,
+                              ash::mpt::pack<ash::field_descriptor<&A::x>>>();
+  check_get_field_descriptors<B,
+                              ash::mpt::pack<ash::field_descriptor<&B::y>>>();
   check_get_field_descriptors<C, ash::mpt::pack<>>();
   check_get_field_descriptors<D, ash::mpt::pack<>>();
 }

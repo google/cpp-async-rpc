@@ -247,7 +247,7 @@ class binary_encoder {
   struct field_saver {
     template <typename T, typename FD, typename S>
     void operator()(mpt::wrap_type<FD>, const T& o, S& s) {
-      s(o.*(FD::member_pointer));
+      s(o.*(FD::data_ptr));
     }
   };
 
@@ -660,7 +660,7 @@ class binary_decoder {
   struct field_loader {
     template <typename T, typename FD, typename S>
     void operator()(mpt::wrap_type<FD>, T& o, S& s) {
-      s(o.*(FD::member_pointer));
+      s(o.*(FD::data_ptr));
     }
   };
 

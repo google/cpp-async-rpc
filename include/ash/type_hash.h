@@ -247,10 +247,11 @@ struct type_hash<
       mpt::insert_into_t<std::weak_ptr<T>, Seen>, T>::value;
 };
 
-template <typename C, typename T, T C::*m_ptr, typename Seen,
-          std::uint32_t base>
-struct type_hash<::ash::field_descriptor<T C::*, m_ptr>, Seen, base, void> {
-  static constexpr std::uint32_t value = type_hash<T, Seen, base>::value;
+template <auto mptr, typename Seen, std::uint32_t base>
+struct type_hash<::ash::field_descriptor<mptr>, Seen, base, void> {
+  static constexpr std::uint32_t value =
+      type_hash<typename ::ash::field_descriptor<mptr>::data_type, Seen,
+                base>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>

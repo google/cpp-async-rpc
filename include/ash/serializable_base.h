@@ -28,6 +28,7 @@
 #include "ash/errors.h"
 #include "ash/mpt.h"
 #include "ash/preprocessor.h"
+#include "ash/traits/type_traits.h"
 
 namespace ash {
 
@@ -74,21 +75,14 @@ struct serializable_mixin<true, OwnType, Bases...>
 }  // namespace detail
 
 /// A field_descriptor type specifies how to access one data member.
-template <typename MPtr, MPtr m_ptr>
-struct field_descriptor;
-
-/// A field_descriptor type specifies how to access one data member.
-template <typename C, typename T, T C::*m_ptr>
-struct field_descriptor<T C::*, m_ptr> {
-  using class_type = C;
-  using member_type = T;
-  static constexpr auto member_pointer = m_ptr;
-
+template <auto mptr>
+struct field_descriptor : public traits::member_data_pointer_traits<mptr> {
   /// Get the field's name.
   static const char* name() {
+    using class_type = typename field_descriptor<mptr>::class_type;
     return class_type::field_names()[mpt::at<0>(
         mpt::find_if(typename class_type::field_descriptors{},
-                     mpt::is<field_descriptor<T C::*, m_ptr>>{}))];
+                     mpt::is<field_descriptor<mptr>>{}))];
   }
 };  // namespace ash
 
@@ -108,8 +102,7 @@ using dynamic = mpt::conditional_t<
     serializable<OwnType, ::ash::dynamic_base_class, Bases...>>;
 
 /// Define a `field_descriptor` type for a member field named `NAME`.
-#define ASH_FIELD(NAME) \
-  ::ash::field_descriptor<decltype(&own_type::NAME), &own_type::NAME>
+#define ASH_FIELD(NAME) ::ash::field_descriptor<&own_type::NAME>
 #define ASH_FIELD_SEP() ,
 #define ASH_FIELD_NAME(NAME) #NAME
 #define ASH_FIELD_NAME_SEP() ,
@@ -137,6 +130,17 @@ using dynamic = mpt::conditional_t<
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION
 
+/// Get the field descriptor for a given member pointer.
+template <auto mptr>
+struct get_field_descriptor {
+  using class_type =
+      typename traits::member_data_pointer_traits<mptr>::class_type;
+  static constexpr auto field_descriptor_index =
+      mpt::at<0>(mpt::find_if(typename class_type::field_descriptors{},
+                              mpt::is<field_descriptor<mptr>>{}));
+  using type = typename decltype(mpt::at<field_descriptor_index>(
+      typename class_type::field_descriptors{}))::type;
+};
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_SERIALIZABLE_BASE_H_
