@@ -32,11 +32,12 @@ namespace ash {
 namespace traits {
 
 /// Will have a `true` value if the compilation target is little-endian.
-constexpr bool target_is_little_endian =
+inline constexpr bool target_is_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 
 /// Will have a `true` value if the compilation target is big-endian.
-constexpr bool target_is_big_endian = (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
+inline constexpr bool target_is_big_endian =
+    (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
 
 static_assert(target_is_little_endian ^ target_is_big_endian,
               "Target endianness isn't either big or little endian.");
@@ -49,6 +50,9 @@ struct enable_if_type {
   /// The resulting replacement type.
   using type = R;
 };
+
+template <typename T, typename R = void>
+using enable_if_type_t = typename enable_if_type<T, R>::type;
 
 /// \brief Check whether `T` is a POD scalar that can be transferred as-is
 /// between memory and a file.
@@ -69,18 +73,17 @@ static inline constexpr bool is_bit_transferrable_scalar_v =
 namespace detail {
 template <typename T>
 struct writable_value_type {
-  using type = typename std::remove_cv<T>::type;
+  using type = typename std::remove_cv_t<T>;
 };
 
 template <typename U, typename V>
 struct writable_value_type<std::pair<U, V>> {
-  using type = std::pair<typename std::remove_cv<U>::type,
-                         typename std::remove_cv<V>::type>;
+  using type = std::pair<std::remove_cv_t<U>, std::remove_cv_t<V>>;
 };
 
 template <typename... U>
 struct writable_value_type<std::tuple<U...>> {
-  using type = std::tuple<typename std::remove_cv<U>::type...>;
+  using type = std::tuple<std::remove_cv_t<U>...>;
 };
 }  // namespace detail
 /// \brief Create a type derived of `T` suitable to create a temporary onto
@@ -91,7 +94,7 @@ struct writable_value_type<std::tuple<U...>> {
 /// the original type `T`.
 template <typename T>
 using writable_value_type = detail::writable_value_type<
-    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+    typename std::remove_cv<std::remove_reference_t<T>>::type>;
 
 template <typename T>
 using writable_value_type_t = typename writable_value_type<T>::type;
@@ -118,12 +121,12 @@ struct member_function_pointer_traits<mptr> {
   using method_type = R(A...);
   using return_type = R;
   using class_type = C;
-  using args_ref_tuple_type = std::tuple<const typename std::remove_cv<
-      typename std::remove_reference<A>::type>::type&...>;
-  using args_tuple_type = std::tuple<typename std::remove_cv<
-      typename std::remove_reference<A>::type>::type...>;
+  using args_ref_tuple_type =
+      std::tuple<const std::remove_cv_t<std::remove_reference_t<A>>&...>;
+  using args_tuple_type =
+      std::tuple<std::remove_cv_t<std::remove_reference_t<A>>...>;
   using return_tuple_type =
-      typename std::conditional<std::is_same<void, R>::value, std::tuple<>,
+      typename std::conditional<std::is_same_v<void, R>, std::tuple<>,
                                 std::tuple<R>>::type;
 };
 
@@ -135,12 +138,12 @@ struct member_function_pointer_traits<mptr> {
   using method_type = R(A...) const;
   using return_type = R;
   using class_type = C;
-  using args_ref_tuple_type = std::tuple<const typename std::remove_cv<
-      typename std::remove_reference<A>::type>::type&...>;
-  using args_tuple_type = std::tuple<typename std::remove_cv<
-      typename std::remove_reference<A>::type>::type...>;
+  using args_ref_tuple_type =
+      std::tuple<const std::remove_cv_t<std::remove_reference_t<A>>&...>;
+  using args_tuple_type =
+      std::tuple<std::remove_cv_t<std::remove_reference_t<A>>...>;
   using return_tuple_type =
-      typename std::conditional<std::is_same<void, R>::value, std::tuple<>,
+      typename std::conditional<std::is_same_v<void, R>, std::tuple<>,
                                 std::tuple<R>>::type;
 };
 

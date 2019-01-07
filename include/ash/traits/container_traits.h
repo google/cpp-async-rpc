@@ -44,8 +44,8 @@ struct is_iterable : public std::integral_constant<bool, false> {};
 
 /// \copydoc is_iterable
 template <typename T>
-struct is_iterable<
-    T, typename enable_if_type<decltype(std::begin(std::declval<T&>()))>::type>
+struct is_iterable<T,
+                   enable_if_type_t<decltype(std::begin(std::declval<T&>()))>>
     : public std::integral_constant<bool, true> {};
 
 template <typename T>
@@ -60,8 +60,8 @@ struct is_const_iterable : public std::integral_constant<bool, false> {};
 
 /// \copydoc is_const_iterable
 template <typename T>
-struct is_const_iterable<T, typename enable_if_type<decltype(
-                                std::begin(std::declval<const T&>()))>::type>
+struct is_const_iterable<
+    T, enable_if_type_t<decltype(std::begin(std::declval<const T&>()))>>
     : public std::integral_constant<bool, true> {};
 
 template <typename T>
@@ -94,7 +94,7 @@ struct is_contiguous_sequence<std::basic_string<CharT, Traits, Allocator>>
 /// \brief Check if `T` is a container storing elements contiguously in memory.
 template <typename T>
 using is_contiguous_sequence = detail::is_contiguous_sequence<
-    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+    std::remove_cv_t<std::remove_reference_t<T>>>;
 
 template <typename T>
 inline constexpr bool is_contiguous_sequence_v =
@@ -112,10 +112,9 @@ struct can_reserve_capacity : public std::integral_constant<bool, false> {};
 
 /// \copydoc can_reserve_capacity
 template <typename T>
-struct can_reserve_capacity<
-    T, typename enable_if_type<typename T::size_type>::type>
+struct can_reserve_capacity<T, enable_if_type_t<typename T::size_type>>
     : public std::integral_constant<
-          bool, detail::has_reserve<T, void(typename T::size_type)>::value> {};
+          bool, detail::has_reserve_v<T, void(typename T::size_type)>> {};
 
 template <typename T>
 inline constexpr bool can_reserve_capacity_v = can_reserve_capacity<T>::value;
@@ -132,9 +131,9 @@ struct can_be_resized : public std::integral_constant<bool, false> {};
 
 /// \copydoc can_be_resized
 template <typename T>
-struct can_be_resized<T, typename enable_if_type<typename T::size_type>::type>
+struct can_be_resized<T, enable_if_type_t<typename T::size_type>>
     : public std::integral_constant<
-          bool, detail::has_resize<T, void(typename T::size_type)>::value> {};
+          bool, detail::has_resize_v<T, void(typename T::size_type)>> {};
 
 template <typename T>
 inline constexpr bool can_be_resized_v = can_be_resized<T>::value;
@@ -152,8 +151,8 @@ struct has_static_size<T[size]> : public std::true_type {};
 
 /// \brief Check whether a container has a size known at compile time.
 template <typename T>
-using has_static_size = detail::has_static_size<
-    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+using has_static_size =
+    detail::has_static_size<std::remove_cv_t<std::remove_reference_t<T>>>;
 
 template <typename T>
 inline constexpr bool has_static_size_v = has_static_size<T>::value;
@@ -170,8 +169,8 @@ struct static_size<T[size]> : public std::integral_constant<std::size_t, size> {
 }  // namespace detail
 /// \brief Get a container's static size at compile time.
 template <typename T>
-using static_size = detail::static_size<
-    typename std::remove_cv<typename std::remove_reference<T>::type>::type>;
+using static_size =
+    detail::static_size<std::remove_cv_t<std::remove_reference_t<T>>>;
 
 template <typename T>
 inline constexpr std::size_t static_size_v = static_size<T>::value;

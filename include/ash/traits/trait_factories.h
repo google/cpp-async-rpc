@@ -59,7 +59,9 @@ namespace traits {
                                                                               \
    public:                                                                    \
     static constexpr bool value = type::value;                                \
-  };
+  };                                                                          \
+  template <typename C, typename M>                                           \
+  inline constexpr bool CHECKER_NAME##_v = CHECKER_NAME<C, M>::value;
 
 /// \brief Define a checker template `struct` to verify whether a class has a
 /// `const` method with the given name.
@@ -90,7 +92,9 @@ namespace traits {
                                                                               \
    public:                                                                    \
     static constexpr bool value = type::value;                                \
-  };
+  };                                                                          \
+  template <typename C, typename M>                                           \
+  inline constexpr bool CHECKER_NAME##_v = CHECKER_NAME<C, M>::value;
 
 /// \brief Define a checker template `struct` to verify whether a class has a
 /// nested type with a given name.
@@ -104,9 +108,11 @@ namespace traits {
   template <typename T, typename Enable = void>                               \
   struct CHECKER_NAME : public std::false_type {};                            \
   template <typename T>                                                       \
-  struct CHECKER_NAME<                                                        \
-      T, typename ::ash::traits::enable_if_type<typename T::TYPE_NAME>::type> \
-      : public std::true_type {};
+  struct CHECKER_NAME<T,                                                      \
+                      ::ash::traits::enable_if_type_t<typename T::TYPE_NAME>> \
+      : public std::true_type {};                                             \
+  template <typename T>                                                       \
+  inline constexpr bool CHECKER_NAME##_v = CHECKER_NAME<T>::value;
 
 /// \brief Define a checker template `struct` to verify whether a class has a
 /// nested compile-time constant with a given name of a given type.
@@ -116,14 +122,16 @@ namespace traits {
 ///
 /// \param CHECKER_NAME Name of the generated template `struct`.
 /// \param CONSTANT_NAME Name of the nested constant to check for.
-#define ASH_MAKE_NESTED_CONSTANT_CHECKER(CHECKER_NAME, CONSTANT_NAME)          \
-  template <typename T, typename VT, typename Enable = void>                   \
-  struct CHECKER_NAME : public std::false_type {};                             \
-  template <typename T, typename VT>                                           \
-  struct CHECKER_NAME<T, VT,                                                   \
-                      typename std::enable_if<std::is_same<                    \
-                          const VT, decltype(T::CONSTANT_NAME)>::value>::type> \
-      : public std::true_type {};
+#define ASH_MAKE_NESTED_CONSTANT_CHECKER(CHECKER_NAME, CONSTANT_NAME)         \
+  template <typename T, typename VT, typename Enable = void>                  \
+  struct CHECKER_NAME : public std::false_type {};                            \
+  template <typename T, typename VT>                                          \
+  struct CHECKER_NAME<                                                        \
+      T, VT,                                                                  \
+      std::enable_if_t<std::is_same_v<const VT, decltype(T::CONSTANT_NAME)>>> \
+      : public std::true_type {};                                             \
+  template <typename T, typename VT>                                          \
+  inline constexpr bool CHECKER_NAME##_v = CHECKER_NAME<T, VT>::value;
 
 }  // namespace traits
 

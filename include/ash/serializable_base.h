@@ -24,6 +24,7 @@
 
 #include <array>
 #include <cstdint>
+#include <type_traits>
 #include "ash/dynamic_base_class.h"
 #include "ash/errors.h"
 #include "ash/mpt.h"
@@ -96,7 +97,7 @@ using serializable = detail::serializable_mixin<
 /// Inherit publicly from this in dynamic classes, specifying own type and
 /// public bases.
 template <typename OwnType, typename... Bases>
-using dynamic = mpt::conditional_t<
+using dynamic = std::conditional_t<
     (mpt::count_if(mpt::pack<Bases...>{}, detail::dynamic_class_filter{}) > 0),
     serializable<OwnType, Bases...>,
     serializable<OwnType, ::ash::dynamic_base_class, Bases...>>;
@@ -141,6 +142,9 @@ struct get_field_descriptor {
   using type = typename decltype(mpt::at<field_descriptor_index>(
       typename class_type::field_descriptors{}))::type;
 };
+
+template <auto mptr>
+using get_field_descriptor_t = typename get_field_descriptor<mptr>::type;
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_SERIALIZABLE_BASE_H_

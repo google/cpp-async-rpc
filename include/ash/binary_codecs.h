@@ -29,6 +29,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include "ash/container/flat_map.h"
@@ -55,7 +56,7 @@ class binary_encoder {
   // Tag processing variant that'll write a structure hash to the output.
   template <typename T, typename... Tags>
   void operator()(const T& o, verify_structure, Tags... tags) {
-    const std::uint32_t type_hash = traits::type_hash<T>::value;
+    const std::uint32_t type_hash = traits::type_hash_v<T>;
     (*this)(type_hash);
     return (*this)(o, tags...);
   }
@@ -69,17 +70,16 @@ class binary_encoder {
 
   // Serializable scalar.
   template <typename T>
-  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          void>::type
-  operator()(const T& v) {
+  std::enable_if_t<traits::is_bit_transferrable_scalar_v<T>, void> operator()(
+      const T& v) {
     write_block(&v, 1);
   }
 
   // Contiguous sequences.
   template <typename T>
-  typename std::enable_if<traits::is_const_iterable<T>::value &&
-                              traits::is_contiguous_sequence<T>::value,
-                          void>::type
+  std::enable_if_t<traits::is_const_iterable_v<T> &&
+                       traits::is_contiguous_sequence_v<T>,
+                   void>
   operator()(const T& sequence) {
     maybe_write_size(sequence);
     write_sequence(&*std::begin(sequence),
@@ -88,9 +88,9 @@ class binary_encoder {
 
   // Non-contiguous iterables.
   template <typename T>
-  typename std::enable_if<traits::is_const_iterable<T>::value &&
-                              !traits::is_contiguous_sequence<T>::value,
-                          void>::type
+  std::enable_if_t<traits::is_const_iterable_v<T> &&
+                       !traits::is_contiguous_sequence_v<T>,
+                   void>
   operator()(const T& sequence) {
     maybe_write_size(sequence);
     for (const auto& i : sequence) {
@@ -113,8 +113,8 @@ class binary_encoder {
 
   // Saveable objects.
   template <typename T>
-  typename std::enable_if<traits::can_be_serialized<T>::value, void>::type
-  operator()(const T& o) {
+  std::enable_if_t<traits::can_be_serialized_v<T>, void> operator()(
+      const T& o) {
     save_base_classes(o);
     save_fields(o);
     invoke_save(o);
@@ -210,14 +210,12 @@ class binary_encoder {
   }
 
   template <typename T>
-  typename std::enable_if<!is_dynamic<T>::value, void>::type
-  save_object_reference(const T& o) {
+  std::enable_if_t<!is_dynamic_v<T>, void> save_object_reference(const T& o) {
     (*this)(o);
   }
 
   template <typename T>
-  typename std::enable_if<is_dynamic<T>::value, void>::type
-  save_object_reference(const T& o) {
+  std::enable_if_t<is_dynamic_v<T>, void> save_object_reference(const T& o) {
     save_dynamic_object_reference(o);
   }
 
@@ -239,8 +237,8 @@ class binary_encoder {
 
   template <typename T>
   void save_base_classes(const T& o) {
-    mpt::for_each(typename traits::get_base_classes<T>::type{},
-                  base_class_saver{}, o, *this);
+    mpt::for_each(traits::get_base_classes_t<T>{}, base_class_saver{}, o,
+                  *this);
   }
 
   // Save fields from field_descriptors, if present.
@@ -253,33 +251,31 @@ class binary_encoder {
 
   template <typename T>
   void save_fields(const T& o) {
-    mpt::for_each(typename traits::get_field_descriptors<T>::type{},
-                  field_saver{}, o, *this);
+    mpt::for_each(traits::get_field_descriptors_t<T>{}, field_saver{}, o,
+                  *this);
   }
 
   // Invoke the save method, if present.
   template <typename T>
-  typename std::enable_if<traits::has_custom_serialization<T>::value,
-                          void>::type
-  invoke_save(const T& o) {
-    static_assert(traits::get_custom_serialization_version<T>::value != 0,
+  std::enable_if_t<traits::has_custom_serialization_v<T>, void> invoke_save(
+      const T& o) {
+    static_assert(traits::get_custom_serialization_version_v<T> != 0,
                   "Custom serialization version must be non-zero.");
     o.save(*this);
   }
 
   template <typename T>
-  typename std::enable_if<!traits::has_custom_serialization<T>::value,
-                          void>::type
-  invoke_save(const T& o) {}
+  std::enable_if_t<!traits::has_custom_serialization_v<T>, void> invoke_save(
+      const T& o) {}
 
   // Write some container's size... or not (if it's known at compile time).
   template <typename T>
-  typename std::enable_if<traits::has_static_size<T>::value, void>::type
+  typename std::enable_if<traits::has_static_size_v<T>, void>::type
   maybe_write_size(const T& t) {}
 
   template <typename T>
-  typename std::enable_if<!traits::has_static_size<T>::value, void>::type
-  maybe_write_size(const T& t) {
+  std::enable_if_t<!traits::has_static_size_v<T>, void> maybe_write_size(
+      const T& t) {
     write_variant(t.size());
   }
 
@@ -287,16 +283,14 @@ class binary_encoder {
   // contiguous
   // memory.
   template <typename T>
-  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          void>::type
+  std::enable_if_t<traits::is_bit_transferrable_scalar_v<T>, void>
   write_sequence(const T* p, std::size_t l) {
     write_block(p, l);
   }
 
   // For non-trivial objects, call the whole serialization machinery.
   template <typename T>
-  typename std::enable_if<!traits::is_bit_transferrable_scalar<T>::value,
-                          void>::type
+  std::enable_if_t<!traits::is_bit_transferrable_scalar_v<T>, void>
   write_sequence(const T* p, std::size_t l) {
     while (l-- > 0) {
       (*this)(*p++);
@@ -305,8 +299,8 @@ class binary_encoder {
 
   // If we need to reverse the data, write it out byte by byte.
   template <typename T>
-  typename std::enable_if<reverse_bytes && sizeof(T) != 1, void>::type
-  write_block(const T* p_, std::size_t l) {
+  std::enable_if_t<reverse_bytes && sizeof(T) != 1, void> write_block(
+      const T* p_, std::size_t l) {
     const char* p = reinterpret_cast<const char*>(p_);
     constexpr std::size_t data_size = sizeof(T);
     for (std::size_t i = 0; i < l; i++, p += data_size) {
@@ -320,8 +314,8 @@ class binary_encoder {
   // either because memory has the right endianness or the data type is
   // byte-sized.
   template <typename T>
-  typename std::enable_if<!reverse_bytes || sizeof(T) == 1, void>::type
-  write_block(const T* p, std::size_t l) {
+  std::enable_if_t<!reverse_bytes || sizeof(T) == 1, void> write_block(
+      const T* p, std::size_t l) {
     out_.write(reinterpret_cast<const char*>(p), l * sizeof(T));
   }
 
@@ -370,7 +364,7 @@ class binary_decoder {
   void operator()(T& o, verify_structure, Tags... tags) {
     std::uint32_t type_hash;
     (*this)(type_hash);
-    if (type_hash != traits::type_hash<T>::value) {
+    if (type_hash != traits::type_hash_v<T>) {
       throw errors::data_mismatch("Wrong type hash in verified read");
     }
     (*this)(o, tags...);
@@ -378,20 +372,19 @@ class binary_decoder {
 
   // Serializable scalar.
   template <typename T>
-  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          void>::type
-  operator()(T& v) {
+  std::enable_if_t<traits::is_bit_transferrable_scalar_v<T>, void> operator()(
+      T& v) {
     read_block(&v, 1);
   }
 
   // Contiguous sequences with fixed size (that is, std::array).
   template <typename T>
-  typename std::enable_if<traits::is_iterable<T>::value &&
-                              traits::is_contiguous_sequence<T>::value &&
-                              traits::has_static_size<T>::value,
-                          void>::type
+  std::enable_if_t<traits::is_iterable_v<T> &&
+                       traits::is_contiguous_sequence_v<T> &&
+                       traits::has_static_size_v<T>,
+                   void>
   operator()(T& sequence) {
-    read_sequence(&*std::begin(sequence), traits::static_size<T>::value);
+    read_sequence(&*std::begin(sequence), traits::static_size_v<T>);
   }
 
   // Contiguous sequences that can be resized, and contain just scalars.
@@ -399,13 +392,12 @@ class binary_decoder {
   // overwrite the values in a single block read. This should match strings
   // and vectors of scalars.
   template <typename T>
-  typename std::enable_if<
-      traits::is_iterable<T>::value && !traits::has_static_size<T>::value &&
-          traits::is_contiguous_sequence<T>::value &&
-          traits::can_be_resized<T>::value &&
-          traits::is_bit_transferrable_scalar<typename T::value_type>::value &&
-          !traits::is_associative<T>::value,
-      void>::type
+  std::enable_if_t<
+      traits::is_iterable_v<T> && !traits::has_static_size_v<T> &&
+          traits::is_contiguous_sequence_v<T> && traits::can_be_resized_v<T> &&
+          traits::is_bit_transferrable_scalar_v<typename T::value_type> &&
+          !traits::is_associative_v<T>,
+      void>
   operator()(T& sequence) {
     std::size_t l = read_size();
     // No need to reserve as we are setting the size directly.
@@ -416,14 +408,13 @@ class binary_decoder {
   // Containers where we need to read elements one by one and push_back them.
   // This should apply to deques, lists and vectors of non-scalars.
   template <typename T>
-  typename std::enable_if<traits::is_iterable<T>::value &&
-                              !traits::has_static_size<T>::value &&
-                              (!traits::is_contiguous_sequence<T>::value ||
-                               !traits::can_be_resized<T>::value ||
-                               !traits::is_bit_transferrable_scalar<
-                                   typename T::value_type>::value) &&
-                              !traits::is_associative<T>::value,
-                          void>::type
+  std::enable_if_t<
+      traits::is_iterable_v<T> && !traits::has_static_size_v<T> &&
+          (!traits::is_contiguous_sequence_v<T> ||
+           !traits::can_be_resized_v<T> ||
+           !traits::is_bit_transferrable_scalar_v<
+               typename T::value_type>)&&!traits::is_associative_v<T>,
+      void>
   operator()(T& sequence) {
     std::size_t l = read_size();
     sequence.clear();
@@ -437,10 +428,9 @@ class binary_decoder {
 
   // Associative containers.
   template <typename T>
-  typename std::enable_if<traits::is_iterable<T>::value &&
-                              !traits::has_static_size<T>::value &&
-                              traits::is_associative<T>::value,
-                          void>::type
+  std::enable_if_t<traits::is_iterable_v<T> && !traits::has_static_size_v<T> &&
+                       traits::is_associative_v<T>,
+                   void>
   operator()(T& sequence) {
     std::size_t l = read_size();
     sequence.clear();
@@ -467,8 +457,7 @@ class binary_decoder {
 
   // Loadable objects.
   template <typename T>
-  typename std::enable_if<traits::can_be_serialized<T>::value, void>::type
-  operator()(T& o) {
+  std::enable_if_t<traits::can_be_serialized_v<T>, void> operator()(T& o) {
     load_base_classes(o);
     load_fields(o);
     invoke_load(o);
@@ -619,8 +608,7 @@ class binary_decoder {
   }
 
   template <typename P, typename O>
-  typename std::enable_if<!is_dynamic<typename P::element_type>::value,
-                          void>::type
+  std::enable_if_t<!is_dynamic_v<typename P::element_type>, void>
   load_object_reference(P& ptr, O o) {
     ptr.reset(new typename P::element_type());
     o(ptr);
@@ -628,8 +616,7 @@ class binary_decoder {
   }
 
   template <typename P, typename O>
-  typename std::enable_if<is_dynamic<typename P::element_type>::value,
-                          void>::type
+  std::enable_if_t<is_dynamic_v<typename P::element_type>, void>
   load_object_reference(P& ptr, O o) {
     load_dynamic_object_reference(ptr, o);
   }
@@ -652,8 +639,8 @@ class binary_decoder {
 
   template <typename T>
   void load_base_classes(T& o) {
-    mpt::for_each(typename traits::get_base_classes<T>::type{},
-                  base_class_loader{}, o, *this);
+    mpt::for_each(traits::get_base_classes_t<T>{}, base_class_loader{}, o,
+                  *this);
   }
 
   // Load fields from field_descriptors, if present.
@@ -666,35 +653,33 @@ class binary_decoder {
 
   template <typename T>
   void load_fields(T& o) {
-    mpt::for_each(typename traits::get_field_descriptors<T>::type{},
-                  field_loader{}, o, *this);
+    mpt::for_each(traits::get_field_descriptors_t<T>{}, field_loader{}, o,
+                  *this);
   }
 
   // Invoke the load method, if present.
   template <typename T>
-  typename std::enable_if<traits::has_custom_serialization<T>::value,
-                          void>::type
-  invoke_load(T& o) {
-    static_assert(traits::get_custom_serialization_version<T>::value != 0,
+  std::enable_if_t<traits::has_custom_serialization_v<T>, void> invoke_load(
+      T& o) {
+    static_assert(traits::get_custom_serialization_version_v<T> != 0,
                   "Custom serialization version must be non-zero.");
     o.load(*this);
   }
 
   template <typename T>
-  typename std::enable_if<!traits::has_custom_serialization<T>::value,
-                          void>::type
-  invoke_load(T& o) {}
+  std::enable_if_t<!traits::has_custom_serialization_v<T>, void> invoke_load(
+      T& o) {}
 
   // Reserve space in a container that supports a reserve method.
   template <typename T>
-  typename std::enable_if<traits::can_reserve_capacity<T>::value, void>::type
-  maybe_reserve(T& t, typename T::size_type l) {
+  std::enable_if_t<traits::can_reserve_capacity_v<T>, void> maybe_reserve(
+      T& t, typename T::size_type l) {
     t.reserve(l);
   }
 
   template <typename T>
-  typename std::enable_if<!traits::can_reserve_capacity<T>::value, void>::type
-  maybe_reserve(T& t, typename T::size_type l) {}
+  std::enable_if_t<!traits::can_reserve_capacity_v<T>, void> maybe_reserve(
+      T& t, typename T::size_type l) {}
 
   std::size_t read_size() { return read_variant(); }
 
@@ -702,16 +687,14 @@ class binary_decoder {
   // contiguous
   // memory.
   template <typename T>
-  typename std::enable_if<traits::is_bit_transferrable_scalar<T>::value,
-                          void>::type
+  std::enable_if_t<traits::is_bit_transferrable_scalar_v<T>, void>
   read_sequence(T* p, std::size_t l) {
     read_block(p, l);
   }
 
   // For non-trivial objects, call the whole serialization machinery.
   template <typename T>
-  typename std::enable_if<!traits::is_bit_transferrable_scalar<T>::value,
-                          void>::type
+  std::enable_if_t<!traits::is_bit_transferrable_scalar_v<T>, void>
   read_sequence(T* p, std::size_t l) {
     while (l-- > 0) {
       (*this)(*p++);
@@ -720,8 +703,8 @@ class binary_decoder {
 
   // If we need to reverse the data, read it into place and reverse.
   template <typename T>
-  typename std::enable_if<reverse_bytes && sizeof(T) != 1, void>::type
-  read_block(T* p, std::size_t l) {
+  std::enable_if_t<reverse_bytes && sizeof(T) != 1, void> read_block(
+      T* p, std::size_t l) {
     in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
     for (std::size_t i = 0; i < l; i++, p++) {
       char* bp = reinterpret_cast<char*>(p);
@@ -733,8 +716,8 @@ class binary_decoder {
   // either because memory has the right endianness or the data type is
   // byte-sized.
   template <typename T>
-  typename std::enable_if<!reverse_bytes || sizeof(T) == 1, void>::type
-  read_block(T* p, std::size_t l) {
+  std::enable_if_t<!reverse_bytes || sizeof(T) == 1, void> read_block(
+      T* p, std::size_t l) {
     in_.read_fully(reinterpret_cast<char*>(p), l * sizeof(T));
   }
 
@@ -770,10 +753,10 @@ class reversing_binary_encoder
                        true>::binary_encoder;
 };
 using little_endian_binary_encoder =
-    mpt::conditional_t<traits::target_is_little_endian, native_binary_encoder,
+    std::conditional_t<traits::target_is_little_endian, native_binary_encoder,
                        reversing_binary_encoder>;
 using big_endian_binary_encoder =
-    mpt::conditional_t<traits::target_is_big_endian, native_binary_encoder,
+    std::conditional_t<traits::target_is_big_endian, native_binary_encoder,
                        reversing_binary_encoder>;
 
 class native_binary_decoder
@@ -787,10 +770,10 @@ class reversing_binary_decoder
                        true>::binary_decoder;
 };
 using little_endian_binary_decoder =
-    mpt::conditional_t<traits::target_is_little_endian, native_binary_decoder,
+    std::conditional_t<traits::target_is_little_endian, native_binary_decoder,
                        reversing_binary_decoder>;
 using big_endian_binary_decoder =
-    mpt::conditional_t<traits::target_is_big_endian, native_binary_decoder,
+    std::conditional_t<traits::target_is_big_endian, native_binary_decoder,
                        reversing_binary_decoder>;
 
 }  // namespace ash

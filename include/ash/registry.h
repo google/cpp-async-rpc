@@ -166,7 +166,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
       return static_cast<::ash::dynamic_base_class*>(new T());
     };
     if (!factory_function_map_
-             .emplace(class_name, info{(f), traits::type_hash<T>::value})
+             .emplace(class_name, info{(f), traits::type_hash_v<T>})
              .second)
       throw errors::invalid_state("Duplicate class registration");
 
@@ -197,25 +197,24 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
 using type_id = const void*;
 
 template <typename T>
-typename std::enable_if<!is_dynamic<T>::value, type_id>::type get_type_id() {
+std::enable_if_t<!is_dynamic_v<T>, type_id> get_type_id() {
   static const char c = 0;
   return &c;
 }
 
 template <typename T>
-typename std::enable_if<is_dynamic<T>::value, type_id>::type get_type_id() {
+std::enable_if_t<is_dynamic_v<T>, type_id> get_type_id() {
   return nullptr;
 }
 
 template <typename T>
-typename std::enable_if<!is_dynamic<T>::value, bool>::type
-check_dynamic_compatibility(void* obj) {
+std::enable_if_t<!is_dynamic_v<T>, bool> check_dynamic_compatibility(
+    void* obj) {
   return true;
 }
 
 template <typename T>
-typename std::enable_if<is_dynamic<T>::value, bool>::type
-check_dynamic_compatibility(void* obj) {
+std::enable_if_t<is_dynamic_v<T>, bool> check_dynamic_compatibility(void* obj) {
   return dynamic_subclass_registry<T>::get().is_subclass(
       (static_cast<::ash::dynamic_base_class*>(obj))->portable_class_name());
 }

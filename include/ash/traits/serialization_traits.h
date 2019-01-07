@@ -46,8 +46,7 @@ struct get_field_descriptors;
 ///
 /// Specialization for types explicitly defining `T::field_descriptors`.
 template <typename T>
-struct get_field_descriptors<
-    T, typename std::enable_if<has_field_descriptors<T>::value>::type> {
+struct get_field_descriptors<T, std::enable_if_t<has_field_descriptors_v<T>>> {
   using type = typename T::field_descriptors;
 };
 
@@ -56,10 +55,12 @@ struct get_field_descriptors<
 /// Specialization for types not defining `T::field_descriptors`, which defaults
 /// to an empty list of field descriptors.
 template <typename T>
-struct get_field_descriptors<
-    T, typename std::enable_if<!has_field_descriptors<T>::value>::type> {
+struct get_field_descriptors<T, std::enable_if_t<!has_field_descriptors_v<T>>> {
   using type = mpt::pack<>;
 };
+
+template <typename T>
+using get_field_descriptors_t = typename get_field_descriptors<T>::type;
 
 /// \brief Check for base classes in `T` to support automatic base class
 /// serialization.
@@ -78,8 +79,7 @@ struct get_base_classes;
 ///
 /// Specialization for types explicitly defining `T::base_classes`.
 template <typename T>
-struct get_base_classes<
-    T, typename std::enable_if<has_base_classes<T>::value>::type> {
+struct get_base_classes<T, std::enable_if_t<has_base_classes_v<T>>> {
   using type = typename T::base_classes;
 };
 
@@ -88,10 +88,12 @@ struct get_base_classes<
 /// Specialization for types not defining `T::base_classes`, which defaults
 /// to an empty list of base classes.
 template <typename T>
-struct get_base_classes<
-    T, typename std::enable_if<!has_base_classes<T>::value>::type> {
+struct get_base_classes<T, std::enable_if_t<!has_base_classes_v<T>>> {
   using type = mpt::pack<>;
 };
+
+template <typename T>
+using get_base_classes_t = typename get_base_classes<T>::type;
 
 /// \brief Type for custom serialization version numbers.
 using custom_serialization_version_type = std::uint32_t;
@@ -111,6 +113,10 @@ template <typename T>
 struct has_custom_serialization : detail::has_custom_serialization_version<
                                       T, custom_serialization_version_type> {};
 
+template <typename T>
+inline constexpr bool has_custom_serialization_v =
+    has_custom_serialization<T>::value;
+
 /// \brief Retrieve the custom serialization version for a type `T`.
 template <typename T, typename Enable = void>
 struct get_custom_serialization_version;
@@ -121,7 +127,7 @@ struct get_custom_serialization_version;
 /// `T::custom_serialization_version`.
 template <typename T>
 struct get_custom_serialization_version<
-    T, typename std::enable_if<has_custom_serialization<T>::value>::type> {
+    T, std::enable_if_t<has_custom_serialization_v<T>>> {
   static constexpr custom_serialization_version_type value =
       T::custom_serialization_version;
 };
@@ -132,19 +138,24 @@ struct get_custom_serialization_version<
 /// which defaults to zero.
 template <typename T>
 struct get_custom_serialization_version<
-    T, typename std::enable_if<!has_custom_serialization<T>::value>::type> {
+    T, std::enable_if_t<!has_custom_serialization_v<T>>> {
   static constexpr custom_serialization_version_type value = 0;
 };
+
+template <typename T>
+inline constexpr custom_serialization_version_type
+    get_custom_serialization_version_v = has_custom_serialization<T>::value;
 
 /// \brief Check if a type `T` can be serialized.
 /// The result is `true` if the type either has field descriptors defined or
 /// it implements custom serialization.
 template <typename T>
 struct can_be_serialized
-    : std::integral_constant<bool,
-                             has_field_descriptors<T>::value ||
-                                 has_custom_serialization<T>::value> {};
+    : std::integral_constant<bool, has_field_descriptors_v<T> ||
+                                       has_custom_serialization_v<T>> {};
 
+template <typename T>
+inline constexpr bool can_be_serialized_v = can_be_serialized<T>::value;
 }  // namespace traits
 
 }  // namespace ash

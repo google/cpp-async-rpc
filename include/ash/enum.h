@@ -45,7 +45,7 @@ struct enum_names {
   }
 
  private:
-  using base_type = typename std::underlying_type<T>::type;
+  using base_type = std::underlying_type_t<T>;
   static const std::size_t size;
   static const char* unknown_name;
   static const std::pair<base_type, const char*> entries[];

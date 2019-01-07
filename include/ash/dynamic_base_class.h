@@ -48,6 +48,9 @@ class dynamic_base_class {
 template <typename T>
 struct is_dynamic : std::is_base_of<dynamic_base_class, T> {};
 
+template <typename T>
+inline constexpr bool is_dynamic_v = is_dynamic<T>::value;
+
 namespace detail {
 template <typename T>
 struct dynamic_class_descriptor {

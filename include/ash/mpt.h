@@ -12,38 +12,6 @@ namespace ash {
 /// Type-based meta-programming toolkit.
 namespace mpt {
 
-/// Backport `constexpr` version of `std::forward_as_tuple` to c++11.
-template <typename... Types>
-constexpr std::tuple<Types&&...> forward_as_tuple(Types&&... args) {
-  return std::tuple<Types&&...>{std::forward<Types>(args)...};
-}
-
-/// Backport of `std::conditional_t` to c++11.
-template <bool B, typename T, typename F>
-using conditional_t = typename std::conditional<B, T, F>::type;
-
-/// Backport of `std::conjunction` to c++11.
-template <typename...>
-struct conjunction : std::true_type {};
-/// Backport of `std::conjunction` to c++11.
-template <typename B1>
-struct conjunction<B1> : B1 {};
-/// Backport of `std::conjunction` to c++11.
-template <typename B1, typename... Bn>
-struct conjunction<B1, Bn...>
-    : conditional_t<bool(B1::value), conjunction<Bn...>, B1> {};
-
-/// Backport of `std::disjunction` to c++11.
-template <typename...>
-struct disjunction : std::false_type {};
-/// Backport of `std::disjunction` to c++11.
-template <typename B1>
-struct disjunction<B1> : B1 {};
-/// Backport of `std::disjunction` to c++11.
-template <typename B1, typename... Bn>
-struct disjunction<B1, Bn...>
-    : conditional_t<bool(B1::value), B1, disjunction<Bn...>> {};
-
 /// \brief Define a whole set of arithmetic operators.
 /// Macro to define the whole set of arithmetic operations given a pair of
 /// macros
@@ -533,7 +501,7 @@ static constexpr auto transform(T&& v, index_sequence<ints...>, F f,
 template <typename T, typename F, typename... Args>
 void for_each(T&& v, F f, Args&&... args) {
   detail::for_each(std::forward<T>(v), make_index_sequence<size<T>::value>{}, f,
-                   forward_as_tuple(std::forward<Args>(args)...));
+                   std::forward_as_tuple(std::forward<Args>(args)...));
 }
 
 /// \brief Run a functor for each element in a sequence type and return the
@@ -561,10 +529,10 @@ void for_each(T&& v, F f, Args&&... args) {
 template <typename T, typename F, typename... Args>
 constexpr auto transform(T&& v, F f, Args&&... args) -> decltype(
     detail::transform(std::forward<T>(v), make_index_sequence<size<T>::value>{},
-                      f, forward_as_tuple(std::forward<Args>(args)...))) {
+                      f, std::forward_as_tuple(std::forward<Args>(args)...))) {
   return detail::transform(std::forward<T>(v),
                            make_index_sequence<size<T>::value>{}, f,
-                           forward_as_tuple(std::forward<Args>(args)...));
+                           std::forward_as_tuple(std::forward<Args>(args)...));
 }
 
 /// Return a new tuple containing a subset of the fields as determined by the
@@ -726,7 +694,7 @@ struct is_integer_sequence<integer_sequence<T, ints...>>
 
 // Forward cat for tuples to tuple_cat.
 template <typename... Args,
-          typename Enable = typename std::enable_if<conjunction<
+          typename Enable = typename std::enable_if<std::conjunction<
               is_tuple<typename std::remove_cv<typename std::remove_reference<
                   Args>::type>::type>...>::value>::type>
 constexpr auto cat(Args&&... args)
@@ -736,7 +704,7 @@ constexpr auto cat(Args&&... args)
 
 // Handle cat pack by wrapping the types and transforming into a tuple.
 template <typename... Args,
-          typename Enable = typename std::enable_if<conjunction<
+          typename Enable = typename std::enable_if<std::conjunction<
               is_pack<typename std::remove_cv<typename std::remove_reference<
                   Args>::type>::type>...>::value>::type>
 constexpr auto cat(Args... args)
@@ -767,7 +735,7 @@ struct integer_sequence_cat_helper<T1> {
 // first argument.
 template <typename... Args,
           typename Enable = typename std::enable_if<
-              conjunction<is_integer_sequence<typename std::remove_cv<
+              std::conjunction<is_integer_sequence<typename std::remove_cv<
                   typename std::remove_reference<Args>::type>::type>...>::
                   value>::type>
 constexpr auto cat(Args... args) ->
@@ -830,8 +798,8 @@ struct is_in {
 };
 
 template <typename T, typename Pack>
-using insert_into_t = conditional_t<is_in<T, Pack>::value, Pack,
-                                    decltype(cat(Pack{}, pack<T>{}))>;
+using insert_into_t = std::conditional_t<is_in<T, Pack>::value, Pack,
+                                         decltype(cat(Pack{}, pack<T>{}))>;
 
 }  // namespace mpt
 

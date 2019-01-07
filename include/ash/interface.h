@@ -85,6 +85,9 @@ struct get_method_descriptor {
   using type = typename decltype(mpt::at<method_descriptor_index>(
       typename class_type::method_descriptors{}))::type;
 };
+
+template <auto mptr>
+using get_method_descriptor_t = typename get_method_descriptor<mptr>::type;
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_INTERFACE_H_
