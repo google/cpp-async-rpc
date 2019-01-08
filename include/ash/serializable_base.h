@@ -42,7 +42,7 @@ struct dynamic_class_filter {
 };
 
 template <bool dynamic, typename OwnType, typename... Bases>
-class serializable_mixin;
+struct serializable_mixin;
 
 template <typename OwnType, typename... Bases>
 struct serializable_mixin<false, OwnType, Bases...> : Bases... {
