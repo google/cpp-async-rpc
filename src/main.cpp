@@ -74,8 +74,8 @@ struct Z : ash::dynamic<Z, X> {
 
   ASH_FIELDS(z2, z3);
 };
-ASH_REGISTER(z::Z);
 }  // namespace z
+ASH_REGISTER(z::Z);
 
 template <typename T>
 void f() {
