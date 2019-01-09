@@ -62,21 +62,20 @@ namespace mpt {
   CREATE_UNARY_OPERATOR(identity, /**/);
 
 /// Define unary arithmetic operation functors on arbitrary types.
-#define ASH_CREATE_UNARY_OPERATOR(NAME, OP)                            \
-  struct NAME {                                                        \
-    template <typename T>                                              \
-    constexpr auto operator()(T v) -> decltype(OP std::declval<T>()) { \
-      return OP v;                                                     \
-    }                                                                  \
+#define ASH_CREATE_UNARY_OPERATOR(NAME, OP) \
+  struct NAME {                             \
+    template <typename T>                   \
+    constexpr auto operator()(T v) {        \
+      return OP v;                          \
+    }                                       \
   };
 /// Define binary arithmetic operation functors on arbitrary types.
-#define ASH_CREATE_BINARY_OPERATOR(NAME, OP)                  \
-  struct NAME {                                               \
-    template <typename T, typename U>                         \
-    constexpr auto operator()(T v, U w)                       \
-        -> decltype(std::declval<T>() OP std::declval<U>()) { \
-      return v OP w;                                          \
-    }                                                         \
+#define ASH_CREATE_BINARY_OPERATOR(NAME, OP) \
+  struct NAME {                              \
+    template <typename T, typename U>        \
+    constexpr auto operator()(T v, U w) {    \
+      return v OP w;                         \
+    }                                        \
   };
 /// Create a complete set of arithmetic operation functors on arbitrary types.
 ASH_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(ASH_CREATE_UNARY_OPERATOR,
@@ -102,7 +101,7 @@ struct integer_sequence {
  private:
   template <typename O>
   struct unary_op {
-    using result_type = typename std::remove_const<decltype(O()(T()))>::type;
+    using result_type = std::remove_cv_t<decltype(O()(T()))>;
     using type = integer_sequence<result_type, (O()(ints))...>;
   };
 
@@ -111,31 +110,33 @@ struct integer_sequence {
 
   template <typename U, U... ints_u, typename O>
   struct binary_op<integer_sequence<U, ints_u...>, O> {
-    using result_type =
-        typename std::remove_const<decltype(O()(T(), U()))>::type;
+    using result_type = std::remove_cv_t<decltype(O()(T(), U()))>;
     using type = integer_sequence<result_type, (O()(ints, ints_u))...>;
   };
 
  public:
 /// Type-based unary operator generator macro.
-#define ASH_INT_SEQ_TYPE_UNARY_OP(NAME, OP) \
-  struct NAME : unary_op<::ash::mpt::NAME> {};
+#define ASH_INT_SEQ_TYPE_UNARY_OP(NAME, OP)    \
+  struct NAME : unary_op<::ash::mpt::NAME> {}; \
+  using NAME##_t = typename NAME::type;
 /// Type-based binary operator generator macro.
-#define ASH_INT_SEQ_TYPE_BINARY_OP(NAME, OP) \
-  template <typename U>                      \
-  struct NAME : binary_op<U, ::ash::mpt::NAME> {};
+#define ASH_INT_SEQ_TYPE_BINARY_OP(NAME, OP)       \
+  template <typename U>                            \
+  struct NAME : binary_op<U, ::ash::mpt::NAME> {}; \
+  template <typename U>                            \
+  using NAME##_t = typename NAME<U>::type;
   /// Type-based operator hierarchy.
   ASH_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(ASH_INT_SEQ_TYPE_UNARY_OP,
                                               ASH_INT_SEQ_TYPE_BINARY_OP);
 
 /// Value-based unary operator generator macro.
 #define ASH_INT_SEQ_VALUE_UNARY_OP(NAME, OP) \
-  constexpr typename NAME::type operator OP() { return {}; }
+  constexpr NAME##_t operator OP() { return {}; }
 /// Value-based binary operator generator macro.
-#define ASH_INT_SEQ_VALUE_BINARY_OP(NAME, OP)       \
-  template <typename U>                             \
-  constexpr typename NAME<U>::type operator OP(U) { \
-    return {};                                      \
+#define ASH_INT_SEQ_VALUE_BINARY_OP(NAME, OP) \
+  template <typename U>                       \
+  constexpr NAME##_t<U> operator OP(U) {      \
+    return {};                                \
   }
   // Value-based operator hierarchy.
   ASH_CREATE_OPERATOR_HIERARCHY(ASH_INT_SEQ_VALUE_UNARY_OP,
@@ -246,6 +247,13 @@ struct wrap_type {
   using type = T;
 };
 
+/// \brief Template class to represent sequences of constexpr values.
+/// `value_pack` structs contain no data; all the information they contain is
+/// the static list of values represented by `v...`.
+/// \param v... List of values to pack, possibly of different types.
+template <auto... v>
+struct value_pack {};
+
 namespace detail {
 // Get the number of types.
 template <typename T>
@@ -254,6 +262,11 @@ struct size;
 template <typename... T>
 struct size<pack<T...>> {
   static constexpr std::size_t value = sizeof...(T);
+};
+
+template <auto... v>
+struct size<value_pack<v...>> {
+  static constexpr std::size_t value = sizeof...(v);
 };
 
 template <typename... T>
