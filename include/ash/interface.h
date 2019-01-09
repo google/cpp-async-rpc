@@ -66,10 +66,10 @@ struct interface : Bases... {
   using method_descriptors =                                                   \
       ::ash::mpt::pack<ASH_FOREACH(ASH_METHOD, ASH_METHOD_SEP, __VA_ARGS__)>;  \
   static const std::array<const char *,                                        \
-                          ::ash::mpt::size<method_descriptors>::value>         \
+                          ::ash::mpt::size_v<method_descriptors>>              \
       &method_names() {                                                        \
     static const std::array<const char *,                                      \
-                            ::ash::mpt::size<method_descriptors>::value>       \
+                            ::ash::mpt::size_v<method_descriptors>>            \
         names{ASH_FOREACH(ASH_METHOD_NAME, ASH_METHOD_NAME_SEP, __VA_ARGS__)}; \
     return names;                                                              \
   }

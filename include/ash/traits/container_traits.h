@@ -40,13 +40,13 @@ namespace traits {
 ///
 /// This implementation checks for an overload of `std::begin(T t)` to apply.
 template <typename T, typename T2 = void>
-struct is_iterable : public std::integral_constant<bool, false> {};
+struct is_iterable : public std::false_type {};
 
 /// \copydoc is_iterable
 template <typename T>
 struct is_iterable<T,
                    enable_if_type_t<decltype(std::begin(std::declval<T&>()))>>
-    : public std::integral_constant<bool, true> {};
+    : public std::true_type {};
 
 template <typename T>
 inline constexpr bool is_iterable_v = is_iterable<T>::value;
@@ -56,13 +56,13 @@ inline constexpr bool is_iterable_v = is_iterable<T>::value;
 /// This implementation checks for an overload of `std::begin(const T t)` to
 /// apply.
 template <typename T, typename T2 = void>
-struct is_const_iterable : public std::integral_constant<bool, false> {};
+struct is_const_iterable : public std::false_type {};
 
 /// \copydoc is_const_iterable
 template <typename T>
 struct is_const_iterable<
     T, enable_if_type_t<decltype(std::begin(std::declval<const T&>()))>>
-    : public std::integral_constant<bool, true> {};
+    : public std::true_type {};
 
 template <typename T>
 inline constexpr bool is_const_iterable_v = is_const_iterable<T>::value;
@@ -108,7 +108,7 @@ ASH_MAKE_METHOD_CHECKER(has_reserve, reserve);
 ///
 /// This implementation checks for a `void reserve(T::size_type)` method.
 template <typename T, typename T2 = void>
-struct can_reserve_capacity : public std::integral_constant<bool, false> {};
+struct can_reserve_capacity : public std::false_type {};
 
 /// \copydoc can_reserve_capacity
 template <typename T>
@@ -127,7 +127,7 @@ ASH_MAKE_METHOD_CHECKER(has_resize, resize);
 ///
 /// This implementation checks for a `void resize(T::size_type)` method.
 template <typename T, typename T2 = void>
-struct can_be_resized : public std::integral_constant<bool, false> {};
+struct can_be_resized : public std::false_type {};
 
 /// \copydoc can_be_resized
 template <typename T>
@@ -165,8 +165,8 @@ struct static_size
 template <typename T, std::size_t size>
 struct static_size<T[size]> : public std::integral_constant<std::size_t, size> {
 };
-
 }  // namespace detail
+
 /// \brief Get a container's static size at compile time.
 template <typename T>
 using static_size =

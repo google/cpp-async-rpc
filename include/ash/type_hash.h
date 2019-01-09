@@ -254,19 +254,18 @@ struct type_hash<
  private:
   static constexpr std::uint32_t class_header_value =
       detail::type_hash_add(base, detail::type_family::CLASS, false,
-                            mpt::size<get_base_classes_t<T>>::value +
-                                mpt::size<get_field_descriptors_t<T>>::value +
+                            mpt::size_v<get_base_classes_t<T>> +
+                                mpt::size_v<get_field_descriptors_t<T>> +
                                 get_custom_serialization_version_v<T>);
 
   static constexpr std::uint32_t with_base_classes = detail::compose_with_types<
       detail::type_hash_add(class_header_value, detail::type_family::BASE_CLASS,
-                            false, mpt::size<get_base_classes_t<T>>::value),
+                            false, mpt::size_v<get_base_classes_t<T>>),
       mpt::insert_into_t<T, Seen>, get_base_classes_t<T>>::value;
 
   static constexpr std::uint32_t with_fields = detail::compose_with_types<
       detail::type_hash_add(with_base_classes, detail::type_family::FIELD,
-                            false,
-                            mpt::size<get_field_descriptors_t<T>>::value),
+                            false, mpt::size_v<get_field_descriptors_t<T>>),
       mpt::insert_into_t<T, Seen>, get_field_descriptors_t<T>>::value;
 
  public:

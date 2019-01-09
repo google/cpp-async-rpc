@@ -286,11 +286,12 @@ struct size<integer_sequence<T, ints...>> {
 /// in any of the sequence types supported by `ash::mpt`.
 /// \param T The type from which to obtain the size.
 template <typename T>
-struct size {
-  /// Number of elements of the sequence-like type `T`.
-  static constexpr std::size_t value = detail::size<typename std::remove_cv<
-      typename std::remove_reference<T>::type>::type>::value;
-};
+struct size
+    : std::integral_constant<
+          std::size_t,
+          detail::size<std::remove_cv_t<std::remove_reference_t<T>>>::value> {};
+template <typename T>
+inline constexpr std::size_t size_v = size<T>::value;
 
 namespace detail {
 
@@ -513,7 +514,7 @@ static constexpr auto transform(T&& v, index_sequence<ints...>, F f,
 /// \param args... Further arguments to forward to the functor call.
 template <typename T, typename F, typename... Args>
 void for_each(T&& v, F f, Args&&... args) {
-  detail::for_each(std::forward<T>(v), make_index_sequence<size<T>::value>{}, f,
+  detail::for_each(std::forward<T>(v), make_index_sequence<size_v<T>>{}, f,
                    std::forward_as_tuple(std::forward<Args>(args)...));
 }
 
@@ -541,10 +542,10 @@ void for_each(T&& v, F f, Args&&... args) {
 /// call.
 template <typename T, typename F, typename... Args>
 constexpr auto transform(T&& v, F f, Args&&... args) -> decltype(
-    detail::transform(std::forward<T>(v), make_index_sequence<size<T>::value>{},
-                      f, std::forward_as_tuple(std::forward<Args>(args)...))) {
-  return detail::transform(std::forward<T>(v),
-                           make_index_sequence<size<T>::value>{}, f,
+    detail::transform(std::forward<T>(v), make_index_sequence<size_v<T>>{}, f,
+                      std::forward_as_tuple(std::forward<Args>(args)...))) {
+  return detail::transform(std::forward<T>(v), make_index_sequence<size_v<T>>{},
+                           f,
                            std::forward_as_tuple(std::forward<Args>(args)...));
 }
 
@@ -635,8 +636,8 @@ constexpr auto head(T&& t) -> decltype(at<0>(std::forward<T>(t))) {
 /// \param t The sequence from which to remove the head element.
 /// \return The original sequence with the head removed.
 template <typename T>
-constexpr auto tail(T&& t) -> decltype(range<1, size<T>::value>(t)) {
-  return range<1, size<T>::value>(t);
+constexpr auto tail(T&& t) -> decltype(range<1, size_v<T>>(t)) {
+  return range<1, size_v<T>>(t);
 }
 
 namespace detail {
@@ -666,10 +667,10 @@ struct accumulate_helper<0> {
 // Accumulate elements with an initial value using the given operator.
 template <typename I, typename T, typename O, typename... Args>
 constexpr auto accumulate(I&& a, T&& t, O o, Args&&... args)
-    -> decltype(detail::accumulate_helper<size<T>::value>::accumulate_internal(
+    -> decltype(detail::accumulate_helper<size_v<T>>::accumulate_internal(
         std::forward<I>(a), std::forward<T>(t), o,
         std::forward<Args>(args)...)) {
-  return detail::accumulate_helper<size<T>::value>::accumulate_internal(
+  return detail::accumulate_helper<size_v<T>>::accumulate_internal(
       std::forward<I>(a), std::forward<T>(t), o, std::forward<Args>(args)...);
 }
 
@@ -802,7 +803,7 @@ constexpr auto filter_if(T&& t, O o)
 
 template <typename T, typename O>
 constexpr std::size_t count_if(T&& t, O o) {
-  return size<decltype(find_if(std::forward<T>(t), o))>::value;
+  return size_v<decltype(find_if(std::forward<T>(t), o))>;
 }
 
 template <typename T, typename Pack>

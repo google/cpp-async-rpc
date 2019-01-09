@@ -113,16 +113,15 @@ using dynamic = std::conditional_t<
 #define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define ASH_FIELDS(...)                                                      \
-  using field_descriptors =                                                  \
-      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;  \
-  static const std::array<const char*,                                       \
-                          ::ash::mpt::size<field_descriptors>::value>&       \
-  field_names() {                                                            \
-    static const std::array<const char*,                                     \
-                            ::ash::mpt::size<field_descriptors>::value>      \
-        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)}; \
-    return names;                                                            \
+#define ASH_FIELDS(...)                                                        \
+  using field_descriptors =                                                    \
+      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;    \
+  static const std::array<const char*, ::ash::mpt::size_v<field_descriptors>>& \
+  field_names() {                                                              \
+    static const std::array<const char*,                                       \
+                            ::ash::mpt::size_v<field_descriptors>>             \
+        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)};   \
+    return names;                                                              \
   }
 
 /// Version of the load/save methods.
