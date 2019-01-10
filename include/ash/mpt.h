@@ -323,8 +323,8 @@ struct element_type;
 template <std::size_t i, typename... T>
 struct element_type<i, pack<T...>> {
   /// Type of the `i`th element.
-  using type = typename decltype(
-      detail::nth_element_impl<i>::f(static_cast<wrap_type<T>*>(0)...))::type;
+  using type = decltype(
+      detail::nth_element_impl<i>::f(static_cast<wrap_type<T>*>(0)...));
 };
 /// \brief Get the type of the `i`th element of a sequence-like type.
 /// This template struct provides a standard way to look at the type
@@ -421,7 +421,7 @@ constexpr auto as_pack(integer_sequence<T, ints...>)
 /// \param t The sequence from which to extract an element.
 /// \return A `wrap_type` object for the type at index `i`.
 template <std::size_t i, typename... T>
-constexpr wrap_type<element_type_t<i, pack<T...>>> at(pack<T...>) {
+constexpr element_type_t<i, pack<T...>> at(pack<T...>) {
   return {};
 }
 /// \brief Get the `i`th *value* from a `std::tuple`.
@@ -592,7 +592,7 @@ subset(std::tuple<T...>&& t, index_sequence<idxs...>) {
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <typename... T, std::size_t... idxs>
-constexpr pack<element_type_t<idxs, pack<T...>>...> subset(
+constexpr pack<typename element_type_t<idxs, pack<T...>>::type...> subset(
     pack<T...>, index_sequence<idxs...>) {
   return {};
 }
@@ -770,18 +770,20 @@ struct index_cat {
   template <typename Prev, typename Current>
   constexpr auto operator()(Prev, Current) -> typename std::enable_if<
       O{}(Current{}),
-      pack<index_sequence<(1 + at<0>(typename element_type<0, Prev>::type{}))>,
-           decltype(cat(typename element_type<1, Prev>::type{},
-                        index_sequence<(at<0>(typename element_type<
-                                              0, Prev>::type{}))>{}))>>::type {
+      pack<decltype(index_sequence<1>{} +
+                    typename element_type<0, Prev>::type::type{}),
+           decltype(cat(typename element_type<1, Prev>::type::type{},
+                        index_sequence<(at<0>(typename element_type<0, Prev>::
+                                                  type::type{}))>{}))>>::type {
     return {};
   }
 
   template <typename Prev, typename Current>
   constexpr auto operator()(Prev, Current) -> typename std::enable_if<
       !O{}(Current{}),
-      pack<index_sequence<(1 + at<0>(typename element_type<0, Prev>::type{}))>,
-           typename element_type<1, Prev>::type>>::type {
+      pack<decltype(index_sequence<1>{} +
+                    typename element_type<0, Prev>::type::type{}),
+           typename element_type<1, Prev>::type::type>>::type {
     return {};
   }
 };
@@ -791,7 +793,8 @@ struct index_cat {
 template <typename T, typename O>
 constexpr auto find_if(T&& t, O o) -> typename element_type<
     1, decltype(accumulate(pack<index_sequence<0>, index_sequence<>>{},
-                           std::forward<T>(t), detail::index_cat<O>{}))>::type {
+                           std::forward<T>(t),
+                           detail::index_cat<O>{}))>::type::type {
   return {};
 }
 
