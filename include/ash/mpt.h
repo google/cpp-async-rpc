@@ -312,6 +312,22 @@ constexpr std::tuple<T...> as_tuple(pack<T...>) {
   return {};
 }
 
+template <typename... T>
+const std::tuple<T...>& as_tuple(const std::tuple<T...>& t) {
+  return t;
+}
+template <typename... T>
+std::tuple<T...>& as_tuple(std::tuple<T...>& t) {
+  return t;
+}
+template <typename... T>
+const std::tuple<T...>&& as_tuple(const std::tuple<T...>&& t) {
+  return t;
+}
+template <typename... T>
+std::tuple<T...>&& as_tuple(std::tuple<T...>&& t) {
+  return t;
+}
 /// \brief Get the size of a sequence-like type.
 /// This template struct provides a standard way to look at the size (number of
 /// elements)
