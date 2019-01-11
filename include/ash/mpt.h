@@ -380,18 +380,6 @@ template <typename... T>
 constexpr std::tuple<T...> as_tuple(pack<T...>) {
   return {};
 }
-/// \brief Generate a tuple type with the same element types as a `pack`.
-/// The result is a `std::tuple` with as many elements as the input sequence,
-/// every one of the same type as the same-index element of the `pack`.
-template <typename T>
-struct as_tuple_type;
-/// \brief Generate a tuple type with the same element types as a `pack`.
-/// The result is a `std::tuple` with as many elements as the input sequence,
-/// every one of the same type as the same-index element of the `pack`.
-template <typename... T>
-struct as_tuple_type<pack<T...>> {
-  using type = std::tuple<T...>;
-};
 
 /// \brief Convert a tuple value into a `pack` value.
 /// The result is a `pack` with as many elements as the input `std::tuple`,
