@@ -300,15 +300,11 @@ constexpr auto as_tuple(value_pack<v...>) {
 
 /// \brief Convert an `pack` value into a tuple value.
 /// The result is a `std::tuple` with as many elements as the input sequence,
-/// every one of the same type as the same-index element of the `pack`.
+/// every one of the wrapped type as the same-index element of the `pack`.
 ///
-/// Beware that some of the types embedded in a `pack` could be impossible to
-/// instantiate (like abstract base classes, for instance), so generating values
-/// of such a `std::tuple` type would be impossible. Consider using `wrap` and
-/// `wrap_type` if needed in such a situation.
 /// \return An appropriate tuple type, default-initialized.
 template <typename... T>
-constexpr std::tuple<T...> as_tuple(pack<T...>) {
+constexpr std::tuple<wrap_type<T>...> as_tuple(pack<T...>) {
   return {};
 }
 
@@ -408,10 +404,11 @@ using element_type_t = typename element_type<i, T>::type;
 
 /// \brief Convert a tuple value into a `pack` value.
 /// The result is a `pack` with as many elements as the input `std::tuple`,
-/// every one of the same type as the same-index element of the `std::tuple`.
-/// \return An appropriate `pack` type with the types in the tuple.
+/// every one of the unwrapped type of the same-index element of the
+/// `std::tuple`. \return An appropriate `pack` type with the types in the
+/// tuple.
 template <typename... T>
-constexpr pack<T...> as_pack(std::tuple<T...>) {
+constexpr pack<typename T::type...> as_pack(std::tuple<T...>) {
   return {};
 }
 /// \brief Convert an `integer_sequence` value into a `pack` value.
@@ -755,8 +752,7 @@ template <typename... Args,
           typename Enable = typename std::enable_if<std::conjunction<
               is_tuple<typename std::remove_cv<typename std::remove_reference<
                   Args>::type>::type>...>::value>::type>
-constexpr auto cat(Args&&... args)
-    -> decltype(std::tuple_cat(std::forward<Args>(args)...)) {
+constexpr auto cat(Args&&... args) {
   return std::tuple_cat(std::forward<Args>(args)...);
 }
 
@@ -765,9 +761,8 @@ template <typename... Args,
           typename Enable = typename std::enable_if<std::conjunction<
               is_pack<typename std::remove_cv<typename std::remove_reference<
                   Args>::type>::type>...>::value>::type>
-constexpr auto cat(Args... args)
-    -> decltype(unwrap(as_pack(std::tuple_cat(as_tuple(wrap(args))...)))) {
-  return unwrap(as_pack(std::tuple_cat(as_tuple(wrap(args))...)));
+constexpr auto cat(Args... args) {
+  return as_pack(std::tuple_cat(as_tuple(args)...));
 }
 
 namespace detail {
