@@ -228,13 +228,6 @@ template <std::size_t n, std::size_t v>
 using make_constant_index_sequence =
     make_constant_integer_sequence<std::size_t, n, v>;
 
-/// \brief Template class to represent sequences of types.
-/// `pack` structs contain no data; all the information they contain is the list
-/// of types represented by `T...`.
-/// \param T... List of types to pack.
-template <typename... T>
-struct pack {};
-
 /// \brief Wrap one type so that it can be passed around without constructing
 /// any instance of it.
 /// `wrap_type<T>` encodes a single type in a class whose objects can be passed
@@ -246,6 +239,13 @@ struct wrap_type {
   /// Actual type wrapped by the `wrap_type` specialization.
   using type = T;
 };
+
+/// \brief Template class to represent sequences of types.
+/// `pack` structs contain no data; all the information they contain is the list
+/// of types represented by `T...`.
+/// \param T... List of types to pack.
+template <typename... T>
+struct pack {};
 
 /// \brief Template class to represent sequences of constexpr values.
 /// `value_pack` structs contain no data; all the information they contain is
@@ -290,6 +290,7 @@ struct size
     : std::integral_constant<
           std::size_t,
           detail::size<std::remove_cv_t<std::remove_reference_t<T>>>::value> {};
+
 template <typename T>
 inline constexpr std::size_t size_v = size<T>::value;
 
@@ -687,6 +688,7 @@ constexpr pack<T...> unwrap(pack<wrap_type<T>...>) {
 }
 
 // Helpers to determine if a type is a pack / tuple / integer_sequence.
+namespace detail {
 template <typename T>
 struct is_tuple : public std::false_type {};
 
@@ -700,11 +702,40 @@ template <typename... T>
 struct is_pack<pack<T...>> : public std::true_type {};
 
 template <typename T>
+struct is_value_pack : public std::false_type {};
+
+template <auto... v>
+struct is_value_pack<value_pack<v...>> : public std::true_type {};
+
+template <typename T>
 struct is_integer_sequence : public std::false_type {};
 
 template <typename T, T... ints>
 struct is_integer_sequence<integer_sequence<T, ints...>>
     : public std::true_type {};
+}  // namespace detail
+
+template <typename T>
+using is_tuple = detail::is_tuple<std::remove_cv_t<std::remove_reference_t<T>>>;
+template <typename T>
+static constexpr bool is_tuple_v = is_tuple<T>::value;
+
+template <typename T>
+using is_pack = detail::is_pack<std::remove_cv_t<std::remove_reference_t<T>>>;
+template <typename T>
+static constexpr bool is_pack_v = is_pack<T>::value;
+
+template <typename T>
+using is_value_pack =
+    detail::is_value_pack<std::remove_cv_t<std::remove_reference_t<T>>>;
+template <typename T>
+static constexpr bool is_value_pack_v = is_value_pack<T>::value;
+
+template <typename T>
+using is_integer_sequence =
+    detail::is_integer_sequence<std::remove_cv_t<std::remove_reference_t<T>>>;
+template <typename T>
+static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
 
 // Forward cat for tuples to tuple_cat.
 template <typename... Args,
