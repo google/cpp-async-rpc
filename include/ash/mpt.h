@@ -280,6 +280,38 @@ struct size<integer_sequence<T, ints...>> {
 };
 }  // namespace detail
 
+/// \brief Convert an integer sequence value into a tuple value.
+/// The result is a `std::tuple` with as many elements as the input sequence,
+/// all of them of type `T`, set to the values of `ints...`.
+/// \return An appropriate tuple type, containing the values of `ints...`.
+template <typename T, T... ints>
+constexpr auto as_tuple(integer_sequence<T, ints...>) {
+  return std::make_tuple(ints...);
+}
+
+/// \brief Convert an value pack sequence value into a tuple value.
+/// The result is a `std::tuple` with as many elements as the input sequence,
+/// each one of the type and value of `v...`.
+/// \return An appropriate tuple type, containing the values of `v...`.
+template <auto... v>
+constexpr auto as_tuple(value_pack<v...>) {
+  return std::make_tuple(v...);
+}
+
+/// \brief Convert an `pack` value into a tuple value.
+/// The result is a `std::tuple` with as many elements as the input sequence,
+/// every one of the same type as the same-index element of the `pack`.
+///
+/// Beware that some of the types embedded in a `pack` could be impossible to
+/// instantiate (like abstract base classes, for instance), so generating values
+/// of such a `std::tuple` type would be impossible. Consider using `wrap` and
+/// `wrap_type` if needed in such a situation.
+/// \return An appropriate tuple type, default-initialized.
+template <typename... T>
+constexpr std::tuple<T...> as_tuple(pack<T...>) {
+  return {};
+}
+
 /// \brief Get the size of a sequence-like type.
 /// This template struct provides a standard way to look at the size (number of
 /// elements)
@@ -357,29 +389,6 @@ struct element_type<i, integer_sequence<T, ints...>> {
 /// \param i The index of the element for which we want to retrieve the type.
 template <std::size_t i, typename T>
 using element_type_t = typename element_type<i, T>::type;
-
-/// \brief Convert an integer sequence value into a tuple value.
-/// The result is a `std::tuple` with as many elements as the input sequence,
-/// all of them of type `T`, set to the values of `ints...`.
-/// \return An appropriate tuple type, containing the values of `ints...`.
-template <typename T, T... ints>
-constexpr auto as_tuple(integer_sequence<T, ints...>)
-    -> decltype(std::make_tuple(ints...)) {
-  return std::make_tuple(ints...);
-}
-/// \brief Convert an `pack` value into a tuple value.
-/// The result is a `std::tuple` with as many elements as the input sequence,
-/// every one of the same type as the same-index element of the `pack`.
-///
-/// Beware that some of the types embedded in a `pack` could be impossible to
-/// instantiate (like abstract base classes, for instance), so generating values
-/// of such a `std::tuple` type would be impossible. Consider using `wrap` and
-/// `wrap_type` if needed in such a situation.
-/// \return An appropriate tuple type, default-initialized.
-template <typename... T>
-constexpr std::tuple<T...> as_tuple(pack<T...>) {
-  return {};
-}
 
 /// \brief Convert a tuple value into a `pack` value.
 /// The result is a `pack` with as many elements as the input `std::tuple`,
