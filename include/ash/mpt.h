@@ -324,6 +324,46 @@ template <typename... T>
 std::tuple<T...>&& as_tuple(std::tuple<T...>&& t) {
   return t;
 }
+
+/// \brief Convert a tuple value into a `pack` value.
+/// The result is a `pack` with as many elements as the input `std::tuple`,
+/// every one of the unwrapped type of the same-index element of the
+/// `std::tuple`. \return An appropriate `pack` type with the types in the
+/// tuple.
+template <typename... T>
+constexpr pack<typename T::type...> as_pack(std::tuple<T...>) {
+  return {};
+}
+
+/// \brief Convert an `integer_sequence` value into a `pack` value.
+/// The result is a `pack` with as many elements as the input
+/// `integer_sequence`,
+/// every one of the same type, which is the common type of the
+/// `integer_sequence`
+/// elements.
+/// \return An appropriate `pack` type with all elements of the integer type in
+/// the sequence.
+template <typename T, T... ints>
+constexpr auto as_pack(integer_sequence<T, ints...>) {
+  return as_pack(std::make_tuple(ints...));
+}
+
+/// \brief Convert an `value_sequence` value into a `pack` value.
+/// The result is a `pack` with as many elements as the input
+/// `integer_sequence`,
+/// every one of the wrapped type of each element's type.
+/// \return An appropriate `pack` type with all elements of the integer type in
+/// the sequence.
+template <auto... v>
+constexpr auto as_pack(value_pack<v...>) {
+  return as_pack(std::make_tuple(v...));
+}
+
+template <typename... T>
+constexpr auto as_pack(pack<T...> t) {
+  return t;
+}
+
 /// \brief Get the size of a sequence-like type.
 /// This template struct provides a standard way to look at the size (number of
 /// elements)
@@ -338,19 +378,6 @@ struct size
 template <typename T>
 inline constexpr std::size_t size_v = size<T>::value;
 
-namespace detail {
-
-template <std::size_t n, typename = make_index_sequence<n>>
-struct nth_element_impl;
-
-template <std::size_t n, std::size_t... ignore>
-struct nth_element_impl<n, index_sequence<ignore...>> {
-  template <typename Tn>
-  static Tn f(decltype(reinterpret_cast<void*>(ignore))..., Tn*, ...);
-};
-
-}  // namespace detail
-
 /// \brief Get the type of the `i`th element of a sequence-like type.
 /// This template struct provides a standard way to look at the type
 /// of a particular element in any of the sequence types supported by
@@ -358,41 +385,13 @@ struct nth_element_impl<n, index_sequence<ignore...>> {
 /// \param T The type for which to inspect the element type.
 /// \param i The index of the element for which we want to retrieve the type.
 template <std::size_t i, typename T>
-struct element_type;
-/// \brief Get the type of the `i`th element of a sequence-like type.
-/// This template struct provides a standard way to look at the type
-/// of a particular element in any of the sequence types supported by
-/// `ash::mpt`.
-/// \param T The type for which to inspect the element type.
-/// \param i The index of the element for which we want to retrieve the type.
-template <std::size_t i, typename... T>
-struct element_type<i, pack<T...>> {
+struct element_type {
   /// Type of the `i`th element.
-  using type = decltype(
-      detail::nth_element_impl<i>::f(static_cast<wrap_type<T>*>(0)...));
+  using type =
+      std::tuple_element_t<i, std::remove_cv_t<std::remove_reference_t<decltype(
+                                  as_tuple(std::declval<T>()))>>>;
 };
-/// \brief Get the type of the `i`th element of a sequence-like type.
-/// This template struct provides a standard way to look at the type
-/// of a particular element in any of the sequence types supported by
-/// `ash::mpt`.
-/// \param T The type for which to inspect the element type.
-/// \param i The index of the element for which we want to retrieve the type.
-template <std::size_t i, typename... T>
-struct element_type<i, std::tuple<T...>> {
-  /// Type of the `i`th element.
-  using type = typename std::tuple_element<i, std::tuple<T...>>::type;
-};
-/// \brief Get the type of the `i`th element of a sequence-like type.
-/// This template struct provides a standard way to look at the type
-/// of a particular element in any of the sequence types supported by
-/// `ash::mpt`.
-/// \param T The type for which to inspect the element type.
-/// \param i The index of the element for which we want to retrieve the type.
-template <std::size_t i, typename T, T... ints>
-struct element_type<i, integer_sequence<T, ints...>> {
-  /// Type of the `i`th element.
-  using type = T;
-};
+
 /// \brief Get the type of the `i`th element of a sequence-like type.
 /// This template struct provides a standard shortcut way to look at the type
 /// of a particular element in any of the sequence types supported by
@@ -401,29 +400,6 @@ struct element_type<i, integer_sequence<T, ints...>> {
 /// \param i The index of the element for which we want to retrieve the type.
 template <std::size_t i, typename T>
 using element_type_t = typename element_type<i, T>::type;
-
-/// \brief Convert a tuple value into a `pack` value.
-/// The result is a `pack` with as many elements as the input `std::tuple`,
-/// every one of the unwrapped type of the same-index element of the
-/// `std::tuple`. \return An appropriate `pack` type with the types in the
-/// tuple.
-template <typename... T>
-constexpr pack<typename T::type...> as_pack(std::tuple<T...>) {
-  return {};
-}
-/// \brief Convert an `integer_sequence` value into a `pack` value.
-/// The result is a `pack` with as many elements as the input
-/// `integer_sequence`,
-/// every one of the same type, which is the common type of the
-/// `integer_sequence`
-/// elements.
-/// \return An appropriate `pack` type with all elements of the integer type in
-/// the sequence.
-template <typename T, T... ints>
-constexpr auto as_pack(integer_sequence<T, ints...>)
-    -> decltype(as_pack(std::make_tuple(ints...))) {
-  return as_pack(std::make_tuple(ints...));
-}
 
 /// \brief Get the `i`th *value* from a `pack`.
 /// This returns a `wrap_type` object wrapping the type
