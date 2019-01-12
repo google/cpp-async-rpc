@@ -309,19 +309,19 @@ constexpr std::tuple<wrap_type<T>...> as_tuple(pack<T...>) {
 }
 
 template <typename... T>
-const std::tuple<T...>& as_tuple(const std::tuple<T...>& t) {
+decltype(auto) as_tuple(const std::tuple<T...>& t) {
   return t;
 }
 template <typename... T>
-std::tuple<T...>& as_tuple(std::tuple<T...>& t) {
+decltype(auto) as_tuple(std::tuple<T...>& t) {
   return t;
 }
 template <typename... T>
-const std::tuple<T...>&& as_tuple(const std::tuple<T...>&& t) {
+decltype(auto) as_tuple(const std::tuple<T...>&& t) {
   return t;
 }
 template <typename... T>
-std::tuple<T...>&& as_tuple(std::tuple<T...>&& t) {
+decltype(auto) as_tuple(std::tuple<T...>&& t) {
   return t;
 }
 
@@ -401,85 +401,20 @@ struct element_type {
 template <std::size_t i, typename T>
 using element_type_t = typename element_type<i, T>::type;
 
-/// \brief Get the `i`th *value* from a `pack`.
-/// This returns a `wrap_type` object wrapping the type
-/// at index `i` in the `pack` type.
-/// \param i The index to retrieve from the `pack` type sequence.
-/// \param t The sequence from which to extract an element.
-/// \return A `wrap_type` object for the type at index `i`.
-template <std::size_t i, typename... T>
-constexpr element_type_t<i, pack<T...>> at(pack<T...>) {
-  return {};
-}
-/// \brief Get the `i`th *value* from a `std::tuple`.
-/// This returns a value of the `i`th element of the
-/// tuple, of the corresponding type.
-/// \param i The index to retrieve within the `std::tuple` object.
-/// \param t The sequence from which to extract an element.
-/// \return The element at index `i`.
-template <std::size_t i, typename... T>
-constexpr element_type_t<i, std::tuple<T...>>& at(std::tuple<T...>& t) {
-  return std::get<i>(t);
-}
-/// \brief Get the `i`th *value* from a `std::tuple`.
-/// This returns a value of the `i`th element of the
-/// tuple, of the corresponding type.
-/// \param i The index to retrieve within the `std::tuple` object.
-/// \param t The sequence from which to extract an element.
-/// \return The element at index `i`.
-template <std::size_t i, typename... T>
-constexpr element_type_t<i, std::tuple<T...>> const& at(
-    const std::tuple<T...>& t) {
-  return std::get<i>(t);
-}
-/// \brief Get the `i`th *value* from a `std::tuple`.
-/// This returns a value of the `i`th element of the
-/// tuple, of the corresponding type.
-/// \param i The index to retrieve within the `std::tuple` object.
-/// \param t The sequence from which to extract an element.
-/// \return The element at index `i`.
-template <std::size_t i, typename... T>
-constexpr element_type_t<i, std::tuple<T...>>&& at(std::tuple<T...>&& t) {
-  return std::get<i>(std::forward<std::tuple<T...>>(t));
-}
-/// \brief Get the `i`th *value* from an `integer_sequence` value.
-/// This returns a value of the `i`th element of the
-/// `integer_sequence`, of the sequence's integer type.
-/// \param i The index to retrieve within the `integer_sequence` object.
-/// \param is The sequence from which to extract an element.
-/// \return The element at index `i`.
-template <std::size_t i, typename T, T... ints>
-constexpr T at(integer_sequence<T, ints...> is) {
-  return at<i>(as_tuple(is));
+template <std::size_t i, typename T>
+constexpr decltype(auto) at(T&& t) {
+  return std::get<i>(as_tuple(std::forward<T>(t)));
 }
 
 namespace detail {
-template <typename Val, typename F, typename... Args, std::size_t... ints>
-static constexpr auto transform_one(Val&& v, F f, std::tuple<Args...>&& t,
-                                    index_sequence<ints...>)
-    -> decltype(f(std::forward<Val>(v), (std::forward<Args>(at<ints>(t)))...)) {
-  return f(std::forward<Val>(v), (std::forward<Args>(at<ints>(t)))...);
+template <typename T, typename F, std::size_t... ints, typename... Args>
+static void for_each(T&& v, index_sequence<ints...>, F f, Args&&... a) {
+  (void)(..., void(f(at<ints>(std::forward<T>(v)), a...)));
 }
 
 template <typename T, typename F, std::size_t... ints, typename... Args>
-static void for_each(T&& v, index_sequence<ints...>, F f,
-                     std::tuple<Args...>&& a) {
-  using swallow = int[];
-  (void)swallow{0, (void(transform_one(at<ints>(std::forward<T>(v)), f,
-                                       std::forward<std::tuple<Args...>>(a),
-                                       make_index_sequence<sizeof...(Args)>{})),
-                    0)...};
-}
-
-template <typename T, typename F, std::size_t... ints, typename... Args>
-static constexpr auto transform(T&& v, index_sequence<ints...>, F f,
-                                std::tuple<Args...>&& a)
-    -> decltype(std::make_tuple(transform_one(
-        at<ints>(std::forward<T>(v)), f, std::forward<std::tuple<Args...>>(a),
-        make_index_sequence<sizeof...(Args)>{})...)) {
-  return std::make_tuple(transform_one(
-      at<ints>(std::forward<T>(v)), f, std::forward<std::tuple<Args...>>(a),
-      make_index_sequence<sizeof...(Args)>{})...);
+static void transform(T&& v, index_sequence<ints...>, F f, Args&&... a) {
+  return std::make_tuple(f(at<ints>(std::forward<T>(v)), a...)...);
 }
 }  // namespace detail
 
@@ -500,9 +435,9 @@ static constexpr auto transform(T&& v, index_sequence<ints...>, F f,
 /// \param f The functor to call on every element.
 /// \param args... Further arguments to forward to the functor call.
 template <typename T, typename F, typename... Args>
-void for_each(T&& v, F f, Args&&... args) {
-  detail::for_each(std::forward<T>(v), make_index_sequence<size_v<T>>{}, f,
-                   std::forward_as_tuple(std::forward<Args>(args)...));
+constexpr void for_each(T&& v, F&& f, Args&&... args) {
+  detail::for_each(std::forward<T>(v), make_index_sequence<size_v<T>>{},
+                   std::forward<F>(f), std::forward<Args>(args)...);
 }
 
 /// \brief Run a functor for each element in a sequence type and return the
@@ -528,12 +463,9 @@ void for_each(T&& v, F f, Args&&... args) {
 /// \return A `std::tuple` of appropriate type to contain the results of every
 /// call.
 template <typename T, typename F, typename... Args>
-constexpr auto transform(T&& v, F f, Args&&... args) -> decltype(
-    detail::transform(std::forward<T>(v), make_index_sequence<size_v<T>>{}, f,
-                      std::forward_as_tuple(std::forward<Args>(args)...))) {
+constexpr auto transform(T&& v, F&& f, Args&&... args) {
   return detail::transform(std::forward<T>(v), make_index_sequence<size_v<T>>{},
-                           f,
-                           std::forward_as_tuple(std::forward<Args>(args)...));
+                           std::forward<F>(f), std::forward<Args>(args)...);
 }
 
 /// Return a new tuple containing a subset of the fields as determined by the

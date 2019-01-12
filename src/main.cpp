@@ -256,18 +256,18 @@ int main() {
     xxd(s);
   }
 
-  std::cerr << decltype(
-                   ash::mpt::at<0>(z::Z::field_descriptors{}))::type::name()
-            << std::endl;
-  std::cerr << decltype(
-                   ash::mpt::at<1>(z::Z::field_descriptors{}))::type::name()
-            << std::endl;
+  std::cerr
+      << ash::mpt::element_type_t<0, z::Z::field_descriptors>::type::name()
+      << std::endl;
+  std::cerr
+      << ash::mpt::element_type_t<1, z::Z::field_descriptors>::type::name()
+      << std::endl;
 
-  std::cerr << decltype(ash::mpt::at<0>(
-                   MyInterface::method_descriptors{}))::type::name()
+  std::cerr << ash::mpt::element_type_t<
+                   0, MyInterface::method_descriptors>::type::name()
             << std::endl;
-  std::cerr << decltype(ash::mpt::at<1>(
-                   MyInterface::method_descriptors{}))::type::name()
+  std::cerr << ash::mpt::element_type_t<
+                   1, MyInterface::method_descriptors>::type::name()
             << std::endl;
 
   try {
