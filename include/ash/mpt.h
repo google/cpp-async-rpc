@@ -492,10 +492,8 @@ constexpr auto transform(T&& v, F&& f, Args&&... args) {
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <typename... T, std::size_t... idxs>
-constexpr std::tuple<
-    typename std::tuple_element<idxs, std::tuple<T...>>::type...>
-subset(std::tuple<T...>& t, index_sequence<idxs...>) {
-  return std::make_tuple(at<idxs>(t)...);
+constexpr auto subset(std::tuple<T...>& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
 }
 /// Return a new tuple containing a subset of the fields as determined by the
 /// passed index sequence.
@@ -504,10 +502,8 @@ subset(std::tuple<T...>& t, index_sequence<idxs...>) {
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <typename... T, std::size_t... idxs>
-constexpr std::tuple<
-    typename std::tuple_element<idxs, const std::tuple<T...>>::type...>
-subset(const std::tuple<T...>& t, index_sequence<idxs...>) {
-  return std::make_tuple(at<idxs>(t)...);
+constexpr auto subset(const std::tuple<T...>& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
 }
 /// Return a new tuple containing a subset of the fields as determined by the
 /// passed index sequence.
@@ -516,10 +512,18 @@ subset(const std::tuple<T...>& t, index_sequence<idxs...>) {
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <typename... T, std::size_t... idxs>
-constexpr std::tuple<
-    typename std::tuple_element<idxs, const std::tuple<T...>>::type...>
-subset(std::tuple<T...>&& t, index_sequence<idxs...>) {
-  return std::make_tuple(at<idxs>(t)...);
+constexpr auto subset(std::tuple<T...>&& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
+}
+/// Return a new tuple containing a subset of the fields as determined by the
+/// passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...ints The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the
+/// indices.
+template <typename... T, std::size_t... idxs>
+constexpr auto subset(const std::tuple<T...>&& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
 }
 /// Return a new pack containing a subset of the types as determined by the
 /// passed index sequence.
@@ -530,6 +534,17 @@ subset(std::tuple<T...>&& t, index_sequence<idxs...>) {
 template <typename... T, std::size_t... idxs>
 constexpr pack<typename element_type_t<idxs, pack<T...>>::type...> subset(
     pack<T...>, index_sequence<idxs...>) {
+  return {};
+}
+/// Return a new value pack containing a subset of the types as determined by
+/// the passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...ints The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the
+/// indices.
+template <auto... v, std::size_t... idxs>
+constexpr value_pack<at<idxs>(value_pack<v...>{})...> subset(
+    value_pack<v...>, index_sequence<idxs...>) {
   return {};
 }
 /// Return a new integer sequence containing a subset of the integers determined
