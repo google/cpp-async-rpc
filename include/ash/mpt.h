@@ -566,10 +566,7 @@ subset(integer_sequence<T, ints...>, index_sequence<idxs...>) {
 /// \return A sliced sequence containing just the elements in the range `begin
 /// .. end`.
 template <std::size_t begin, std::size_t end, typename T>
-constexpr auto range(T&& t) -> decltype(
-    subset(std::forward<T>(t),
-           make_index_sequence<(end - begin)>{} +
-               make_constant_index_sequence<(end - begin), begin>{})) {
+constexpr auto range(T&& t) {
   return subset(std::forward<T>(t),
                 make_index_sequence<(end - begin)>{} +
                     make_constant_index_sequence<(end - begin), begin>{});
@@ -579,7 +576,7 @@ constexpr auto range(T&& t) -> decltype(
 /// \param t The sequence from which to extract the head element.
 /// \return The result of calling `at<0>` over the sequence.
 template <typename T>
-constexpr auto head(T&& t) -> decltype(at<0>(std::forward<T>(t))) {
+constexpr auto head(T&& t) {
   return at<0>(std::forward<T>(t));
 }
 
@@ -587,7 +584,7 @@ constexpr auto head(T&& t) -> decltype(at<0>(std::forward<T>(t))) {
 /// \param t The sequence from which to remove the head element.
 /// \return The original sequence with the head removed.
 template <typename T>
-constexpr auto tail(T&& t) -> decltype(range<1, size_v<T>>(t)) {
+constexpr auto tail(T&& t) {
   return range<1, size_v<T>>(t);
 }
 
