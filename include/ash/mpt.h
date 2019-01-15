@@ -676,22 +676,6 @@ using is_integer_sequence =
 template <typename T>
 static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
 
-// Forward cat for tuples to tuple_cat.
-template <typename... Args>
-constexpr auto cat(Args&&... args) -> std::enable_if_t<
-    (... && is_tuple_v<std::remove_cv_t<std::remove_reference_t<Args>>>),
-    decltype(std::tuple_cat(std::forward<Args>(args)...))> {
-  return std::tuple_cat(std::forward<Args>(args)...);
-}
-
-// Handle cat pack by wrapping the types and transforming into a tuple.
-template <typename... Args>
-constexpr auto cat(Args&&... args) -> std::enable_if_t<
-    (... && is_pack_v<std::remove_cv_t<std::remove_reference_t<Args>>>),
-    decltype(as_pack(std::tuple_cat(as_tuple(std::forward<Args>(args))...)))> {
-  return as_pack(std::tuple_cat(as_tuple(std::forward<Args>(args))...));
-}
-
 namespace detail {
 template <typename... TN>
 struct integer_sequence_cat_helper;
@@ -706,21 +690,65 @@ template <typename T1>
 struct integer_sequence_cat_helper<T1> {
   using type = T1;
 };
+
+template <typename T1, typename T2>
+struct join_value_packs;
+
+template <auto... v1, auto... v2>
+struct join_value_packs<value_pack<v1...>, value_pack<v2...>> {
+  using type = value_pack<v1..., v2...>;
+};
+
+template <typename... T>
+struct value_pack_cat_helper;
+
+template <typename T1, typename T2, typename... TN>
+struct value_pack_cat_helper<T1, T2, TN...> {
+  using rest_type = typename value_pack_cat_helper<T2, TN...>::type;
+  using type = typename join_value_packs<T1, rest_type>::type;
+};
+
+template <typename T1>
+struct value_pack_cat_helper<T1> {
+  using type = T1;
+};
+
+template <typename... Args>
+static constexpr bool all_tuples =
+    (... && is_tuple_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+template <typename... Args>
+static constexpr bool all_packs =
+    (... && is_pack_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+template <typename... Args>
+static constexpr bool all_value_packs =
+    (... && is_value_pack_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+template <typename... Args>
+static constexpr bool all_integer_sequences =
+    (... &&
+     is_integer_sequence_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+
 }  // namespace detail
 
-// Handle cat for integer sequences.
-// We need at least one to determine the integer type, and all of them must
-// match.
-// So a workaround for the empty case is to provide a zero-length "start" as the
-// first argument.
-template <typename... Args,
-          typename Enable = typename std::enable_if<
-              std::conjunction<is_integer_sequence<typename std::remove_cv<
-                  typename std::remove_reference<Args>::type>::type>...>::
-                  value>::type>
-constexpr auto cat(Args... args) ->
-    typename detail::integer_sequence_cat_helper<Args...>::type {
-  return {};
+// Concatenate one or more sequence types of the same kind.
+template <typename... Args>
+constexpr auto cat(Args&&... args) {
+  static_assert(sizeof...(Args) > 0,
+                "ash::mpt::cat requires at least one argument");
+  static_assert(detail::all_tuples<Args...> || detail::all_packs<Args...> ||
+                    detail::all_value_packs<Args...> ||
+                    detail::all_integer_sequences<Args...>,
+                "ash::mpt::cat requires all arguments to be of the same "
+                "supported sequence type");
+
+  if constexpr (detail::all_tuples<Args...>) {
+    return std::tuple_cat(std::forward<Args>(args)...);
+  } else if constexpr (detail::all_packs<Args...>) {
+    return as_pack(std::tuple_cat(as_tuple(std::forward<Args>(args))...));
+  } else if constexpr (detail::all_value_packs<Args...>) {
+    return typename detail::value_pack_cat_helper<Args...>::type{};
+  } else if constexpr (detail::all_integer_sequences<Args...>) {
+    return typename detail::integer_sequence_cat_helper<Args...>::type{};
+  }
 }
 
 // Check whether the passed wrapped type is T.
@@ -734,22 +762,21 @@ namespace detail {
 template <typename O>
 struct index_cat {
   template <typename Prev, typename Current>
-  constexpr auto operator()(Prev, Current) -> typename std::enable_if<
+  constexpr auto operator()(Prev, Current) -> std::enable_if_t<
       O{}(Current{}),
       pack<decltype(index_sequence<1>{} +
-                    typename element_type<0, Prev>::type::type{}),
-           decltype(cat(typename element_type<1, Prev>::type::type{},
-                        index_sequence<(at<0>(typename element_type<0, Prev>::
-                                                  type::type{}))>{}))>>::type {
+                    typename element_type_t<0, Prev>::type{}),
+           decltype(cat(typename element_type_t<1, Prev>::type{},
+                        index_sequence<(at<0>(
+                            typename element_type_t<0, Prev>::type{}))>{}))>> {
     return {};
   }
 
   template <typename Prev, typename Current>
-  constexpr auto operator()(Prev, Current) -> typename std::enable_if<
-      !O{}(Current{}),
-      pack<decltype(index_sequence<1>{} +
-                    typename element_type<0, Prev>::type::type{}),
-           typename element_type<1, Prev>::type::type>>::type {
+  constexpr auto operator()(Prev, Current) -> std::enable_if_t<
+      !O{}(Current{}), pack<decltype(index_sequence<1>{} +
+                                     typename element_type_t<0, Prev>::type{}),
+                            typename element_type_t<1, Prev>::type>> {
     return {};
   }
 };
@@ -757,16 +784,14 @@ struct index_cat {
 
 /// Get the indexes of the elements that meet a condition.
 template <typename T, typename O>
-constexpr auto find_if(T&& t, O o) -> typename element_type<
+constexpr auto find_if(T&& t, O o) -> typename element_type_t<
     1, decltype(accumulate(pack<index_sequence<0>, index_sequence<>>{},
-                           std::forward<T>(t),
-                           detail::index_cat<O>{}))>::type::type {
+                           std::forward<T>(t), detail::index_cat<O>{}))>::type {
   return {};
 }
 
 template <typename T, typename O>
-constexpr auto filter_if(T&& t, O o)
-    -> decltype(subset(t, find_if(std::forward<T>(t), o))) {
+constexpr auto filter_if(T&& t, O o) {
   return subset(t, find_if(std::forward<T>(t), o));
 }
 
@@ -779,11 +804,12 @@ template <typename T, typename Pack>
 struct is_in {
   static constexpr bool value = (count_if(Pack{}, is<T>{}) > 0);
 };
+template <typename T, typename Pack>
+static constexpr bool is_in_v = is_in<T, Pack>::value;
 
 template <typename T, typename Pack>
-using insert_into_t = std::conditional_t<is_in<T, Pack>::value, Pack,
+using insert_into_t = std::conditional_t<is_in_v<T, Pack>, Pack,
                                          decltype(cat(Pack{}, pack<T>{}))>;
-
 }  // namespace mpt
 
 }  // namespace ash
