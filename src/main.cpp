@@ -20,6 +20,30 @@
 #include "ash/string_adapters.h"
 #include "ash/type_hash.h"
 
+struct T1 : ash::interface<T1> {
+  virtual void f1(int) = 0;
+
+  ASH_METHODS(f1);
+
+  struct proxy;
+};
+
+struct T1::proxy : public virtual T1 {
+  void f1(int) override {}
+};
+
+struct T2 : ash::interface<T2, T1> {
+  virtual void f2(int) = 0;
+
+  ASH_METHODS(f2);
+
+  struct proxy;
+};
+
+struct T2::proxy : public virtual T2, public virtual T1::proxy {
+  void f2(int) override {}
+};
+
 template <typename R>
 struct K : ash::serializable<K<R>> {
   R x = 1, y = 2;
@@ -129,6 +153,12 @@ void xxd(const std::string& data) {
 }
 
 int main() {
+  T2::proxy proxy;
+  std::cerr << sizeof(T1) << std::endl;
+  std::cerr << sizeof(T1::proxy) << std::endl;
+  std::cerr << sizeof(T2) << std::endl;
+  std::cerr << sizeof(T2::proxy) << std::endl;
+
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
 
   std::cerr << ash::traits::member_function_pointer_traits<
