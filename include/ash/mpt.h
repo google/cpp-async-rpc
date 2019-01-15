@@ -677,21 +677,19 @@ template <typename T>
 static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
 
 // Forward cat for tuples to tuple_cat.
-template <typename... Args,
-          typename Enable = typename std::enable_if<std::conjunction<
-              is_tuple<typename std::remove_cv<typename std::remove_reference<
-                  Args>::type>::type>...>::value>::type>
-constexpr auto cat(Args&&... args) {
+template <typename... Args>
+constexpr auto cat(Args&&... args) -> std::enable_if_t<
+    (... && is_tuple_v<std::remove_cv_t<std::remove_reference_t<Args>>>),
+    decltype(std::tuple_cat(std::forward<Args>(args)...))> {
   return std::tuple_cat(std::forward<Args>(args)...);
 }
 
 // Handle cat pack by wrapping the types and transforming into a tuple.
-template <typename... Args,
-          typename Enable = typename std::enable_if<std::conjunction<
-              is_pack<typename std::remove_cv<typename std::remove_reference<
-                  Args>::type>::type>...>::value>::type>
-constexpr auto cat(Args... args) {
-  return as_pack(std::tuple_cat(as_tuple(args)...));
+template <typename... Args>
+constexpr auto cat(Args&&... args) -> std::enable_if_t<
+    (... && is_pack_v<std::remove_cv_t<std::remove_reference_t<Args>>>),
+    decltype(as_pack(std::tuple_cat(as_tuple(std::forward<Args>(args))...)))> {
+  return as_pack(std::tuple_cat(as_tuple(std::forward<Args>(args))...));
 }
 
 namespace detail {
