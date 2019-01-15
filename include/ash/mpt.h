@@ -308,20 +308,24 @@ constexpr std::tuple<wrap_type<T>...> as_tuple(pack<T...>) {
   return {};
 }
 
+/// \brief Convert a a tuple value into a tuple value.
+/// The result is the input.
+///
+/// \return The input, as-is.
 template <typename... T>
-decltype(auto) as_tuple(const std::tuple<T...>& t) {
+constexpr decltype(auto) as_tuple(const std::tuple<T...>& t) {
   return t;
 }
 template <typename... T>
-decltype(auto) as_tuple(std::tuple<T...>& t) {
+constexpr decltype(auto) as_tuple(std::tuple<T...>& t) {
   return t;
 }
 template <typename... T>
-decltype(auto) as_tuple(const std::tuple<T...>&& t) {
+constexpr decltype(auto) as_tuple(const std::tuple<T...>&& t) {
   return t;
 }
 template <typename... T>
-decltype(auto) as_tuple(std::tuple<T...>&& t) {
+constexpr decltype(auto) as_tuple(std::tuple<T...>&& t) {
   return t;
 }
 
@@ -406,14 +410,27 @@ constexpr decltype(auto) at(T&& t) {
   return std::get<i>(as_tuple(std::forward<T>(t)));
 }
 
+/// \brief Convert an input sequence to a `value_pack`.
+///
+/// \return The `as_tuple` values of the input sequence, packed into a
+/// `value_pack`'s parameters.
+template <auto... v>
+constexpr value_pack<v...> as_value_pack(value_pack<v...>) {
+  return {};
+}
+template <typename T, T... ints>
+constexpr value_pack<ints...> as_value_pack(integer_sequence<T, ints...>) {
+  return {};
+}
+
 namespace detail {
 template <typename T, typename F, std::size_t... ints, typename... Args>
-static void for_each(T&& v, index_sequence<ints...>, F f, Args&&... a) {
+constexpr void for_each(T&& v, index_sequence<ints...>, F f, Args&&... a) {
   (void)(..., void(f(at<ints>(std::forward<T>(v)), a...)));
 }
 
 template <typename T, typename F, std::size_t... ints, typename... Args>
-static void transform(T&& v, index_sequence<ints...>, F f, Args&&... a) {
+constexpr auto transform(T&& v, index_sequence<ints...>, F f, Args&&... a) {
   return std::make_tuple(f(at<ints>(std::forward<T>(v)), a...)...);
 }
 }  // namespace detail

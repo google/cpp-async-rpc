@@ -129,6 +129,8 @@ void xxd(const std::string& data) {
 }
 
 int main() {
+  f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
+
   std::cerr << ash::traits::member_function_pointer_traits<
                    &MyInterface::Method3>::is_const
             << std::endl;

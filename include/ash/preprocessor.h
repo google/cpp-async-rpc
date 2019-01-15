@@ -65,6 +65,7 @@
   ASH_FOREACH_EXPAND(ASH_CONCAT(ASH_FOREACH_, n)(what, sep, __VA_ARGS__))
 #define ASH_FOREACH_EXPAND(...) __VA_ARGS__
 
+#define ASH_FOREACH_0(what, sep, ...)
 #define ASH_FOREACH_1(what, sep, first, ...) what(first)
 #define ASH_FOREACH_2(what, sep, first, ...) \
   what(first) sep() ASH_FOREACH_1(what, sep, __VA_ARGS__)
