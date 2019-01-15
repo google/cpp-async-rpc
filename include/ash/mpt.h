@@ -592,11 +592,7 @@ namespace detail {
 template <std::size_t n>
 struct accumulate_helper {
   template <typename I, typename T, typename O, typename... Args>
-  static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args)
-      -> decltype(accumulate(o(std::forward<I>(a), head(std::forward<T>(t)),
-                               std::forward<Args>(args)...),
-                             tail(std::forward<T>(t)), o,
-                             std::forward<Args>(args)...)) {
+  static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args) {
     return accumulate(o(std::forward<I>(a), head(std::forward<T>(t)),
                         std::forward<Args>(args)...),
                       tail(std::forward<T>(t)), o, std::forward<Args>(args)...);
@@ -605,8 +601,7 @@ struct accumulate_helper {
 template <>
 struct accumulate_helper<0> {
   template <typename I, typename T, typename O, typename... Args>
-  static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args)
-      -> I {
+  static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args) {
     return a;
   }
 };
@@ -614,10 +609,7 @@ struct accumulate_helper<0> {
 
 // Accumulate elements with an initial value using the given operator.
 template <typename I, typename T, typename O, typename... Args>
-constexpr auto accumulate(I&& a, T&& t, O o, Args&&... args)
-    -> decltype(detail::accumulate_helper<size_v<T>>::accumulate_internal(
-        std::forward<I>(a), std::forward<T>(t), o,
-        std::forward<Args>(args)...)) {
+constexpr auto accumulate(I&& a, T&& t, O o, Args&&... args) {
   return detail::accumulate_helper<size_v<T>>::accumulate_internal(
       std::forward<I>(a), std::forward<T>(t), o, std::forward<Args>(args)...);
 }
