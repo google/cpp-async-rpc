@@ -22,6 +22,8 @@
 #ifndef INCLUDE_ASH_TESTING_STATIC_CHECKS_H_
 #define INCLUDE_ASH_TESTING_STATIC_CHECKS_H_
 
+#include <type_traits>
+
 namespace ash {
 namespace testing {
 
@@ -32,7 +34,7 @@ struct check_value {
 
 template <typename T1, typename T2>
 struct check_type {
-  static_assert(std::is_same<T1, T2>::value, "check failed");
+  static_assert(std::is_same_v<T1, T2>, "check failed");
 };
 
 }  // namespace testing

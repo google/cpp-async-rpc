@@ -102,21 +102,22 @@ struct compose_with_types<base, Seen, T, TN...> {
                                    Seen, base>::value,
                          Seen, TN...>::value;
 };
+
 }  // namespace detail
 
 // If we see a type that we already saw before there's a cyclic reference
 // somewhere,
 // so insert a back-reference.
 template <typename T, typename Seen, std::uint32_t base>
-struct type_hash<T, Seen, base, std::enable_if_t<mpt::is_in<T, Seen>::value>> {
+struct type_hash<T, Seen, base, std::enable_if_t<mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::type_hash_add(
       base, detail::type_family::SEEN_TYPE_BACKREFERENCE, false,
-      mpt::head(mpt::find_if(Seen{}, mpt::is<T>{})));
+      mpt::head(mpt::find_if_t<Seen, mpt::is_type<T>>{}));
 };
 
 template <typename Seen, std::uint32_t base>
 struct type_hash<void, Seen, base,
-                 std::enable_if_t<!mpt::is_in<void, Seen>::value>> {
+                 std::enable_if_t<!mpt::is_type_in_v<void, Seen>>> {
   static constexpr std::uint32_t value =
       detail::type_hash_add(base, detail::type_family::VOID, false, 0);
 };
@@ -124,7 +125,7 @@ struct type_hash<void, Seen, base,
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
-    std::enable_if_t<std::is_integral_v<T> && !mpt::is_in<T, Seen>::value>> {
+    std::enable_if_t<std::is_integral_v<T> && !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::type_hash_add(
       base, detail::type_family::INTEGER, std::is_signed_v<T>, sizeof(T));
 };
@@ -132,7 +133,7 @@ struct type_hash<
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<T, Seen, base,
                  std::enable_if_t<std::is_floating_point_v<T> &&
-                                  !mpt::is_in<T, Seen>::value>> {
+                                  !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::type_hash_add(
       base, detail::type_family::FLOAT, std::is_signed_v<T>, sizeof(T));
 };
@@ -140,37 +141,37 @@ struct type_hash<T, Seen, base,
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
-    std::enable_if_t<std::is_enum_v<T> && !mpt::is_in<T, Seen>::value>> {
+    std::enable_if_t<std::is_enum_v<T> && !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::type_hash_add(
       base, detail::type_family::ENUM, std::is_signed_v<T>, sizeof(T));
 };
 
 template <typename U, typename V, typename Seen, std::uint32_t base>
 struct type_hash<std::pair<U, V>, Seen, base,
-                 std::enable_if_t<!mpt::is_in<std::pair<U, V>, Seen>::value>> {
+                 std::enable_if_t<!mpt::is_type_in_v<std::pair<U, V>, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::TUPLE, false, 2),
-      mpt::insert_into_t<std::pair<U, V>, Seen>, U, V>::value;
+      mpt::insert_type_into_t<std::pair<U, V>, Seen>, U, V>::value;
 };
 
 template <typename... T, typename Seen, std::uint32_t base>
 struct type_hash<std::tuple<T...>, Seen, base,
-                 std::enable_if_t<!mpt::is_in<std::tuple<T...>, Seen>::value>> {
+                 std::enable_if_t<!mpt::is_type_in_v<std::tuple<T...>, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::TUPLE, false,
                             sizeof...(T)),
-      mpt::insert_into_t<std::tuple<T...>, Seen>, T...>::value;
+      mpt::insert_type_into_t<std::tuple<T...>, Seen>, T...>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
     std::enable_if_t<is_const_iterable_v<T> && has_static_size_v<T> &&
-                     !mpt::is_in<T, Seen>::value>> {
+                     !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::ARRAY, false,
                             static_size<T>::value),
-      mpt::insert_into_t<T, Seen>,
+      mpt::insert_type_into_t<T, Seen>,
       typename std::iterator_traits<decltype(
           std::begin(std::declval<T&>()))>::value_type>::value;
 };
@@ -179,10 +180,10 @@ template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
     std::enable_if_t<is_const_iterable_v<T> && !has_static_size_v<T> &&
-                     !is_associative_v<T> && !mpt::is_in<T, Seen>::value>> {
+                     !is_associative_v<T> && !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SEQUENCE, false, 0),
-      mpt::insert_into_t<T, Seen>,
+      mpt::insert_type_into_t<T, Seen>,
       writable_value_type_t<typename T::value_type>>::value;
 };
 
@@ -193,10 +194,10 @@ struct type_hash<
         is_const_iterable_v<T> && !has_static_size_v<T> &&
         is_associative_v<T> &&
         !std::is_same_v<typename T::key_type, typename T::value_type> &&
-        !mpt::is_in<T, Seen>::value>> {
+        !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::MAP, false, 0),
-      mpt::insert_into_t<T, Seen>,
+      mpt::insert_type_into_t<T, Seen>,
       writable_value_type_t<typename T::value_type>>::value;
 };
 
@@ -207,37 +208,37 @@ struct type_hash<
         is_const_iterable_v<T> && !has_static_size_v<T> &&
         is_associative_v<T> &&
         std::is_same_v<typename T::key_type, typename T::value_type> &&
-        !mpt::is_in<T, Seen>::value>> {
+        !mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SET, false, 0),
-      mpt::insert_into_t<T, Seen>,
+      mpt::insert_type_into_t<T, Seen>,
       writable_value_type_t<typename T::value_type>>::value;
 };
 
 template <typename T, typename Seen, typename Deleter, std::uint32_t base>
 struct type_hash<
     std::unique_ptr<T, Deleter>, Seen, base,
-    std::enable_if_t<!mpt::is_in<std::unique_ptr<T, Deleter>, Seen>::value>> {
+    std::enable_if_t<!mpt::is_type_in_v<std::unique_ptr<T, Deleter>, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::UNIQUE_PTR, false, 0),
-      mpt::insert_into_t<std::unique_ptr<T, Deleter>, Seen>, T>::value;
+      mpt::insert_type_into_t<std::unique_ptr<T, Deleter>, Seen>, T>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     std::shared_ptr<T>, Seen, base,
-    std::enable_if_t<!mpt::is_in<std::shared_ptr<T>, Seen>::value>> {
+    std::enable_if_t<!mpt::is_type_in_v<std::shared_ptr<T>, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::SHARED_PTR, false, 0),
-      mpt::insert_into_t<std::shared_ptr<T>, Seen>, T>::value;
+      mpt::insert_type_into_t<std::shared_ptr<T>, Seen>, T>::value;
 };
 
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<std::weak_ptr<T>, Seen, base,
-                 std::enable_if_t<!mpt::is_in<std::weak_ptr<T>, Seen>::value>> {
+                 std::enable_if_t<!mpt::is_type_in_v<std::weak_ptr<T>, Seen>>> {
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::WEAK_PTR, false, 0),
-      mpt::insert_into_t<std::weak_ptr<T>, Seen>, T>::value;
+      mpt::insert_type_into_t<std::weak_ptr<T>, Seen>, T>::value;
 };
 
 template <auto mptr, typename Seen, std::uint32_t base>
@@ -250,7 +251,7 @@ struct type_hash<::ash::field_descriptor<mptr>, Seen, base, void> {
 template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<
     T, Seen, base,
-    std::enable_if_t<can_be_serialized_v<T> && !mpt::is_in<T, Seen>::value>> {
+    std::enable_if_t<can_be_serialized_v<T> && !mpt::is_type_in_v<T, Seen>>> {
  private:
   static constexpr std::uint32_t class_header_value =
       detail::type_hash_add(base, detail::type_family::CLASS, false,
@@ -261,12 +262,12 @@ struct type_hash<
   static constexpr std::uint32_t with_base_classes = detail::compose_with_types<
       detail::type_hash_add(class_header_value, detail::type_family::BASE_CLASS,
                             false, mpt::size_v<get_base_classes_t<T>>),
-      mpt::insert_into_t<T, Seen>, get_base_classes_t<T>>::value;
+      mpt::insert_type_into_t<T, Seen>, get_base_classes_t<T>>::value;
 
   static constexpr std::uint32_t with_fields = detail::compose_with_types<
       detail::type_hash_add(with_base_classes, detail::type_family::FIELD,
                             false, mpt::size_v<get_field_descriptors_t<T>>),
-      mpt::insert_into_t<T, Seen>, get_field_descriptors_t<T>>::value;
+      mpt::insert_type_into_t<T, Seen>, get_field_descriptors_t<T>>::value;
 
  public:
   static constexpr std::uint32_t value = detail::type_hash_add(

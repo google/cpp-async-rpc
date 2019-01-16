@@ -35,9 +35,9 @@ struct method_descriptor : public traits::member_function_pointer_traits<mptr> {
   /// Get the method's name.
   static const char *name() {
     using class_type = typename method_descriptor<mptr>::class_type;
-    return class_type::method_names()[mpt::at<0>(
-        mpt::find_if(typename class_type::method_descriptors{},
-                     mpt::is<method_descriptor<mptr>>{}))];
+    return class_type::method_names()
+        [mpt::find_v<typename class_type::method_descriptors,
+                     mpt::is_type<method_descriptor<mptr>>>];
   }
 };
 
@@ -73,20 +73,6 @@ struct interface : virtual Bases... {
     return names;                                                              \
   }
 
-/// Get the method descriptor for a given member function pointer.
-template <auto mptr>
-struct get_method_descriptor {
-  using class_type =
-      typename traits::member_function_pointer_traits<mptr>::class_type;
-  static constexpr auto method_descriptor_index =
-      mpt::at<0>(mpt::find_if(typename class_type::method_descriptors{},
-                              mpt::is<method_descriptor<mptr>>{}));
-  using type = typename decltype(mpt::at<method_descriptor_index>(
-      typename class_type::method_descriptors{}))::type;
-};
-
-template <auto mptr>
-using get_method_descriptor_t = typename get_method_descriptor<mptr>::type;
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_INTERFACE_H_

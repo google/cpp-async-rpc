@@ -288,12 +288,12 @@ int main() {
     xxd(s);
   }
 
-  std::cerr
-      << ash::mpt::element_type_t<0, z::Z::field_descriptors>::type::name()
-      << std::endl;
-  std::cerr
-      << ash::mpt::element_type_t<1, z::Z::field_descriptors>::type::name()
-      << std::endl;
+  std::cerr << ash::mpt::element_type_t<
+                   0, ash::traits::get_field_descriptors_t<z::Z>>::type::name()
+            << std::endl;
+  std::cerr << ash::mpt::element_type_t<
+                   1, ash::traits::get_field_descriptors_t<z::Z>>::type::name()
+            << std::endl;
 
   std::cerr << ash::mpt::element_type_t<
                    0, MyInterface::method_descriptors>::type::name()
@@ -320,10 +320,10 @@ int main() {
     std::cerr << has_roro<Y, int>::value << std::endl;
 
     using A = ash::mpt::pack<>;
-    using B = ash::mpt::insert_into_t<int, A>;
-    using C = ash::mpt::insert_into_t<int, B>;
-    using D = ash::mpt::insert_into_t<double, C>;
-    using E = ash::mpt::insert_into_t<int, D>;
+    using B = ash::mpt::insert_type_into_t<int, A>;
+    using C = ash::mpt::insert_type_into_t<int, B>;
+    using D = ash::mpt::insert_type_into_t<double, C>;
+    using E = ash::mpt::insert_type_into_t<int, D>;
     f<E>();
 
     std::cerr << std::hex;

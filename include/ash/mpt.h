@@ -751,65 +751,127 @@ constexpr auto cat(Args&&... args) {
   }
 }
 
+// Check whether the passed value is v.
+template <auto v>
+struct is_value {
+  constexpr bool operator()(const decltype(v)& w) { return w == v; }
+  constexpr bool operator()(...) { return false; }
+};
 // Check whether the passed wrapped type is T.
 template <typename T>
-struct is {
-  constexpr bool operator()(wrap_type<T>) { return true; }
+struct is_type {
+  constexpr bool operator()(wrap_type<T> w) { return true; }
   constexpr bool operator()(...) { return false; }
 };
 
-namespace detail {
-template <typename O>
-struct index_cat {
-  template <typename Prev, typename Current>
-  constexpr auto operator()(Prev, Current) -> std::enable_if_t<
-      O{}(Current{}),
-      pack<decltype(index_sequence<1>{} +
-                    typename element_type_t<0, Prev>::type{}),
-           decltype(cat(typename element_type_t<1, Prev>::type{},
-                        index_sequence<(at<0>(
-                            typename element_type_t<0, Prev>::type{}))>{}))>> {
-    return {};
-  }
+template <typename T, bool... selected>
+struct index_if;
 
-  template <typename Prev, typename Current>
-  constexpr auto operator()(Prev, Current) -> std::enable_if_t<
-      !O{}(Current{}), pack<decltype(index_sequence<1>{} +
-                                     typename element_type_t<0, Prev>::type{}),
-                            typename element_type_t<1, Prev>::type>> {
-    return {};
-  }
+template <typename T, bool... selected>
+using index_if_t = typename index_if<T, selected...>::type;
+
+template <>
+struct index_if<index_sequence<>> {
+  using type = index_sequence<>;
+};
+
+template <std::size_t idx>
+struct index_if<index_sequence<idx>, true> {
+  using type = index_sequence<idx>;
+};
+
+template <std::size_t idx>
+struct index_if<index_sequence<idx>, false> {
+  using type = index_sequence<>;
+};
+
+template <std::size_t idx1, std::size_t... idx, bool selected1,
+          bool... selected>
+struct index_if<index_sequence<idx1, idx...>, selected1, selected...> {
+  using type = decltype(cat(index_if_t<index_sequence<idx1>, selected1>{},
+                            index_if_t<index_sequence<idx...>, selected...>{}));
+};
+namespace detail {
+template <typename T, typename O, typename S>
+struct find_if_helper;
+
+template <typename T, typename O, std::size_t... ints>
+struct find_if_helper<T, O, index_sequence<ints...>> {
+  using type = index_if_t<index_sequence<ints...>, O{}(at<ints>(T{}))...>;
 };
 }  // namespace detail
 
-/// Get the indexes of the elements that meet a condition.
 template <typename T, typename O>
-constexpr auto find_if(T&& t, O o) -> typename element_type_t<
-    1, decltype(accumulate(pack<index_sequence<0>, index_sequence<>>{},
-                           std::forward<T>(t), detail::index_cat<O>{}))>::type {
-  return {};
-}
-
-template <typename T, typename O>
-constexpr auto filter_if(T&& t, O o) {
-  return subset(t, find_if(std::forward<T>(t), o));
-}
-
-template <typename T, typename O>
-constexpr std::size_t count_if(T&& t, O o) {
-  return size_v<decltype(find_if(std::forward<T>(t), o))>;
-}
-
-template <typename T, typename Pack>
-struct is_in {
-  static constexpr bool value = (count_if(Pack{}, is<T>{}) > 0);
+struct find_if {
+  using type =
+      typename detail::find_if_helper<T, O,
+                                      make_index_sequence<size_v<T>>>::type;
 };
-template <typename T, typename Pack>
-static constexpr bool is_in_v = is_in<T, Pack>::value;
 
-template <typename T, typename Pack>
-using insert_into_t = std::conditional_t<is_in_v<T, Pack>, Pack,
-                                         decltype(cat(Pack{}, pack<T>{}))>;
+template <typename T, typename O>
+using find_if_t = typename find_if<T, O>::type;
+
+template <typename T, typename O>
+struct find {
+  using type = find_if_t<T, O>;
+  static_assert((size_v<type>) > 0, "find didn't find any coincidence");
+  static_assert((size_v<type>) < 2, "find found multiple coincidences");
+  static constexpr std::size_t value = at<0>(type{});
+};
+
+template <typename T, typename O>
+inline constexpr std::size_t find_v = find<T, O>::value;
+
+template <typename T, typename O>
+struct filter_if {
+  using type = decltype(subset(T{}, find_if_t<T, O>{}));
+};
+
+template <typename T, typename O>
+using filter_if_t = typename filter_if<T, O>::type;
+
+template <typename T, typename O>
+struct count_if {
+  static constexpr std::size_t value = size_v<find_if_t<T, O>>;
+};
+
+template <typename T, typename O>
+inline constexpr std::size_t count_if_v = count_if<T, O>::value;
+
+template <auto v, typename S>
+struct is_value_in {
+  static constexpr bool value = ((count_if_v<S, is_value<v>>) > 0);
+};
+
+template <auto v, typename S>
+static constexpr bool is_value_in_v = is_value_in<v, S>::value;
+
+template <typename T, typename S>
+struct is_type_in {
+  static constexpr bool value = ((count_if_v<S, is_type<T>>) > 0);
+};
+
+template <typename T, typename S>
+static constexpr bool is_type_in_v = is_type_in<T, S>::value;
+
+template <typename T, typename S>
+struct insert_type_into {
+  using type =
+      std::conditional_t<is_type_in_v<T, S>, S, decltype(cat(S{}, pack<T>{}))>;
+};
+
+template <typename T, typename S>
+using insert_type_into_t = typename insert_type_into<T, S>::type;
+
+template <auto v, typename S>
+struct insert_value_into {
+  using type = std::conditional_t<is_value_in_v<v, S>, S,
+                                  decltype(cat(S{}, value_pack<v>{}))>;
+};
+
+template <auto v, typename S>
+using insert_value_into_t = typename insert_value_into<v, S>::type;
+
 }  // namespace mpt
 
 }  // namespace ash

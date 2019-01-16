@@ -49,7 +49,7 @@ struct serializable_mixin<false, OwnType, Bases...> : Bases... {
   using own_type = OwnType;
   using base_classes = mpt::pack<Bases...>;
   using dynamic_base_classes =
-      decltype(mpt::filter_if(base_classes{}, dynamic_class_filter{}));
+      mpt::filter_if_t<base_classes, dynamic_class_filter>;
 
   // Don't inherit load/save behavior from the parent, and provide an empty set
   // of fields.
@@ -57,7 +57,7 @@ struct serializable_mixin<false, OwnType, Bases...> : Bases... {
   void save(S& s) const = delete;
   template <typename S>
   void load(S& s) = delete;
-  using field_descriptors = mpt::pack<>;
+  using field_pointers = mpt::value_pack<>;
 };
 
 template <typename OwnType, typename... Bases>
@@ -81,29 +81,28 @@ struct field_descriptor : public traits::member_data_pointer_traits<mptr> {
   /// Get the field's name.
   static const char* name() {
     using class_type = typename field_descriptor<mptr>::class_type;
-    return class_type::field_names()[mpt::at<0>(
-        mpt::find_if(typename class_type::field_descriptors{},
-                     mpt::is<field_descriptor<mptr>>{}))];
+    return class_type::field_names()
+        [mpt::find_v<typename class_type::field_pointers, mpt::is_value<mptr>>];
   }
-};  // namespace ash
+};
 
 /// Inherit publicly from this in serializable classes, specifying own type and
 /// public bases.
 template <typename OwnType, typename... Bases>
 using serializable = detail::serializable_mixin<
-    (mpt::count_if(mpt::pack<Bases...>{}, detail::dynamic_class_filter{}) > 0),
+    ((mpt::count_if_v<mpt::pack<Bases...>, detail::dynamic_class_filter>) > 0),
     OwnType, Bases...>;
 
 /// Inherit publicly from this in dynamic classes, specifying own type and
 /// public bases.
 template <typename OwnType, typename... Bases>
 using dynamic = std::conditional_t<
-    (mpt::count_if(mpt::pack<Bases...>{}, detail::dynamic_class_filter{}) > 0),
+    ((mpt::count_if_v<mpt::pack<Bases...>, detail::dynamic_class_filter>) > 0),
     serializable<OwnType, Bases...>,
     serializable<OwnType, ::ash::dynamic_base_class, Bases...>>;
 
 /// Define a `field_descriptor` type for a member field named `NAME`.
-#define ASH_FIELD(NAME) ::ash::field_descriptor<&own_type::NAME>
+#define ASH_FIELD(NAME) &own_type::NAME
 #define ASH_FIELD_SEP() ,
 #define ASH_FIELD_NAME(NAME) #NAME
 #define ASH_FIELD_NAME_SEP() ,
@@ -113,15 +112,14 @@ using dynamic = std::conditional_t<
 #define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define ASH_FIELDS(...)                                                        \
-  using field_descriptors =                                                    \
-      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;    \
-  static const std::array<const char*, ::ash::mpt::size_v<field_descriptors>>& \
-  field_names() {                                                              \
-    static const std::array<const char*,                                       \
-                            ::ash::mpt::size_v<field_descriptors>>             \
-        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)};   \
-    return names;                                                              \
+#define ASH_FIELDS(...)                                                      \
+  using field_pointers = ::ash::mpt::value_pack<ASH_FOREACH(                 \
+      ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;                               \
+  static const std::array<const char*, ::ash::mpt::size_v<field_pointers>>&  \
+  field_names() {                                                            \
+    static const std::array<const char*, ::ash::mpt::size_v<field_pointers>> \
+        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)}; \
+    return names;                                                            \
   }
 
 /// Version of the load/save methods.
@@ -130,20 +128,6 @@ using dynamic = std::conditional_t<
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION
 
-/// Get the field descriptor for a given member pointer.
-template <auto mptr>
-struct get_field_descriptor {
-  using class_type =
-      typename traits::member_data_pointer_traits<mptr>::class_type;
-  static constexpr auto field_descriptor_index =
-      mpt::at<0>(mpt::find_if(typename class_type::field_descriptors{},
-                              mpt::is<field_descriptor<mptr>>{}));
-  using type = typename decltype(mpt::at<field_descriptor_index>(
-      typename class_type::field_descriptors{}))::type;
-};
-
-template <auto mptr>
-using get_field_descriptor_t = typename get_field_descriptor<mptr>::type;
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_SERIALIZABLE_BASE_H_

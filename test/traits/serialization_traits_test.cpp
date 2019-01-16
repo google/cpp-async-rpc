@@ -81,16 +81,15 @@ TEST_CASE("get_custom_serialization_version") {
 }
 
 template <typename T1, typename T2>
-using check_get_field_descriptors = ash::testing::check_type<
-    typename ash::traits::get_field_descriptors<T1>::type, T2>;
+using check_get_field_pointers =
+    ash::testing::check_type<typename ash::traits::get_field_pointers<T1>::type,
+                             T2>;
 
-TEST_CASE("get_field_descriptors") {
-  check_get_field_descriptors<A,
-                              ash::mpt::pack<ash::field_descriptor<&A::x>>>();
-  check_get_field_descriptors<B,
-                              ash::mpt::pack<ash::field_descriptor<&B::y>>>();
-  check_get_field_descriptors<C, ash::mpt::pack<>>();
-  check_get_field_descriptors<D, ash::mpt::pack<>>();
+TEST_CASE("get_field_pointers") {
+  check_get_field_pointers<A, ash::mpt::value_pack<&A::x>>();
+  check_get_field_pointers<B, ash::mpt::value_pack<&B::y>>();
+  check_get_field_pointers<C, ash::mpt::value_pack<>>();
+  check_get_field_pointers<D, ash::mpt::value_pack<>>();
 }
 
 template <typename T, bool v>
@@ -116,13 +115,13 @@ TEST_CASE("has_custom_serialization") {
 }
 
 template <typename T, bool v>
-using check_has_field_descriptors =
-    ash::testing::check_value<bool,
-                              ash::traits::has_field_descriptors<T>::value, v>;
+using check_has_field_pointers =
+    ash::testing::check_value<bool, ash::traits::has_field_pointers<T>::value,
+                              v>;
 
-TEST_CASE("has_field_descriptors") {
-  check_has_field_descriptors<A, true>();
-  check_has_field_descriptors<B, true>();
-  check_has_field_descriptors<C, true>();
-  check_has_field_descriptors<D, false>();
+TEST_CASE("has_field_pointers") {
+  check_has_field_pointers<A, true>();
+  check_has_field_pointers<B, true>();
+  check_has_field_pointers<C, true>();
+  check_has_field_pointers<D, false>();
 }
