@@ -405,9 +405,34 @@ struct element_type {
 template <std::size_t i, typename T>
 using element_type_t = typename element_type<i, T>::type;
 
-template <std::size_t i, typename T>
-constexpr decltype(auto) at(T&& t) {
-  return std::get<i>(as_tuple(std::forward<T>(t)));
+template <std::size_t i, typename... T>
+constexpr decltype(auto) at(const std::tuple<T...>& t) {
+  return std::get<i>(t);
+}
+template <std::size_t i, typename... T>
+constexpr decltype(auto) at(std::tuple<T...>& t) {
+  return std::get<i>(t);
+}
+template <std::size_t i, typename... T>
+constexpr decltype(auto) at(const std::tuple<T...>&& t) {
+  return std::get<i>(t);
+}
+template <std::size_t i, typename... T>
+constexpr decltype(auto) at(std::tuple<T...>&& t) {
+  return std::get<i>(t);
+}
+
+template <std::size_t i, typename... T>
+constexpr auto at(pack<T...> t) {
+  return std::get<i>(as_tuple(t));
+}
+template <std::size_t i, auto... v>
+constexpr auto at(value_pack<v...> t) {
+  return std::get<i>(as_tuple(t));
+}
+template <std::size_t i, typename T, T... ints>
+constexpr auto at(integer_sequence<T, ints...> t) {
+  return std::get<i>(as_tuple(t));
 }
 
 /// \brief Convert an input sequence to a `value_pack`.
@@ -576,7 +601,7 @@ constexpr auto range(T&& t) {
 /// \param t The sequence from which to extract the head element.
 /// \return The result of calling `at<0>` over the sequence.
 template <typename T>
-constexpr auto head(T&& t) {
+constexpr decltype(auto) head(T&& t) {
   return at<0>(std::forward<T>(t));
 }
 
@@ -816,7 +841,7 @@ struct find {
   using type = find_if_t<T, O>;
   static_assert((size_v<type>) > 0, "find didn't find any coincidence");
   static_assert((size_v<type>) < 2, "find found multiple coincidences");
-  static constexpr std::size_t value = at<0>(type{});
+  static constexpr std::size_t value = head(type{});
 };
 
 template <typename T, typename O>

@@ -41,10 +41,10 @@ struct method_descriptor : public traits::member_function_pointer_traits<mptr> {
   }
 };
 
-template <typename OwnInterface, typename... Bases>
-struct interface : virtual Bases... {
+template <typename OwnInterface, typename... Extends>
+struct interface : virtual Extends... {
   using own_interface = OwnInterface;
-  using base_interfaces = mpt::pack<Bases...>;
+  using extended_interfaces = mpt::pack<Extends...>;
   using method_descriptors = mpt::pack<>;
 
   virtual ~interface() {}

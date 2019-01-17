@@ -112,7 +112,7 @@ template <typename T, typename Seen, std::uint32_t base>
 struct type_hash<T, Seen, base, std::enable_if_t<mpt::is_type_in_v<T, Seen>>> {
   static constexpr std::uint32_t value = detail::type_hash_add(
       base, detail::type_family::SEEN_TYPE_BACKREFERENCE, false,
-      mpt::head(mpt::find_if_t<Seen, mpt::is_type<T>>{}));
+      mpt::at<0>(mpt::find_if_t<Seen, mpt::is_type<T>>{}));
 };
 
 template <typename Seen, std::uint32_t base>

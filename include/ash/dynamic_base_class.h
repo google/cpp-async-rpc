@@ -33,7 +33,7 @@ class dynamic_base_class {
   const char* portable_class_name() const {
     return portable_class_name_internal();
   }
-  using field_pointers = mpt::value_pack<>;
+  using field_descriptors = mpt::pack<>;
   using dynamic_base_classes = mpt::pack<>;
 
   /// Make sure deleters work.

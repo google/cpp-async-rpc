@@ -38,49 +38,28 @@ namespace traits {
 /// \brief Check for field pointers in `T` to support automatic field
 /// serialization.
 ///
-/// The implementation checks for a nested type `T::field_pointers`.
-ASH_MAKE_NESTED_TYPE_CHECKER(has_field_pointers, field_pointers);
+/// The implementation checks for a nested type `T::field_descriptors`.
+ASH_MAKE_NESTED_TYPE_CHECKER(has_field_descriptors, field_descriptors);
 
 /// \brief Retrieve the field pointers for a type `T`.
 template <typename T, typename Enable = void>
-struct get_field_pointers;
+struct get_field_descriptors;
 
-/// \copydoc get_field_pointers
+/// \copydoc get_field_descriptors
 ///
-/// Specialization for types explicitly defining `T::field_pointers`.
+/// Specialization for types explicitly defining `T::field_descriptors`.
 template <typename T>
-struct get_field_pointers<T, std::enable_if_t<has_field_pointers_v<T>>> {
-  using type = typename T::field_pointers;
+struct get_field_descriptors<T, std::enable_if_t<has_field_descriptors_v<T>>> {
+  using type = typename T::field_descriptors;
 };
 
-/// \copydoc get_field_pointers
+/// \copydoc get_field_descriptors
 ///
 /// Specialization for types not defining `T::field_descriptors`, which defaults
 /// to an empty list of field descriptors.
 template <typename T>
-struct get_field_pointers<T, std::enable_if_t<!has_field_pointers_v<T>>> {
-  using type = mpt::value_pack<>;
-};
-
-template <typename T>
-using get_field_pointers_t = typename get_field_pointers<T>::type;
-
-/// Convert a value pack of field pointers to a pack of field descriptors.
-template <typename T>
-struct field_pointers_as_field_descriptors;
-
-template <auto... v>
-struct field_pointers_as_field_descriptors<mpt::value_pack<v...>> {
-  using type = mpt::pack<field_descriptor<v>...>;
-};
-
-template <typename T>
-using field_pointers_as_field_descriptors_t =
-    typename field_pointers_as_field_descriptors<T>::type;
-
-template <typename T>
-struct get_field_descriptors {
-  using type = field_pointers_as_field_descriptors_t<get_field_pointers_t<T>>;
+struct get_field_descriptors<T, std::enable_if_t<!has_field_descriptors_v<T>>> {
+  using type = mpt::pack<>;
 };
 
 template <typename T>
@@ -175,7 +154,7 @@ inline constexpr custom_serialization_version_type
 /// it implements custom serialization.
 template <typename T>
 struct can_be_serialized
-    : std::integral_constant<bool, has_field_pointers_v<T> ||
+    : std::integral_constant<bool, has_field_descriptors_v<T> ||
                                        has_custom_serialization_v<T>> {};
 
 template <typename T>

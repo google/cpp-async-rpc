@@ -57,7 +57,7 @@ struct serializable_mixin<false, OwnType, Bases...> : Bases... {
   void save(S& s) const = delete;
   template <typename S>
   void load(S& s) = delete;
-  using field_pointers = mpt::value_pack<>;
+  using field_descriptors = mpt::pack<>;
 };
 
 template <typename OwnType, typename... Bases>
@@ -82,7 +82,8 @@ struct field_descriptor : public traits::member_data_pointer_traits<mptr> {
   static const char* name() {
     using class_type = typename field_descriptor<mptr>::class_type;
     return class_type::field_names()
-        [mpt::find_v<typename class_type::field_pointers, mpt::is_value<mptr>>];
+        [mpt::find_v<typename class_type::field_descriptors,
+                     mpt::is_type<field_descriptor<mptr>>>];
   }
 };
 
@@ -102,7 +103,7 @@ using dynamic = std::conditional_t<
     serializable<OwnType, ::ash::dynamic_base_class, Bases...>>;
 
 /// Define a `field_descriptor` type for a member field named `NAME`.
-#define ASH_FIELD(NAME) &own_type::NAME
+#define ASH_FIELD(NAME) ::ash::field_descriptor<&own_type::NAME>
 #define ASH_FIELD_SEP() ,
 #define ASH_FIELD_NAME(NAME) #NAME
 #define ASH_FIELD_NAME_SEP() ,
@@ -112,14 +113,15 @@ using dynamic = std::conditional_t<
 #define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define ASH_FIELDS(...)                                                      \
-  using field_pointers = ::ash::mpt::value_pack<ASH_FOREACH(                 \
-      ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;                               \
-  static const std::array<const char*, ::ash::mpt::size_v<field_pointers>>&  \
-  field_names() {                                                            \
-    static const std::array<const char*, ::ash::mpt::size_v<field_pointers>> \
-        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)}; \
-    return names;                                                            \
+#define ASH_FIELDS(...)                                                        \
+  using field_descriptors =                                                    \
+      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;    \
+  static const std::array<const char*, ::ash::mpt::size_v<field_descriptors>>& \
+  field_names() {                                                              \
+    static const std::array<const char*,                                       \
+                            ::ash::mpt::size_v<field_descriptors>>             \
+        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)};   \
+    return names;                                                              \
   }
 
 /// Version of the load/save methods.
