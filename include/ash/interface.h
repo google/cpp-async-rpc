@@ -50,27 +50,53 @@ struct interface : virtual Extends... {
   virtual ~interface() {}
 };
 
-/// Define a `method_descriptor` type for a method named `NAME`.
-#define ASH_METHOD(NAME) ::ash::method_descriptor<&own_interface::NAME>
-#define ASH_METHOD_SEP() ,
-#define ASH_METHOD_NAME(NAME) #NAME
-#define ASH_METHOD_NAME_SEP() ,
+#define ASH_INTERFACE_EXTENDS_ONE(...) ASH_EXPAND_1 __VA_ARGS__
+#define ASH_INTERFACE_EXTENDS_SEP() ,
+#define ASH_INTERFACE_EXTENDS(...) \
+  ASH_FOREACH(ASH_INTERFACE_EXTENDS_ONE, ASH_INTERFACE_EXTENDS_SEP, __VA_ARGS__)
 
-/// Needed to find our own interface class in template interfaces, as the base
-/// class is dependent.
-#define ASH_OWN_INTERFACE(...) using own_interface = __VA_ARGS__
+#define ASH_INTERFACE_DECL_ARG(TYPE, NAME) ASH_EXPAND_1 TYPE NAME
+#define ASH_INTERFACE_DECL_ARGS_ONE(...) ASH_INTERFACE_DECL_ARG __VA_ARGS__
+#define ASH_INTERFACE_DECL_ARGS_SEP() ,
+#define ASH_INTERFACE_DECL_ARGS(...) \
+  ASH_DEFER_2(ASH_FOREACH_AGAIN)     \
+  ()(ASH_INTERFACE_DECL_ARGS_ONE, ASH_INTERFACE_DECL_ARGS_SEP, __VA_ARGS__)
+#define ASH_INTERFACE_DECL(RETURN, METHOD, ARGS) \
+  virtual ASH_EXPAND_1 RETURN METHOD(ASH_INTERFACE_DECL_ARGS ARGS) = 0;
+#define ASH_INTERFACE_DECLS_ONE(...) ASH_INTERFACE_DECL __VA_ARGS__
+#define ASH_INTERFACE_DECLS_SEP()
+#define ASH_INTERFACE_DECLS(...) \
+  ASH_FOREACH(ASH_INTERFACE_DECLS_ONE, ASH_INTERFACE_DECLS_SEP, __VA_ARGS__)
 
-/// Define the list of `method_descriptor` elements for the current interface.
-#define ASH_METHODS(...)                                                       \
-  using method_descriptors =                                                   \
-      ::ash::mpt::pack<ASH_FOREACH(ASH_METHOD, ASH_METHOD_SEP, __VA_ARGS__)>;  \
-  static const std::array<const char *,                                        \
-                          ::ash::mpt::size_v<method_descriptors>>              \
-      &method_names() {                                                        \
-    static const std::array<const char *,                                      \
-                            ::ash::mpt::size_v<method_descriptors>>            \
-        names{ASH_FOREACH(ASH_METHOD_NAME, ASH_METHOD_NAME_SEP, __VA_ARGS__)}; \
-    return names;                                                              \
+#define ASH_INTERFACE_METHOD(RETURN, METHOD, ARGS) \
+  ::ash::method_descriptor<&own_interface::METHOD>
+#define ASH_INTERFACE_METHODS_ONE(...) ASH_INTERFACE_METHOD __VA_ARGS__
+#define ASH_INTERFACE_METHODS_SEP() ,
+#define ASH_INTERFACE_METHODS(...) \
+  ASH_FOREACH(ASH_INTERFACE_METHODS_ONE, ASH_INTERFACE_METHODS_SEP, __VA_ARGS__)
+
+#define ASH_INTERFACE_METHOD_NAME(RETURN, METHOD, ARGS) #METHOD
+#define ASH_INTERFACE_METHOD_NAMES_ONE(...) \
+  ASH_INTERFACE_METHOD_NAME __VA_ARGS__
+#define ASH_INTERFACE_METHOD_NAMES_SEP() ,
+#define ASH_INTERFACE_METHOD_NAMES(...)                                       \
+  ASH_FOREACH(ASH_INTERFACE_METHOD_NAMES_ONE, ASH_INTERFACE_METHOD_NAMES_SEP, \
+              __VA_ARGS__)
+
+#define ASH_INTERFACE(NAME, EXTENDS, METHODS)                                \
+  struct NAME : ::ash::interface<NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))( \
+                    , ) ASH_EXPAND(ASH_INTERFACE_EXTENDS EXTENDS)> {         \
+    ASH_EXPAND(ASH_INTERFACE_DECLS METHODS)                                  \
+    using method_descriptors =                                               \
+        ::ash::mpt::pack<ASH_EXPAND(ASH_INTERFACE_METHODS METHODS)>;         \
+    static const std::array<const char *,                                    \
+                            ::ash::mpt::size_v<method_descriptors>>          \
+        &method_names() {                                                    \
+      static const std::array<const char *,                                  \
+                              ::ash::mpt::size_v<method_descriptors>>        \
+          names{ASH_EXPAND(ASH_INTERFACE_METHOD_NAMES METHODS)};             \
+      return names;                                                          \
+    }                                                                        \
   }
 
 }  // namespace ash

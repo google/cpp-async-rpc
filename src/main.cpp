@@ -1,3 +1,29 @@
+#include "ash/interface.h"
+
+// clang-format off
+ASH_INTERFACE(
+    Reader, (),
+    (
+        // Get the value of a variable.
+        ((std::string), get, (((const std::string&), name)))
+    )
+);
+
+ASH_INTERFACE(
+    Writer, ((Reader)),
+    (
+        // Set the value of a variable.
+        ((void), set,
+            (((const std::string&), name),
+            ((const std::string&), value))),
+
+        // Reset the server.
+        ((void), clear, ())
+
+    )
+);
+// clang-format on
+
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -10,7 +36,6 @@
 #include "ash/connection.h"
 #include "ash/errors.h"
 #include "ash/highway_hash.h"
-#include "ash/interface.h"
 #include "ash/iostream_adapters.h"
 #include "ash/linux/connection.h"
 #include "ash/mpt.h"
@@ -20,6 +45,7 @@
 #include "ash/string_adapters.h"
 #include "ash/type_hash.h"
 
+/*
 struct T1 : ash::interface<T1> {
   virtual void f1(int) = 0;
 
@@ -43,6 +69,7 @@ struct T2 : ash::interface<T2, T1> {
 struct T2::proxy : public virtual T2, public virtual T1::proxy {
   void f2(int) override {}
 };
+*/
 
 template <typename R>
 struct K : ash::serializable<K<R>> {
@@ -112,13 +139,6 @@ struct kk {
 
 ASH_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
-struct MyInterface : ash::interface<MyInterface> {
-  virtual void Method1(int x) const = 0;
-  virtual int Method2(int x, int y) = 0;
-  virtual void Method3(int x) const = 0;
-  ASH_METHODS(Method1, Method2);
-};
-
 void xxd(const std::string& data) {
   std::size_t i = 0;
   while (i < data.size()) {
@@ -153,17 +173,11 @@ void xxd(const std::string& data) {
 }
 
 int main() {
-  T2::proxy proxy;
-  std::cerr << sizeof(T1) << std::endl;
-  std::cerr << sizeof(T1::proxy) << std::endl;
-  std::cerr << sizeof(T2) << std::endl;
-  std::cerr << sizeof(T2::proxy) << std::endl;
-
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
 
-  std::cerr << ash::traits::member_function_pointer_traits<
-                   &MyInterface::Method3>::is_const
-            << std::endl;
+  std::cerr
+      << ash::traits::member_function_pointer_traits<&Reader::get>::is_const
+      << std::endl;
 
   try {
     ash::error_factory::get().throw_error("out_of_range", "It's way off!");
@@ -295,12 +309,12 @@ int main() {
                    1, ash::traits::get_field_descriptors_t<z::Z>>::type::name()
             << std::endl;
 
-  std::cerr << ash::mpt::element_type_t<
-                   0, MyInterface::method_descriptors>::type::name()
-            << std::endl;
-  std::cerr << ash::mpt::element_type_t<
-                   1, MyInterface::method_descriptors>::type::name()
-            << std::endl;
+  std::cerr
+      << ash::mpt::element_type_t<0, Writer::method_descriptors>::type::name()
+      << std::endl;
+  std::cerr
+      << ash::mpt::element_type_t<1, Writer::method_descriptors>::type::name()
+      << std::endl;
 
   try {
     std::string data = "Hello";
