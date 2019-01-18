@@ -185,6 +185,8 @@ struct bad_connection {
 int main() {
   bad_connection bc;
   auto proxy = Writer::make_proxy(bc);
+  f<decltype(proxy)>();
+  proxy.get("something");
   proxy.clear();
 
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
