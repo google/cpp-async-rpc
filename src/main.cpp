@@ -172,7 +172,21 @@ void xxd(const std::string& data) {
   std::cerr << std::endl;
 }
 
+struct bad_connection {
+  template <auto mfp, typename... Args>
+  auto call(Args&&... args) ->
+      typename ash::traits::member_function_pointer_traits<mfp>::return_type {
+    return (static_cast<typename ash::traits::member_function_pointer_traits<
+                mfp>::class_type*>(nullptr)
+                ->*mfp)(std::forward<Args>(args)...);
+  }
+};
+
 int main() {
+  bad_connection bc;
+  auto proxy = Writer::make_proxy(bc);
+  proxy.clear();
+
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
 
   std::cerr
