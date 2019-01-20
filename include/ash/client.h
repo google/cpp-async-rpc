@@ -85,7 +85,7 @@ class client_connection {
         std::string exception_type, exception_message;
         decoder(exception_type);
         decoder(exception_message);
-        ash::error_factory::get().throw_error(exception_type,
+        ash::error_factory::get().throw_error(exception_type.c_str(),
                                               exception_message.c_str());
       }
       if constexpr (!std::is_same_v<return_type, void>) {
