@@ -22,7 +22,10 @@
 #ifndef INCLUDE_ASH_CONNECTION_H_
 #define INCLUDE_ASH_CONNECTION_H_
 
+#include <condition_variable>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -53,9 +56,10 @@ class connection : public input_stream, public output_stream {
 template <typename Connection>
 class reconnectable_connection : public connection {
  private:
-  Connection& get() {
-    if (!connection_) throw errors::io_error("Connection is closed");
-    return *connection_;
+  std::shared_ptr<Connection> get() {
+    auto res = ptr_;
+    if (!res) throw errors::io_error("Connection is closed");
+    return res;
   }
 
  public:
@@ -72,36 +76,53 @@ class reconnectable_connection : public connection {
   ~reconnectable_connection() override { disconnect(); }
 
   void connect() override {
-    if (!connection_ || !connection_->connected()) {
+    std::scoped_lock lock(mu_);
+    if (!ptr_ || !ptr_->connected()) {
       connection_factory_();
+      ptr_.reset(&*connection_, [this](Connection*) {
+        {
+          std::scoped_lock lock(mu_);
+          connection_.reset();
+        }
+        done_.notify_all();
+      });
     }
   }
 
   void disconnect() override {
-    if (connection_) {
-      connection_->disconnect();
-      connection_.reset();
+    std::unique_lock lock(mu_);
+
+    if (ptr_) {
+      ptr_->disconnect();
+      ptr_.reset();
+      done_.wait(lock, [this]() { return !connection_; });
     }
   }
 
-  bool connected() override { return connection_ && connection_->connected(); }
+  bool connected() override {
+    auto ptr = ptr_;
+    return ptr && ptr->connected();
+  }
 
   void write(const char* data, std::size_t size) override {
-    get().write(data, size);
+    get()->write(data, size);
   }
 
-  void putc(char c) override { get().putc(c); }
+  void putc(char c) override { get()->putc(c); }
 
-  void flush() override { get().flush(); }
+  void flush() override { get()->flush(); }
 
   std::size_t read(char* data, std::size_t size) override {
-    return get().read(data, size);
+    return get()->read(data, size);
   }
 
-  char getc() override { return get().getc(); }
+  char getc() override { return get()->getc(); }
 
  private:
   std::optional<Connection> connection_;
+  std::shared_ptr<Connection> ptr_;
+  std::mutex mu_;
+  std::condition_variable done_;
   std::function<void()> connection_factory_;
 };
 
