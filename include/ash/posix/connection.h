@@ -1,5 +1,5 @@
 /// \file
-/// \brief Linux-specific connection implementations.
+/// \brief POSIX-specific connection implementations.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_LINUX_CONNECTION_H_
-#define INCLUDE_ASH_LINUX_CONNECTION_H_
+#ifndef INCLUDE_ASH_POSIX_CONNECTION_H_
+#define INCLUDE_ASH_POSIX_CONNECTION_H_
 
 #include <errno.h>
 #include <fcntl.h>
@@ -203,4 +203,4 @@ class char_dev_connection : public fd_connection {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_LINUX_CONNECTION_H_
+#endif  // INCLUDE_ASH_POSIX_CONNECTION_H_
