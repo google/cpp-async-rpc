@@ -37,8 +37,6 @@
 
 namespace ash {
 
-#define ASH_CALL(...) call<decltype(&__VA_ARGS__), &__VA_ARGS__>
-
 template <typename Encoder = little_endian_binary_encoder,
           typename Decoder = little_endian_binary_decoder>
 class client_connection {
