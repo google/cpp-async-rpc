@@ -24,6 +24,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -43,7 +44,7 @@ class client_connection {
  private:
   struct remote_object {
     remote_object(client_connection<Encoder, Decoder>& connection,
-                  const std::string& name)
+                  std::string_view name)
         : connection_(connection), name_(name) {}
 
     template <auto mptr, typename... A>
@@ -104,7 +105,7 @@ class client_connection {
       : connection_(connection) {}
 
   template <typename I>
-  auto get_proxy(const std::string& name) {
+  auto get_proxy(std::string_view name) {
     return I::make_proxy(remote_object(*this, name));
   }
 

@@ -224,7 +224,7 @@ int main() {
       slpci3("/dev/tty");
   ash::client_connection<> conn(slpci3);
   auto obj = conn.get_proxy<Reader>("default");
-  std::cerr << obj.get("variable") << std::endl;
+  std::cerr << "XX" << obj.get("variable") << "XX" << std::endl;
 
   std::uint64_t key[4] = {1, 2, 3, 4};
 

@@ -62,7 +62,8 @@ class reconnectable_connection : public connection {
   template <typename... Args>
   explicit reconnectable_connection(Args&&... args)
       : connection_factory_(
-            [args_tuple = std::make_tuple(std::move<Args>(args)...), this]() {
+            [args_tuple = std::make_tuple(std::forward<Args>(args)...),
+             this]() {
               return std::apply(
                   [this](const auto&... args) { connection_.emplace(args...); },
                   args_tuple);
