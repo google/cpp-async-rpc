@@ -24,6 +24,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include "ash/const_char_ptr_compare.h"
 #include "ash/container/flat_map.h"
 #include "ash/singleton.h"
@@ -31,16 +32,16 @@
 #define ERROR_CLASS(NAME)                                                   \
   class NAME;                                                               \
   template <>                                                               \
-  const char* ::ash::errors::detail::error_class_descriptor<                \
-      NAME>::error_class_name =                                             \
-      ::ash::error_factory::get().register_error_class<NAME>(#NAME);        \
+  const std::string_view                                                    \
+      detail::error_class_descriptor<NAME>::error_class_name =              \
+          ::ash::error_factory::get().register_error_class<NAME>(#NAME);    \
                                                                             \
   class NAME : public ::ash::errors::base_error {                           \
    public:                                                                  \
     using ::ash::errors::base_error::base_error;                            \
                                                                             \
    private:                                                                 \
-    const char* portable_error_class_name_internal() const override {       \
+    std::string_view portable_error_class_name_internal() const override {  \
       using Descriptor = ash::errors::detail::error_class_descriptor<NAME>; \
       if (Descriptor::error_class_name == nullptr)                          \
         throw std::runtime_error("Error class had no name set");            \
@@ -54,21 +55,20 @@ class error_factory : public singleton<error_factory> {
  public:
   using error_function_type = void (*)(const char*);
 
-  void throw_error(const char* error_class_name, const char* what);
+  void throw_error(std::string_view error_class_name, const char* what);
 
   template <typename T>
-  const char* register_error_class(const char* error_class_name);
+  std::string_view register_error_class(std::string_view error_class_name);
 
  private:
-  ash::flat_map<const char*, error_function_type, const_char_ptr_compare>
-      error_function_map_;
+  ash::flat_map<std::string_view, error_function_type> error_function_map_;
 };
 
 namespace errors {
 namespace detail {
 template <typename T>
 struct error_class_descriptor {
-  static const char* error_class_name;
+  static const std::string_view error_class_name;
 };
 }  // namespace detail
 
@@ -77,12 +77,12 @@ class base_error : public std::runtime_error {
   using std::runtime_error::runtime_error;
   virtual ~base_error() {}
 
-  const char* portable_error_class_name() const {
+  std::string_view portable_error_class_name() const {
     return portable_error_class_name_internal();
   }
 
  private:
-  virtual const char* portable_error_class_name_internal() const = 0;
+  virtual std::string_view portable_error_class_name_internal() const = 0;
 };
 
 // Actual error class definitions.
@@ -100,7 +100,7 @@ ERROR_CLASS(not_implemented);
 
 }  // namespace errors
 
-void error_factory::throw_error(const char* error_class_name,
+void error_factory::throw_error(std::string_view error_class_name,
                                 const char* what) {
   auto it = error_function_map_.find(error_class_name);
   if (it == error_function_map_.end()) {
@@ -112,7 +112,8 @@ void error_factory::throw_error(const char* error_class_name,
 }
 
 template <typename T>
-const char* error_factory::register_error_class(const char* error_class_name) {
+std::string_view error_factory::register_error_class(
+    std::string_view error_class_name) {
   // Register the class into this factory for object creation.
   error_function_type f = [](const char* what) { throw T(what); };
   if (!error_function_map_.emplace(error_class_name, f).second)

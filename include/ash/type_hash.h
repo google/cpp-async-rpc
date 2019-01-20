@@ -61,7 +61,8 @@ enum class type_family : std::uint8_t {
   BASE_CLASS,
   FIELD,
   CUSTOM_SERIALIZATION,
-  SEEN_TYPE_BACKREFERENCE
+  SEEN_TYPE_BACKREFERENCE,
+  FUNCTION,
 };
 
 constexpr std::size_t FAMILY_OFFSET = 0;
@@ -273,6 +274,14 @@ struct type_hash<
   static constexpr std::uint32_t value = detail::type_hash_add(
       with_fields, detail::type_family::CUSTOM_SERIALIZATION, false,
       get_custom_serialization_version_v<T>);
+};
+
+template <typename R, typename... A, typename Seen, std::uint32_t base>
+struct type_hash<R(A...), Seen, base,
+                 std::enable_if_t<!mpt::is_type_in_v<R(A...), Seen>>> {
+  static constexpr std::uint32_t value = detail::compose_with_types<
+      detail::type_hash_add(base, detail::type_family::FUNCTION, false, 0),
+      mpt::insert_type_into_t<R(A...), Seen>, R, A...>::value;
 };
 
 template <typename T>

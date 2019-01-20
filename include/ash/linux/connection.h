@@ -49,7 +49,7 @@ class fd_connection : public connection {
   class fd_lock {
    public:
     explicit fd_lock(fd_connection& conn) : conn_(conn) {
-      std::lock_guard<std::mutex> lock(conn_.mu_);
+      std::scoped_lock lock(conn_.mu_);
       conn_.lock_count_++;
     }
 
@@ -57,7 +57,7 @@ class fd_connection : public connection {
       bool last = false;
 
       {
-        std::lock_guard<std::mutex> lock(conn_.mu_);
+        std::scoped_lock lock(conn_.mu_);
         if (!--conn_.lock_count_) {
           last = true;
         }
@@ -82,12 +82,12 @@ class fd_connection : public connection {
   ~fd_connection() override { disconnect(); }
 
   bool connected() override {
-    std::lock_guard<std::mutex> lock(mu_);
+    std::scoped_lock lock(mu_);
     return (fd_ >= 0);
   }
 
   void disconnect() override {
-    std::unique_lock<std::mutex> lock(mu_);
+    std::unique_lock lock(mu_);
     if (fd_ < 0) {
       // Already disconnected.
       return;

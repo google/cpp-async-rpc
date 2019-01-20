@@ -28,8 +28,9 @@
 #include <type_traits>
 #include <utility>
 #include "ash/binary_codecs.h"
+#include "ash/connection.h"
+#include "ash/errors.h"
 #include "ash/interface.h"
-#include "ash/packet_protocols.h"
 #include "ash/string_adapters.h"
 #include "ash/traits/type_traits.h"
 #include "ash/type_hash.h"
@@ -38,94 +39,86 @@ namespace ash {
 
 #define ASH_CALL(...) call<decltype(&__VA_ARGS__), &__VA_ARGS__>
 
-template <typename Encoder, typename Decoder>
-class remote_object;
-
 template <typename Encoder = little_endian_binary_encoder,
           typename Decoder = little_endian_binary_decoder>
 class client_connection {
- public:
-  explicit client_connection(packet_protocol& protocol) : protocol_(protocol) {}
+ private:
+  struct remote_object {
+    remote_object(client_connection<Encoder, Decoder>& connection,
+                  const std::string& name)
+        : connection_(connection), name_(name) {}
 
-  remote_object<Encoder, Decoder> object(const std::string& name);
+    template <auto mptr, typename... A>
+    typename traits::member_function_pointer_traits<mptr>::return_type call(
+        A&&... args) {
+      using return_type =
+          typename traits::member_function_pointer_traits<mptr>::return_type;
+      using method_type =
+          typename traits::member_function_pointer_traits<mptr>::method_type;
+
+      // Get a serializable tuple with the args.
+      using args_ref_tuple_type =
+          typename traits::member_function_pointer_traits<
+              mptr>::args_ref_tuple_type;
+      args_ref_tuple_type args_refs(std::forward<A>(args)...);
+
+      // Serialize to a string.
+      std::string request;
+      string_output_stream request_os(request);
+      Encoder encoder(request_os);
+      // Name of the remote object.
+      encoder(name_);
+      // Method name.
+      using method_descriptor = method_descriptor<mptr>;
+      encoder(method_descriptor::name());
+      // Method signature hash.
+      constexpr auto method_hash = traits::type_hash<method_type>::value;
+      encoder(method_hash);
+      // Actual arguments.
+      encoder(args_refs);
+
+      // Send the request, receive and deserialize the result.
+      std::string response(connection_.send(std::move(request)));
+      string_input_stream response_is(response);
+      Decoder decoder(response_is);
+      bool got_exception;
+      decoder(got_exception);
+      if (got_exception) {
+        std::string exception_type, exception_message;
+        decoder(exception_type);
+        decoder(exception_message);
+        ash::error_factory::get().throw_error(exception_type,
+                                              exception_message.c_str());
+      }
+      if constexpr (!std::is_same_v<return_type, void>) {
+        return_type result;
+        decoder(result);
+        return result;
+      }
+    }
+
+    client_connection<Encoder, Decoder>& connection_;
+    const std::string name_;
+  };
+
+ public:
+  explicit client_connection(packet_connection& connection)
+      : connection_(connection) {}
+
+  template <typename I>
+  auto get_proxy(const std::string& name) {
+    return I::make_proxy(remote_object(*this, name));
+  }
 
  private:
-  friend class remote_object<Encoder, Decoder>;
-
-  std::string send(std::string&& request) {
-    protocol_.send(std::move(request));
-    return protocol_.receive();
+  std::string send(std::string request) {
+    connection_.connect();
+    connection_.send(std::move(request));
+    return connection_.receive();
   }
 
-  packet_protocol& protocol_;
+  packet_connection& connection_;
 };
-
-template <typename Encoder, typename Decoder>
-class remote_object {
- public:
-  template <typename MFP, MFP mptr, typename... A>
-  typename traits::member_function_pointer_traits<MFP, mptr>::return_type call(
-      A... args) {
-    using return_type =
-        typename traits::member_function_pointer_traits<MFP, mptr>::return_type;
-    using method_type =
-        typename traits::member_function_pointer_traits<MFP, mptr>::method_type;
-
-    // Get a serializable tuple with the args.
-    using args_ref_tuple_type = typename traits::member_function_pointer_traits<
-        MFP, mptr>::args_ref_tuple_type;
-    args_ref_tuple_type args_refs(args...);
-
-    // Serialize to a string.
-    std::string request;
-    string_output_stream request_os(request);
-    Encoder encoder(request_os);
-    // Name of the remote object.
-    encoder(name_);
-    // Method name.
-    using method_descriptor = typename get_method_descriptor<MFP, mptr>::type;
-    encoder(method_descriptor::name());
-    // Method signature hash.
-    constexpr auto method_hash = traits::type_hash<method_type>::value;
-    encoder(method_hash);
-    // Actual arguments.
-    encoder(args_refs);
-
-    // Send the request, receive and deserialize the result.
-    std::string response(connection_.send(std::move(request)));
-    string_input_stream response_is(response);
-    Decoder decoder(response_is);
-    return decode<return_type>(decoder);
-  }
-
- private:
-  template <typename R>
-  typename std::enable_if<std::is_same<void, R>::value, R>::type decode(
-      Decoder& decoder) {}
-
-  template <typename R>
-  typename std::enable_if<!std::is_same<void, R>::value, R>::type decode(
-      Decoder& decoder) {
-    R result;
-    decoder(result);
-    return result;
-  }
-
-  friend class client_connection<Encoder, Decoder>;
-
-  remote_object(client_connection<Encoder, Decoder>& connection,
-                const std::string& name)
-      : connection_(connection), name_(name) {}
-
-  client_connection<Encoder, Decoder>& connection_;
-  const std::string name_;
-};
-
-template <typename Encoder, typename Decoder>
-remote_object<Encoder, Decoder> client_connection<Encoder, Decoder>::object(
-    const std::string& name) {
-  return {*this, name};
-}
 
 }  // namespace ash
 

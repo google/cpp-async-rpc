@@ -23,7 +23,7 @@
 #define INCLUDE_ASH_CONNECTION_H_
 
 #include <functional>
-#include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -53,57 +53,55 @@ class connection : public input_stream, public output_stream {
 template <typename Connection>
 class reconnectable_connection : public connection {
  private:
-  std::shared_ptr<Connection> get() {
-    auto res = connection_;
-    if (!res) throw errors::io_error("Connection is closed");
-    return res;
+  Connection& get() {
+    if (!connection_) throw errors::io_error("Connection is closed");
+    return *connection_;
   }
 
  public:
   template <typename... Args>
   explicit reconnectable_connection(Args&&... args)
       : connection_factory_(
-            [args_tuple = std::make_tuple(std::move<Args>(args)...)]() {
+            [args_tuple = std::make_tuple(std::move<Args>(args)...), this]() {
               return std::apply(
-                  [](const auto&... args) {
-                    return std::make_unique<Connection>(args...);
-                  },
+                  [this](const auto&... args) { connection_.emplace(args...); },
                   args_tuple);
             }) {}
 
   ~reconnectable_connection() override { disconnect(); }
 
   void connect() override {
-    auto c = connection_;
-    if (!c || !c->connected()) {
-      connection_ = connection_factory_();
+    if (!connection_ || !connection_->connected()) {
+      connection_factory_();
     }
   }
 
-  void disconnect() override { connection_.reset(); }
-
-  bool connected() override {
-    auto c = connection_;
-    return c && c->connected();
+  void disconnect() override {
+    if (connection_) {
+      connection_->disconnect();
+      connection_.reset();
+    }
   }
+
+  bool connected() override { return connection_ && connection_->connected(); }
 
   void write(const char* data, std::size_t size) override {
-    get()->write(data, size);
+    get().write(data, size);
   }
 
-  void putc(char c) override { get()->putc(c); }
+  void putc(char c) override { get().putc(c); }
 
-  void flush() override { get()->flush(); }
+  void flush() override { get().flush(); }
 
   std::size_t read(char* data, std::size_t size) override {
-    return get()->read(data, size);
+    return get().read(data, size);
   }
 
-  char getc() override { return get()->getc(); }
+  char getc() override { return get().getc(); }
 
  private:
-  std::shared_ptr<Connection> connection_;
-  std::function<std::unique_ptr<Connection>()> connection_factory_;
+  std::optional<Connection> connection_;
+  std::function<void()> connection_factory_;
 };
 
 class packet_connection {

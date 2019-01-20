@@ -1,4 +1,24 @@
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <thread>
+#include "ash.h"
+#include "ash/client.h"
+#include "ash/connection.h"
+#include "ash/errors.h"
+#include "ash/highway_hash.h"
 #include "ash/interface.h"
+#include "ash/iostream_adapters.h"
+#include "ash/linux/connection.h"
+#include "ash/mpt.h"
+#include "ash/packet_codecs.h"
+#include "ash/packet_protocols.h"
+#include "ash/serializable.h"
+#include "ash/string_adapters.h"
+#include "ash/type_hash.h"
 
 // clang-format off
 ASH_INTERFACE(
@@ -23,53 +43,6 @@ ASH_INTERFACE(
     )
 );
 // clang-format on
-
-#include <chrono>
-#include <iomanip>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <thread>
-#include "ash.h"
-// #include "ash/client.h"
-#include "ash/connection.h"
-#include "ash/errors.h"
-#include "ash/highway_hash.h"
-#include "ash/iostream_adapters.h"
-#include "ash/linux/connection.h"
-#include "ash/mpt.h"
-#include "ash/packet_codecs.h"
-#include "ash/packet_protocols.h"
-#include "ash/serializable.h"
-#include "ash/string_adapters.h"
-#include "ash/type_hash.h"
-
-/*
-struct T1 : ash::interface<T1> {
-  virtual void f1(int) = 0;
-
-  ASH_METHODS(f1);
-
-  struct proxy;
-};
-
-struct T1::proxy : public virtual T1 {
-  void f1(int) override {}
-};
-
-struct T2 : ash::interface<T2, T1> {
-  virtual void f2(int) = 0;
-
-  ASH_METHODS(f2);
-
-  struct proxy;
-};
-
-struct T2::proxy : public virtual T2, public virtual T1::proxy {
-  void f2(int) override {}
-};
-*/
 
 template <typename R>
 struct K : ash::serializable<K<R>> {
@@ -183,17 +156,12 @@ struct bad_connection {
 };
 
 int main() {
-  bad_connection bc;
-  auto proxy = Writer::make_proxy(bc);
-  f<decltype(proxy)>();
-  proxy.get("something");
-  proxy.clear();
-
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
 
   std::cerr
+      << "X"
       << ash::traits::member_function_pointer_traits<&Reader::get>::is_const
-      << std::endl;
+      << "X" << std::endl;
 
   try {
     ash::error_factory::get().throw_error("out_of_range", "It's way off!");
@@ -202,6 +170,7 @@ int main() {
               << oor.what() << std::endl;
   }
 
+  /*
   ash::char_dev_connection cdc("/dev/tty");
 
   std::thread t1([&cdc] {
@@ -247,20 +216,15 @@ int main() {
   slpci2.connect();
   slpci2.send("hello");
   slpci2.disconnect();
-
-  /*
-  std::string req, res;
-  ash::string_output_stream req_os(req);
-  ash::string_input_stream res_is(res);
-  ash::serial_line_packet_protocol<> slpprpc(res_is, req_os);
-  // xxd(slpprpc.receive());
-  // return 0;
-  ash::client_connection<> conn(slpprpc);
-  auto obj = conn.object("default");
-  obj.ASH_CALL(MyInterface::Method2)(133, 22);
-
-  xxd(req);
   */
+
+  ash::packet_connection_impl<
+      ash::reconnectable_connection<ash::char_dev_connection>,
+      ash::protected_stream_packet_protocol<>>
+      slpci3("/dev/tty");
+  ash::client_connection<> conn(slpci3);
+  auto obj = conn.get_proxy<Reader>("default");
+  std::cerr << obj.get("variable") << std::endl;
 
   std::uint64_t key[4] = {1, 2, 3, 4};
 
