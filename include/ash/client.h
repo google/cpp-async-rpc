@@ -22,11 +22,16 @@
 #ifndef INCLUDE_ASH_CLIENT_H_
 #define INCLUDE_ASH_CLIENT_H_
 
+#include <condition_variable>
+#include <future>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include "ash/binary_codecs.h"
 #include "ash/connection.h"
@@ -102,7 +107,20 @@ class client_connection {
 
  public:
   explicit client_connection(packet_connection& connection)
-      : connection_(connection) {}
+      : sequence_(0),
+        stopping_(false),
+        connection_(connection),
+        receiver_(&client_connection<Encoder, Decoder>::receive, this) {}
+
+  ~client_connection() {
+    {
+      std::scoped_lock lock(mu_);
+      stopping_ = true;
+      connection_.disconnect();
+    }
+    start_stop_cond_.notify_all();
+    receiver_.join();
+  }
 
   template <typename I>
   auto get_proxy(std::string_view name) {
@@ -110,13 +128,94 @@ class client_connection {
   }
 
  private:
+  using pending_map_type =
+      std::unordered_map<std::uint32_t, std::promise<std::string>>;
+
   std::string send(std::string request) {
-    connection_.connect();
-    connection_.send(std::move(request));
-    return connection_.receive();
+    std::future<std::string> result;
+    {
+      std::scoped_lock lock(mu_);
+      auto req_id = sequence_++;
+      request.reserve(request.size() + sizeof(req_id));
+      for (std::size_t i = 0; i < sizeof(req_id); i++) {
+        request.push_back((req_id >> (8 * i)) & 0xff);
+      }
+      try {
+        connection_.connect();
+        connection_.send(std::move(request));
+      } catch (...) {
+        // Disconnect the connection.
+        connection_.disconnect();
+        throw;
+      }
+      result = pending_[req_id].get_future();
+    }
+    start_stop_cond_.notify_all();
+    return result.get();
   }
 
+  void receive() {
+    auto exc = std::current_exception();
+
+    while (true) {
+      {
+        std::unique_lock lock(mu_);
+
+        // Disconnect the connection.
+        connection_.disconnect();
+
+        // Report the exception for all pending requests and unqueue them.
+        for (auto& p : pending_) {
+          p.second.set_exception(exc);
+        }
+        pending_.clear();
+
+        start_stop_cond_.wait(
+            lock, [this]() { return stopping_ || !pending_.empty(); });
+        if (stopping_) {
+          return;
+        }
+      }
+
+      try {
+        while (true) {
+          // Read the next packet.
+          auto response = connection_.receive();
+          std::uint32_t req_id = 0;
+          if (response.size() >= sizeof(req_id)) {
+            // Find the req_id.
+            const std::uint8_t* ptr = reinterpret_cast<const std::uint8_t*>(
+                response.data() + response.size() - sizeof(req_id));
+            for (std::size_t i = 0; i < sizeof(req_id); i++) {
+              req_id <<= 8;
+              req_id |= static_cast<std::uint32_t>(*ptr++);
+            }
+            response.resize(response.size() - sizeof(req_id));
+
+            typename pending_map_type::node_type n;
+            {
+              std::scoped_lock lock(mu_);
+              n = pending_.extract(req_id);
+            }
+            if (!n.empty()) {
+              n.mapped().set_value(response);
+            }
+          }
+        }
+      } catch (...) {
+        // Record the exception
+        exc = std::current_exception();
+      }
+    }
+  }
+
+  std::mutex mu_;
+  std::uint32_t sequence_;
+  bool stopping_;
+  std::condition_variable start_stop_cond_;
   packet_connection& connection_;
+  std::thread receiver_;
+  pending_map_type pending_;
 };
 
 }  // namespace ash

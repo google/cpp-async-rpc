@@ -66,8 +66,9 @@ class mac_codec : public packet_codec {
     data.reserve(original_size + sizeof(std::uint64_t));
 
     // Get the hash; append it.
-    std::uint64_t hash = highway_hash::hash64(
-        reinterpret_cast<const uint8_t*>(data.data()), original_size, key_);
+    std::uint64_t hash =
+        highway_hash::hash64(reinterpret_cast<const std::uint8_t*>(data.data()),
+                             original_size, key_);
     for (std::size_t i = 0; i < sizeof(std::uint64_t); i++) {
       data.push_back(hash & 0xff);
       hash >>= 8;
@@ -81,10 +82,11 @@ class mac_codec : public packet_codec {
     std::size_t original_size = data.size() - sizeof(std::uint64_t);
 
     // Get the hash; verify it.
-    std::uint64_t hash = highway_hash::hash64(
-        reinterpret_cast<const uint8_t*>(data.data()), original_size, key_);
-    const uint8_t* ptr =
-        reinterpret_cast<const uint8_t*>(data.data()) + original_size;
+    std::uint64_t hash =
+        highway_hash::hash64(reinterpret_cast<const std::uint8_t*>(data.data()),
+                             original_size, key_);
+    const std::uint8_t* ptr =
+        reinterpret_cast<const std::uint8_t*>(data.data()) + original_size;
     for (std::size_t i = 0; i < sizeof(std::uint64_t); i++) {
       if (*ptr++ != (hash & 0xff)) {
         throw errors::data_mismatch("Hash mismatch in MAC decode");
