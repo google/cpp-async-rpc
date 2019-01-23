@@ -65,8 +65,8 @@ class fd_connection : public connection {
   };
 
  public:
-  explicit fd_connection(file_descriptor&& fd) : fd_(std::move(fd)) {
-    pipe(pipe_);
+  explicit fd_connection(file&& fd) : fd_(std::move(fd)) {
+    file::pipe(pipe_);
     fd_.make_non_blocking();
   }
 
@@ -172,8 +172,8 @@ class fd_connection : public connection {
   }
   std::mutex mu_;
   std::condition_variable idle_;
-  file_descriptor fd_;
-  file_descriptor pipe_[2];
+  file fd_;
+  file pipe_[2];
   bool closing_ = false;
   int lock_count_ = 0;
 };  // namespace ash
@@ -184,8 +184,8 @@ class char_dev_connection : public fd_connection {
       : fd_connection(open_path(path)) {}
 
  protected:
-  static file_descriptor open_path(const std::string& path) {
-    return open(path, open_mode::READ_PLUS);
+  static file open_path(const std::string& path) {
+    return file::open(path, file::open_mode::READ_PLUS);
   }
 };
 

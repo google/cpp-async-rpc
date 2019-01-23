@@ -32,19 +32,19 @@
 
 namespace ash {
 
-class file_descriptor {
+class file {
  public:
-  constexpr file_descriptor() noexcept : fd_(-1) {}
-  explicit file_descriptor(int fd) noexcept : fd_(fd) {}
-  file_descriptor(file_descriptor&& fd) noexcept : fd_(-1) { swap(fd); }
-  ~file_descriptor() noexcept {
+  constexpr file() noexcept : fd_(-1) {}
+  explicit file(int fd) noexcept : fd_(fd) {}
+  file(file&& fd) noexcept : fd_(-1) { swap(fd); }
+  ~file() noexcept {
     if (fd_ >= 0) {
       ::close(fd_);  // Ignore close-time errors to prevent exceptions.
     }
   }
-  void swap(file_descriptor& fd) noexcept { std::swap(fd_, fd.fd_); }
-  file_descriptor& operator=(file_descriptor&& fd) noexcept {
-    file_descriptor tmp;
+  void swap(file& fd) noexcept { std::swap(fd_, fd.fd_); }
+  file& operator=(file&& fd) noexcept {
+    file tmp;
     tmp.swap(fd);
     swap(tmp);
     return *this;
@@ -57,7 +57,7 @@ class file_descriptor {
   int get() const noexcept { return fd_; }
   int operator*() const noexcept { return fd_; }
   void reset(int fd = -1) noexcept {
-    file_descriptor tmp(fd);
+    file tmp(fd);
     swap(tmp);
   }
   explicit operator bool() const noexcept { return (fd_ >= 0); }
@@ -90,14 +90,37 @@ class file_descriptor {
           "Error making file descriptor non-blocking");
   }
 
-  file_descriptor dup() const {
+  file dup() const {
     if (!*this)
       throw_with_errno<errors::io_error>(
           "Trying to duplicate an empty file descriptor");
-    file_descriptor res(::dup(fd_));
+    file res(::dup(fd_));
     if (!res)
       throw_with_errno<errors::io_error>(
           "Error duplicating the file descriptor");
+    return res;
+  }
+
+  static void pipe(file fds[2]) {
+    int fd[2];
+    if (::pipe(fd))
+      throw_with_errno<errors::io_error>("Error creating pipe pair");
+    fds[0].reset(fd[0]);
+    fds[1].reset(fd[1]);
+  }
+
+  enum class open_mode : int {
+    READ = O_RDONLY,
+    WRITE = O_WRONLY | O_CREAT | O_TRUNC,
+    APPEND = O_WRONLY | O_CREAT | O_APPEND,
+    READ_PLUS = O_RDWR,
+    WRITE_PLUS = O_RDWR | O_CREAT | O_TRUNC,
+    APPEND_PLUS = O_RDWR | O_CREAT | O_APPEND,
+  };
+
+  static file open(const std::string& path, open_mode mode = open_mode::READ) {
+    file res(::open(path.c_str(), static_cast<int>(mode)));
+    if (!res) throw_with_errno<errors::io_error>("Error opening file");
     return res;
   }
 
@@ -105,48 +128,12 @@ class file_descriptor {
   int fd_;
 };
 
-bool operator==(const file_descriptor& a, const file_descriptor& b) {
-  return a.get() == b.get();
-}
-bool operator!=(const file_descriptor& a, const file_descriptor& b) {
-  return a.get() != b.get();
-}
-bool operator<(const file_descriptor& a, const file_descriptor& b) {
-  return a.get() < b.get();
-}
-bool operator<=(const file_descriptor& a, const file_descriptor& b) {
-  return a.get() <= b.get();
-}
-bool operator>(const file_descriptor& a, const file_descriptor& b) {
-  return a.get() > b.get();
-}
-bool operator>=(const file_descriptor& a, const file_descriptor& b) {
-  return a.get() >= b.get();
-}
-
-void pipe(file_descriptor fds[2]) {
-  int fd[2];
-  if (::pipe(fd))
-    throw_with_errno<errors::io_error>("Error creating pipe pair");
-  fds[0].reset(fd[0]);
-  fds[1].reset(fd[1]);
-}
-
-enum class open_mode : int {
-  READ = O_RDONLY,
-  WRITE = O_WRONLY | O_CREAT | O_TRUNC,
-  APPEND = O_WRONLY | O_CREAT | O_APPEND,
-  READ_PLUS = O_RDWR,
-  WRITE_PLUS = O_RDWR | O_CREAT | O_TRUNC,
-  APPEND_PLUS = O_RDWR | O_CREAT | O_APPEND,
-};
-
-file_descriptor open(const std::string& path,
-                     open_mode mode = open_mode::READ) {
-  file_descriptor res(::open(path.c_str(), static_cast<int>(mode)));
-  if (!res) throw_with_errno<errors::io_error>("Error opening file");
-  return res;
-}
+bool operator==(const file& a, const file& b) { return a.get() == b.get(); }
+bool operator!=(const file& a, const file& b) { return a.get() != b.get(); }
+bool operator<(const file& a, const file& b) { return a.get() < b.get(); }
+bool operator<=(const file& a, const file& b) { return a.get() <= b.get(); }
+bool operator>(const file& a, const file& b) { return a.get() > b.get(); }
+bool operator>=(const file& a, const file& b) { return a.get() >= b.get(); }
 
 }  // namespace ash
 
