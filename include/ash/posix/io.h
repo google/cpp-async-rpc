@@ -62,6 +62,8 @@ class file_descriptor {
   }
   explicit operator bool() const noexcept { return (fd_ >= 0); }
 
+  void close() noexcept { reset(); }
+
   std::size_t read(void* buf, std::size_t len) {
     auto num = ::read(fd_, buf, len);
     if (num < 0) throw_with_errno<errors::io_error>("Error reading");

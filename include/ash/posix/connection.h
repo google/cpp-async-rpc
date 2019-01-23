@@ -86,15 +86,15 @@ class fd_connection : public connection {
 
     if (!closing_) {
       closing_ = true;
-      pipe_[1].reset();
+      pipe_[1].close();
     }
 
     // Wait for all shared owners to go away.
     idle_.wait(lock, [this] { return lock_count_ == 0; });
 
     if (closing_) {
-      pipe_[0].reset();
-      fd_.reset();
+      pipe_[0].close();
+      fd_.close();
       closing_ = false;
     }
   }
