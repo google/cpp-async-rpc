@@ -170,7 +170,6 @@ int main() {
               << oor.what() << std::endl;
   }
 
-  /*
   ash::char_dev_connection cdc("/dev/tty");
 
   std::thread t1([&cdc] {
@@ -191,6 +190,7 @@ int main() {
 
   t1.join();
 
+  /*
   ash::packet_connection_impl<ash::char_dev_connection,
                               ash::serial_line_packet_protocol<>>
       slpci("/dev/tty");

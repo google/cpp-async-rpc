@@ -22,6 +22,7 @@
 #ifndef INCLUDE_ASH_ERRORS_H_
 #define INCLUDE_ASH_ERRORS_H_
 
+#include <cerrno>
 #include <stdexcept>
 #include <string>
 #include "ash/const_char_ptr_compare.h"
@@ -119,6 +120,15 @@ const char* error_factory::register_error_class(const char* error_class_name) {
     throw errors::invalid_state("Duplicate class registration");
 
   return error_class_name;
+}
+
+template <typename ET>
+void throw_with_errno(const std::string& message) {
+  throw ET(message + std::string(": ") + std::to_string(errno));
+}
+template <typename ET>
+void throw_with_errno(std::string&& message) {
+  throw ET(message + std::string(": ") + std::to_string(errno));
 }
 
 }  // namespace ash
