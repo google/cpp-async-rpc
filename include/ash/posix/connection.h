@@ -100,18 +100,14 @@ class fd_connection : public connection {
 
     while (size > 0) {
       try {
+        auto written = fd_.write(data, size);
+        size -= written;
+        data += written;
+      } catch (const errors::try_again&) {
         auto s = select(fd_.write(), pipe_[0].read());
-
         if (s[1])
           throw errors::shutting_down(
               "Write interrupted by connection shutdown");
-
-        if (s[0]) {
-          auto written = fd_.write(data, size);
-          size -= written;
-          data += written;
-        }
-      } catch (const errors::try_again&) {
       }
     }
   }
@@ -127,20 +123,16 @@ class fd_connection : public connection {
     std::size_t total_read = 0;
     while (size > 0) {
       try {
+        auto read = fd_.read(data, size);
+        if (read == 0) break;
+        size -= read;
+        data += read;
+        total_read += read;
+      } catch (const errors::try_again&) {
         auto s = select(fd_.read(), pipe_[0].read());
-
         if (s[1])
           throw errors::shutting_down(
               "Read interrupted by connection shutdown");
-
-        if (s[0]) {
-          auto read = fd_.read(data, size);
-          if (read == 0) break;
-          size -= read;
-          data += read;
-          total_read += read;
-        }
-      } catch (const errors::try_again&) {
       }
     }
     return total_read;
