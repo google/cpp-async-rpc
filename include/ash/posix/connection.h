@@ -65,8 +65,8 @@ class fd_connection : public connection {
   };
 
  public:
-  explicit fd_connection(file&& fd) : fd_(std::move(fd)) {
-    file::pipe(pipe_);
+  explicit fd_connection(channel&& fd) : fd_(std::move(fd)) {
+    pipe(pipe_);
     fd_.make_non_blocking();
   }
 
@@ -106,22 +106,24 @@ class fd_connection : public connection {
     fd_set fdrs, fdws;
 
     while (size > 0) {
-      FD_ZERO(&fdrs);
-      FD_ZERO(&fdws);
-      FD_SET(*pipe_[0], &fdrs);
-      FD_SET(*fd_, &fdws);
-      if (::select(1 + std::max(*fd_, *pipe_[0]), &fdrs, &fdws, nullptr,
-                   nullptr) < 0)
-        throw_with_errno<errors::io_error>("Error in select");
-      if (FD_ISSET(*pipe_[0], &fdrs))
-        throw errors::shutting_down("Write interrupted by connection shutdown");
+      try {
+        FD_ZERO(&fdrs);
+        FD_ZERO(&fdws);
+        FD_SET(*pipe_[0], &fdrs);
+        FD_SET(*fd_, &fdws);
+        if (::select(1 + std::max(*fd_, *pipe_[0]), &fdrs, &fdws, nullptr,
+                     nullptr) < 0)
+          throw_with_errno<errors::io_error>("Error in select");
+        if (FD_ISSET(*pipe_[0], &fdrs))
+          throw errors::shutting_down(
+              "Write interrupted by connection shutdown");
 
-      if (FD_ISSET(*fd_, &fdws)) {
-        auto written = fd_.write(data, size);
-        // if (written < 0 && errno == EAGAIN) continue;
-        // if (written < 0) throw_with_errno<errors::io_error>("Error writing");
-        size -= written;
-        data += written;
+        if (FD_ISSET(*fd_, &fdws)) {
+          auto written = fd_.write(data, size);
+          size -= written;
+          data += written;
+        }
+      } catch (const errors::try_again&) {
       }
     }
   }
@@ -137,24 +139,26 @@ class fd_connection : public connection {
     std::size_t total_read = 0;
     fd_set fdrs;
     while (size > 0) {
-      FD_ZERO(&fdrs);
-      FD_SET(*pipe_[0], &fdrs);
-      FD_SET(*fd_, &fdrs);
-      if (::select(1 + std::max(*fd_, *pipe_[0]), &fdrs, nullptr, nullptr,
-                   nullptr) < 0)
-        throw_with_errno<errors::io_error>("Error in select");
+      try {
+        FD_ZERO(&fdrs);
+        FD_SET(*pipe_[0], &fdrs);
+        FD_SET(*fd_, &fdrs);
+        if (::select(1 + std::max(*fd_, *pipe_[0]), &fdrs, nullptr, nullptr,
+                     nullptr) < 0)
+          throw_with_errno<errors::io_error>("Error in select");
 
-      if (FD_ISSET(*pipe_[0], &fdrs))
-        throw errors::shutting_down("Read interrupted by connection shutdown");
+        if (FD_ISSET(*pipe_[0], &fdrs))
+          throw errors::shutting_down(
+              "Read interrupted by connection shutdown");
 
-      if (FD_ISSET(*fd_, &fdrs)) {
-        auto read = fd_.read(data, size);
-        // if (read < 0 && errno == EAGAIN) continue;
-        // if (read < 0) throw_with_errno<errors::io_error>("Error reading");
-        if (read == 0) break;
-        size -= read;
-        data += read;
-        total_read += read;
+        if (FD_ISSET(*fd_, &fdrs)) {
+          auto read = fd_.read(data, size);
+          if (read == 0) break;
+          size -= read;
+          data += read;
+          total_read += read;
+        }
+      } catch (const errors::try_again&) {
       }
     }
     return total_read;
@@ -172,8 +176,8 @@ class fd_connection : public connection {
   }
   std::mutex mu_;
   std::condition_variable idle_;
-  file fd_;
-  file pipe_[2];
+  channel fd_;
+  channel pipe_[2];
   bool closing_ = false;
   int lock_count_ = 0;
 };  // namespace ash
@@ -184,8 +188,8 @@ class char_dev_connection : public fd_connection {
       : fd_connection(open_path(path)) {}
 
  protected:
-  static file open_path(const std::string& path) {
-    return file::open(path, file::open_mode::READ_PLUS);
+  static channel open_path(const std::string& path) {
+    return file(path, open_mode::READ_PLUS);
   }
 };
 
