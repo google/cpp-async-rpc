@@ -166,11 +166,13 @@ awaitable channel::read() const { return awaitable(fd_, POLLIN | POLLHUP); }
 
 awaitable channel::write() const { return awaitable(fd_, POLLOUT | POLLERR); }
 
-awaitable timeout(const std::chrono::milliseconds& duration) {
+template <typename Duration>
+awaitable timeout(Duration duration) {
   return awaitable(duration / std::chrono::milliseconds(1));
 }
 
-awaitable deadline(const std::chrono::system_clock::time_point& when) {
+template <typename Timepoint>
+awaitable deadline(Timepoint when) {
   std::chrono::milliseconds delta =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           when - std::chrono::system_clock::now());
