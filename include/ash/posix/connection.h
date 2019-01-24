@@ -22,11 +22,6 @@
 #ifndef INCLUDE_ASH_POSIX_CONNECTION_H_
 #define INCLUDE_ASH_POSIX_CONNECTION_H_
 
-#include <fcntl.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <algorithm>
 #include <condition_variable>
 #include <mutex>
@@ -103,22 +98,15 @@ class fd_connection : public connection {
     fd_lock lock(*this);
     check_connected();
 
-    fd_set fdrs, fdws;
-
     while (size > 0) {
       try {
-        FD_ZERO(&fdrs);
-        FD_ZERO(&fdws);
-        FD_SET(*pipe_[0], &fdrs);
-        FD_SET(*fd_, &fdws);
-        if (::select(1 + std::max(*fd_, *pipe_[0]), &fdrs, &fdws, nullptr,
-                     nullptr) < 0)
-          throw_with_errno<errors::io_error>("Error in select");
-        if (FD_ISSET(*pipe_[0], &fdrs))
+        auto s = select(fd_.write(), pipe_[0].read());
+
+        if (s[1])
           throw errors::shutting_down(
               "Write interrupted by connection shutdown");
 
-        if (FD_ISSET(*fd_, &fdws)) {
+        if (s[0]) {
           auto written = fd_.write(data, size);
           size -= written;
           data += written;
@@ -137,21 +125,15 @@ class fd_connection : public connection {
     check_connected();
 
     std::size_t total_read = 0;
-    fd_set fdrs;
     while (size > 0) {
       try {
-        FD_ZERO(&fdrs);
-        FD_SET(*pipe_[0], &fdrs);
-        FD_SET(*fd_, &fdrs);
-        if (::select(1 + std::max(*fd_, *pipe_[0]), &fdrs, nullptr, nullptr,
-                     nullptr) < 0)
-          throw_with_errno<errors::io_error>("Error in select");
+        auto s = select(fd_.read(), pipe_[0].read());
 
-        if (FD_ISSET(*pipe_[0], &fdrs))
+        if (s[1])
           throw errors::shutting_down(
               "Read interrupted by connection shutdown");
 
-        if (FD_ISSET(*fd_, &fdrs)) {
+        if (s[0]) {
           auto read = fd_.read(data, size);
           if (read == 0) break;
           size -= read;

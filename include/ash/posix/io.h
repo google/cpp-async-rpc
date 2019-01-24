@@ -23,9 +23,13 @@
 #define INCLUDE_ASH_POSIX_IO_H_
 
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <algorithm>
+#include <array>
+#include <chrono>
 #include <string>
 #include <utility>
 #include "ash/errors.h"
@@ -42,6 +46,8 @@ void throw_io_error(const std::string& message) {
 }
 
 }  // namespace detail
+
+class awaitable;
 
 class channel {
  public:
@@ -117,6 +123,9 @@ class channel {
     return res;
   }
 
+  awaitable read() const;
+  awaitable write() const;
+
  private:
   int fd_;
 };
@@ -134,6 +143,39 @@ bool operator<=(const channel& a, const channel& b) {
 bool operator>(const channel& a, const channel& b) { return a.get() > b.get(); }
 bool operator>=(const channel& a, const channel& b) {
   return a.get() >= b.get();
+}
+
+class awaitable {
+ public:
+  awaitable(int fd, short events) : fd_(fd), events_(events) {}
+  explicit awaitable(int timeout_ms) : timeout_ms_(timeout_ms) {}
+
+ private:
+  int timeout() const { return timeout_ms_; }
+  pollfd event() const { return {.fd = fd_, .events = events_}; }
+
+  template <typename... Args>
+  friend std::array<bool, sizeof...(Args)> select(const Args&... args);
+
+  int fd_ = -1;
+  short events_ = 0;
+  int timeout_ms_ = -1;
+};
+
+awaitable channel::read() const { return awaitable(fd_, POLLIN | POLLHUP); }
+
+awaitable channel::write() const { return awaitable(fd_, POLLOUT | POLLERR); }
+
+awaitable timeout(const std::chrono::milliseconds& duration) {
+  return awaitable(duration / std::chrono::milliseconds(1));
+}
+
+awaitable deadline(const std::chrono::system_clock::time_point& when) {
+  std::chrono::milliseconds delta =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          when - std::chrono::system_clock::now());
+  return awaitable(std::max(std::chrono::milliseconds::zero(), delta) /
+                   std::chrono::milliseconds(1));
 }
 
 void pipe(channel fds[2]) {
@@ -155,6 +197,35 @@ enum class open_mode : int {
 channel file(const std::string& path, open_mode mode = open_mode::READ) {
   channel res(::open(path.c_str(), static_cast<int>(mode)));
   if (!res) detail::throw_io_error("Error opening channel");
+  return res;
+}
+
+template <typename... Args>
+std::array<bool, sizeof...(Args)> select(const Args&... args) {
+  constexpr std::size_t n = sizeof...(Args);
+  pollfd fds[n] = {args.event()...};
+  int timeouts[n] = {args.timeout()...};
+
+  int timeout_ms = -1;
+  for (std::size_t i = 0; i < n; i++) {
+    if (timeouts[i] >= 0 && (timeout_ms < 0 || timeout_ms > timeouts[i])) {
+      timeout_ms = timeouts[i];
+    }
+  }
+
+  int pres = poll(fds, n, timeout_ms);
+  if (pres < 0) detail::throw_io_error("Error in select");
+
+  std::array<bool, n> res;
+  if (pres > 0) {
+    for (std::size_t i = 0; i < n; i++) {
+      res[i] = (fds[i].revents & fds[i].events) != 0;
+    }
+  } else {
+    for (std::size_t i = 0; i < n; i++) {
+      res[i] = timeouts[i] >= 0 && timeouts[i] <= timeout_ms;
+    }
+  }
   return res;
 }
 

@@ -156,6 +156,12 @@ struct bad_connection {
 };
 
 int main() {
+  ash::channel in(0);
+  auto s =
+      ash::select(in.read(), ash::timeout(std::chrono::milliseconds(3000)));
+  std::cerr << s[0] << s[1] << std::endl;
+  in.release();
+
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();
 
   std::cerr
