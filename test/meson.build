@@ -15,7 +15,9 @@ foreach test_source : tests_list
     test_source,
     include_directories : includes,
     dependencies : [catch_dependency],
-    cpp_args: [cpp_catch2_config_main_flag]
+    cpp_args: [cpp_catch2_config_main_flag],
+    link_args : '-lpthread',
+    link_with: ash_library
   )
   test(test_binary_name, test_executable)
 endforeach

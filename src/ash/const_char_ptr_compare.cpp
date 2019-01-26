@@ -1,5 +1,5 @@
 /// \file
-/// \brief Connections are bidirectional streams.
+/// \brief Compare operator for `const char *` value based on `strcmp`.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,14 +19,11 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONNECTION_H_
-#define INCLUDE_ASH_CONNECTION_H_
-
-#include "ash/connection_common.h"
-#include "ash/posix/connection.h"
+#include "ash/const_char_ptr_compare.h"
+#include <cstring>
 
 namespace ash {
-using namespace ::ash::posix;
+bool const_char_ptr_compare::operator()(const char* a, const char* b) const {
+  return std::strcmp(a, b) < 0;
+}
 }  // namespace ash
-
-#endif  // INCLUDE_ASH_CONNECTION_H_

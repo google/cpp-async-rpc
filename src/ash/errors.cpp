@@ -1,5 +1,5 @@
 /// \file
-/// \brief Connections are bidirectional streams.
+/// \brief Implementations of common exception classes.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,14 +19,25 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONNECTION_H_
-#define INCLUDE_ASH_CONNECTION_H_
-
-#include "ash/connection_common.h"
-#include "ash/posix/connection.h"
+#include "ash/errors.h"
 
 namespace ash {
-using namespace ::ash::posix;
-}  // namespace ash
 
-#endif  // INCLUDE_ASH_CONNECTION_H_
+namespace errors {
+
+base_error::~base_error() {}
+
+}  // namespace errors
+
+void error_factory::throw_error(const char* error_class_name,
+                                const char* what) {
+  auto it = error_function_map_.find(error_class_name);
+  if (it == error_function_map_.end()) {
+    // If we don't know the error type, just use unknown_error.
+    throw errors::unknown_error(what);
+  }
+  // Throw the specific error type otherwise.
+  it->second(what);
+}
+
+}  // namespace ash

@@ -24,26 +24,19 @@
 
 #include <fcntl.h>
 #include <poll.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <algorithm>
 #include <array>
 #include <chrono>
 #include <string>
-#include <utility>
-#include "ash/errors.h"
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace ash {
-
+namespace posix {
 namespace detail {
 
-void throw_io_error(const std::string& message) {
-  if (errno == EAGAIN || errno == EWOULDBLOCK) {
-    throw errors::try_again("Try again");
-  }
-  throw errors::io_error(message + std::string(": ") + std::to_string(errno));
-}
+void throw_io_error(const std::string& message);
 
 }  // namespace detail
 
@@ -51,78 +44,23 @@ class awaitable;
 
 class channel {
  public:
-  constexpr channel() noexcept : fd_(-1) {}
-
-  explicit channel(int fd) noexcept : fd_(fd) {}
-
-  channel(channel&& fd) noexcept : fd_(-1) { swap(fd); }
-
-  ~channel() noexcept {
-    if (fd_ >= 0) {
-      ::close(fd_);  // Ignore close-time errors to prevent exceptions.
-    }
-  }
-
-  void swap(channel& fd) noexcept { std::swap(fd_, fd.fd_); }
-  channel& operator=(channel&& fd) noexcept {
-    channel tmp;
-    tmp.swap(fd);
-    swap(tmp);
-    return *this;
-  }
-
-  int release() noexcept {
-    int res = -1;
-    std::swap(res, fd_);
-    return res;
-  }
-
-  int get() const noexcept { return fd_; }
-
-  int operator*() const noexcept { return fd_; }
-
-  void reset(int fd = -1) noexcept {
-    channel tmp(fd);
-    swap(tmp);
-  }
-
-  explicit operator bool() const noexcept { return (fd_ >= 0); }
-
-  void close() noexcept { reset(); }
-
-  std::size_t read(void* buf, std::size_t len) {
-    auto num = ::read(fd_, buf, len);
-    if (num < 0) detail::throw_io_error("Error reading");
-    return num;
-  }
-
-  std::size_t write(const void* buf, std::size_t len) {
-    auto num = ::write(fd_, buf, len);
-    if (num < 0) detail::throw_io_error("Error writing");
-    return num;
-  }
-
-  void make_blocking() {
-    if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
-                   fcntl(fd_, F_SETFL, flags & ~O_NONBLOCK) < 0)
-      detail::throw_io_error("Error making channel descriptor blocking");
-  }
-
-  void make_non_blocking() {
-    if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
-                   fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0)
-      detail::throw_io_error("Error making channel descriptor non-blocking");
-  }
-
-  channel dup() const {
-    if (!*this)
-      detail::throw_io_error("Trying to duplicate an empty channel descriptor");
-    channel res(::dup(fd_));
-    if (!res)
-      detail::throw_io_error("Error duplicating the channel descriptor");
-    return res;
-  }
-
+  channel() noexcept;
+  explicit channel(int fd) noexcept;
+  channel(channel&& fd) noexcept;
+  ~channel() noexcept;
+  void swap(channel& fd) noexcept;
+  channel& operator=(channel&& fd) noexcept;
+  int release() noexcept;
+  int get() const noexcept;
+  int operator*() const noexcept;
+  void reset(int fd = -1) noexcept;
+  explicit operator bool() const noexcept;
+  void close() noexcept;
+  std::size_t read(void* buf, std::size_t len);
+  std::size_t write(const void* buf, std::size_t len);
+  void make_blocking();
+  void make_non_blocking();
+  channel dup() const;
   awaitable read() const;
   awaitable write() const;
 
@@ -130,29 +68,20 @@ class channel {
   int fd_;
 };
 
-bool operator==(const channel& a, const channel& b) {
-  return a.get() == b.get();
-}
-bool operator!=(const channel& a, const channel& b) {
-  return a.get() != b.get();
-}
-bool operator<(const channel& a, const channel& b) { return a.get() < b.get(); }
-bool operator<=(const channel& a, const channel& b) {
-  return a.get() <= b.get();
-}
-bool operator>(const channel& a, const channel& b) { return a.get() > b.get(); }
-bool operator>=(const channel& a, const channel& b) {
-  return a.get() >= b.get();
-}
-
+bool operator==(const channel& a, const channel& b);
+bool operator!=(const channel& a, const channel& b);
+bool operator<(const channel& a, const channel& b);
+bool operator<=(const channel& a, const channel& b);
+bool operator>(const channel& a, const channel& b);
+bool operator>=(const channel& a, const channel& b);
 class awaitable {
  public:
-  awaitable(int fd, short events) : fd_(fd), events_(events) {}
-  explicit awaitable(int timeout_ms) : timeout_ms_(timeout_ms) {}
+  awaitable(int fd, short events);
+  explicit awaitable(int timeout_ms);
 
  private:
-  int timeout() const { return timeout_ms_; }
-  pollfd event() const { return {.fd = fd_, .events = events_}; }
+  int timeout() const;
+  pollfd event() const;
 
   template <typename... Args>
   friend std::array<bool, sizeof...(Args)> select(const Args&... args);
@@ -161,10 +90,6 @@ class awaitable {
   short events_ = 0;
   int timeout_ms_ = -1;
 };
-
-awaitable channel::read() const { return awaitable(fd_, POLLIN | POLLHUP); }
-
-awaitable channel::write() const { return awaitable(fd_, POLLOUT | POLLERR); }
 
 template <typename Duration>
 awaitable timeout(Duration duration) {
@@ -180,12 +105,7 @@ awaitable deadline(Timepoint when) {
                    std::chrono::milliseconds(1));
 }
 
-void pipe(channel fds[2]) {
-  int fd[2];
-  if (::pipe(fd)) detail::throw_io_error("Error creating pipe pair");
-  fds[0].reset(fd[0]);
-  fds[1].reset(fd[1]);
-}
+void pipe(channel fds[2]);
 
 enum class open_mode : int {
   READ = O_RDONLY,
@@ -196,11 +116,7 @@ enum class open_mode : int {
   APPEND_PLUS = O_RDWR | O_CREAT | O_APPEND,
 };
 
-channel file(const std::string& path, open_mode mode = open_mode::READ) {
-  channel res(::open(path.c_str(), static_cast<int>(mode)));
-  if (!res) detail::throw_io_error("Error opening channel");
-  return res;
-}
+channel file(const std::string& path, open_mode mode = open_mode::READ);
 
 template <typename... Args>
 std::array<bool, sizeof...(Args)> select(const Args&... args) {
@@ -230,7 +146,7 @@ std::array<bool, sizeof...(Args)> select(const Args&... args) {
   }
   return res;
 }
-
+}  // namespace posix
 }  // namespace ash
 
 #endif  // INCLUDE_ASH_POSIX_IO_H_

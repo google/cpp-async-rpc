@@ -732,14 +732,13 @@ class binary_decoder {
 // Sizing OutputEncoder
 class binary_sizer : public binary_encoder<binary_sizer, output_sizer, false> {
  public:
-  binary_sizer()
-      : binary_encoder<binary_sizer, output_sizer, false>(output_sizer()) {}
+  binary_sizer();
 
   // Get the total number of bytes written so far.
-  std::size_t size() { return out_.size(); }
+  std::size_t size();
 
   // Reset the byte count so that we can reuse the object.
-  void reset() { out_.reset(); }
+  void reset();
 };
 
 class native_binary_encoder

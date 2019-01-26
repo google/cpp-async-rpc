@@ -1,13 +1,13 @@
-/// \file
-/// \brief Connections are bidirectional streams.
+/// \channel
+/// \brief Channel descriptor wrapper.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
-///   not use this file except in compliance with the License. You may obtain a
-///   copy of the License at
+///   not use this channel except in compliance with the License. You may obtain
+///   a copy of the License at
 ///
 /// \copyright
 ///   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,14 +19,12 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONNECTION_H_
-#define INCLUDE_ASH_CONNECTION_H_
+#ifndef INCLUDE_ASH_IO_H_
+#define INCLUDE_ASH_IO_H_
 
-#include "ash/connection_common.h"
-#include "ash/posix/connection.h"
-
+#include "ash/posix/io.h"
 namespace ash {
 using namespace ::ash::posix;
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_CONNECTION_H_
+#endif  // INCLUDE_ASH_IO_H_

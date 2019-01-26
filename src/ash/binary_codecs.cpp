@@ -1,5 +1,5 @@
 /// \file
-/// \brief Connections are bidirectional streams.
+/// \brief Binary format codecs for serialization.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,14 +19,15 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONNECTION_H_
-#define INCLUDE_ASH_CONNECTION_H_
-
-#include "ash/connection_common.h"
-#include "ash/posix/connection.h"
+#include "ash/binary_codecs.h"
 
 namespace ash {
-using namespace ::ash::posix;
-}  // namespace ash
 
-#endif  // INCLUDE_ASH_CONNECTION_H_
+binary_sizer::binary_sizer()
+    : binary_encoder<binary_sizer, output_sizer, false>(output_sizer()) {}
+
+std::size_t binary_sizer::size() { return out_.size(); }
+
+void binary_sizer::reset() { out_.reset(); }
+
+}  // namespace ash

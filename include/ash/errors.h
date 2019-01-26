@@ -32,7 +32,7 @@
 #define ERROR_CLASS(NAME)                                                   \
   class NAME;                                                               \
   template <>                                                               \
-  const char* ::ash::errors::detail::error_class_descriptor<                \
+  inline const char* ::ash::errors::detail::error_class_descriptor<         \
       NAME>::error_class_name =                                             \
       ::ash::error_factory::get().register_error_class<NAME>(#NAME);        \
                                                                             \
@@ -76,7 +76,7 @@ struct error_class_descriptor {
 class base_error : public std::runtime_error {
  public:
   using std::runtime_error::runtime_error;
-  virtual ~base_error() {}
+  virtual ~base_error();
 
   const char* portable_error_class_name() const {
     return portable_error_class_name_internal();
@@ -103,17 +103,6 @@ ERROR_CLASS(shutting_down);
 ERROR_CLASS(try_again);
 
 }  // namespace errors
-
-void error_factory::throw_error(const char* error_class_name,
-                                const char* what) {
-  auto it = error_function_map_.find(error_class_name);
-  if (it == error_function_map_.end()) {
-    // If we don't know the error type, just use unknown_error.
-    throw errors::unknown_error(what);
-  }
-  // Throw the specific error type otherwise.
-  it->second(what);
-}
 
 template <typename T>
 const char* error_factory::register_error_class(const char* error_class_name) {

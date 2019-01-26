@@ -22,14 +22,10 @@
 #ifndef INCLUDE_ASH_CONST_CHAR_PTR_COMPARE_H_
 #define INCLUDE_ASH_CONST_CHAR_PTR_COMPARE_H_
 
-#include <cstring>
-
 namespace ash {
 
 struct const_char_ptr_compare {
-  bool operator()(const char* a, const char* b) const {
-    return std::strcmp(a, b) < 0;
-  }
+  bool operator()(const char* a, const char* b) const;
 };
 }  // namespace ash
 

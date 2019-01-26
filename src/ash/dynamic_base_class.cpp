@@ -1,5 +1,5 @@
 /// \file
-/// \brief Connections are bidirectional streams.
+/// \brief Header defining a base class for polymorphic serializable data.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,14 +19,14 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONNECTION_H_
-#define INCLUDE_ASH_CONNECTION_H_
-
-#include "ash/connection_common.h"
-#include "ash/posix/connection.h"
+#include "ash/dynamic_base_class.h"
 
 namespace ash {
-using namespace ::ash::posix;
-}  // namespace ash
 
-#endif  // INCLUDE_ASH_CONNECTION_H_
+const char* dynamic_base_class::portable_class_name() const {
+  return portable_class_name_internal();
+}
+
+dynamic_base_class::~dynamic_base_class() {}
+
+}  // namespace ash

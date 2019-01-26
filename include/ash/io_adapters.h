@@ -36,49 +36,23 @@ class input_stream {
   virtual std::size_t read(char* p, std::size_t l) = 0;
 
   // Ensure that l chars are read, or return status::END_OF_FILE.
-  void read_fully(char* p, std::size_t l) {
-    std::size_t r = read(p, l);
-    if (r < l) {
-      throw errors::eof("EOF");
-    }
-  }
+  void read_fully(char* p, std::size_t l);
 
   // Try to read one more char, or block.
   virtual char getc() = 0;
 
-  virtual ~input_stream() {}
+  virtual ~input_stream();
 };
-
-std::size_t input_stream::read(char* p, std::size_t l) {
-  std::size_t r = 0;
-  while (r < l) {
-    try {
-      auto c = getc();
-      r++;
-      *p++ = c;
-    } catch (const errors::eof&) {
-      break;
-    }
-  }
-  return r;
-}
-
-char input_stream::getc() {
-  char c;
-  read_fully(&c, 1);
-  return c;
-}
 
 class input_adapter {
  public:
-  input_adapter(input_stream& in)  // NOLINT(runtime/explicit)
-      : in_(in) {}
+  input_adapter(input_stream& in);  // NOLINT(runtime/explicit)
 
-  std::size_t read(char* p, std::size_t l) { return in_.read(p, l); }
+  std::size_t read(char* p, std::size_t l);
 
-  void read_fully(char* p, std::size_t l) { in_.read_fully(p, l); }
+  void read_fully(char* p, std::size_t l);
 
-  char getc() { return in_.getc(); }
+  char getc();
 
  private:
   input_stream& in_;
@@ -97,25 +71,16 @@ class output_stream {
   // Close the stream so that no further write will succeed.
   virtual void flush() = 0;
 
-  virtual ~output_stream() {}
+  virtual ~output_stream();
 };
-
-void output_stream::write(const char* p, std::size_t l) {
-  while (l-- > 0) {
-    putc(*p++);
-  }
-}
-
-void output_stream::putc(char c) { write(&c, 1); }
 
 class output_adapter {
  public:
-  output_adapter(output_stream& out)  // NOLINT(runtime/explicit)
-      : out_(out) {}
+  output_adapter(output_stream& out);  // NOLINT(runtime/explicit)
 
-  void write(const char* p, std::size_t l) { out_.write(p, l); }
+  void write(const char* p, std::size_t l);
 
-  void putc(char c) { out_.putc(c); }
+  void putc(char c);
 
  private:
   output_stream& out_;
@@ -125,16 +90,16 @@ class output_adapter {
 class output_sizer {
  public:
   // Get the total number of bytes written so far.
-  std::size_t size() { return size_; }
+  std::size_t size();
 
   // Reset the byte count so that we can reuse the object.
-  void reset() { size_ = 0; }
+  void reset();
 
   // Write l chars out.
-  void write(const char* p, std::size_t l) { size_ += l; }
+  void write(const char* p, std::size_t l);
 
   // Write c out.
-  void putc(char c) { size_++; }
+  void putc(char c);
 
  private:
   std::size_t size_ = 0;
