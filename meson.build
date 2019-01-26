@@ -18,7 +18,6 @@ readme_file = files('README.md')
 license_file = files('LICENSE.md')
 
 # Enter the project subdirectories.
-subdir('include')
 subdir('src')
 subdir('examples')
 subdir('test')
