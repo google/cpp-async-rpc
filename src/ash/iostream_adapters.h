@@ -25,29 +25,17 @@
 #include <cstddef>
 #include <istream>
 #include <ostream>
-#include "ash/errors.h"
 #include "ash/io_adapters.h"
 
 namespace ash {
 
 class istream_input_stream : public input_stream {
  public:
-  explicit istream_input_stream(std::istream& is) : is_(is) {}
+  explicit istream_input_stream(std::istream& is);
 
-  std::size_t read(char* p, std::size_t l) override {
-    is_.read(p, l);
-    if (is_.bad()) throw errors::io_error("Bad input stream");
-    return static_cast<std::size_t>(is_.gcount());
-  }
+  std::size_t read(char* p, std::size_t l) override;
 
-  char getc() override {
-    char c;
-    if (is_.get(c)) {
-      return c;
-    }
-    if (is_.eof()) throw errors::eof("EOF");
-    throw errors::io_error("Bad input stream");
-  }
+  char getc() override;
 
  private:
   std::istream& is_;
@@ -55,19 +43,15 @@ class istream_input_stream : public input_stream {
 
 class ostream_output_stream : public output_stream {
  public:
-  explicit ostream_output_stream(std::ostream& os) : os_(os) {}
+  explicit ostream_output_stream(std::ostream& os);
 
-  ~ostream_output_stream() override { flush(); }
+  ~ostream_output_stream() override;
 
-  void write(const char* p, std::size_t l) override {
-    if (!os_.write(p, l)) throw errors::io_error("Bad output stream");
-  }
+  void write(const char* p, std::size_t l) override;
 
-  void putc(char c) override {
-    if (!os_.put(c)) throw errors::io_error("Bad output stream");
-  }
+  void putc(char c) override;
 
-  void flush() override { os_.flush(); }
+  void flush() override;
 
  private:
   std::ostream& os_;

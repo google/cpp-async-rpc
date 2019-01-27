@@ -30,4 +30,4 @@ endforeach
 find_sources_output = run_command(find_program_path.path(), meson.current_source_dir(), '-name', '*.cpp', '-printf', '%P\n')
 sources_list = find_sources_output.stdout().strip().split('\n')
 
-ash_library = library('ash', sources_list, include_directories : includes)
+ash_library = static_library('ash', sources_list, include_directories : includes)

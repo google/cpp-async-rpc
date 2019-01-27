@@ -33,31 +33,15 @@ namespace ash {
 class string_input_stream : public input_stream {
  public:
   explicit string_input_stream(const std::string& is,
-                               std::size_t initial_pos = 0)
-      : is_(is), pos_(0) {
-    pos(initial_pos);
-  }
+                               std::size_t initial_pos = 0);
 
-  std::size_t read(char* p, std::size_t l) override {
-    l = std::min(l, is_.size() - pos_);
-    std::copy(is_.begin() + pos_, is_.begin() + pos_ + l, p);
-    pos_ += l;
-    return l;
-  }
+  std::size_t read(char* p, std::size_t l) override;
 
-  char getc() override {
-    if (pos_ >= is_.size()) throw errors::eof("EOF");
-    return is_[pos_++];
-  }
+  char getc() override;
 
-  std::size_t pos() const { return pos_; }
+  std::size_t pos() const;
 
-  void pos(std::size_t new_pos) {
-    if (new_pos > is_.size()) {
-      throw errors::out_of_range("Positioning past end of string");
-    }
-    pos_ = new_pos;
-  }
+  void pos(std::size_t new_pos);
 
  private:
   const std::string& is_;
@@ -66,13 +50,13 @@ class string_input_stream : public input_stream {
 
 class string_output_stream : public output_stream {
  public:
-  explicit string_output_stream(std::string& os) : os_(os) {}
+  explicit string_output_stream(std::string& os);
 
-  void write(const char* p, std::size_t l) override { os_.append(p, l); }
+  void write(const char* p, std::size_t l) override;
 
-  void putc(char c) override { os_.push_back(c); }
+  void putc(char c) override;
 
-  void flush() override {}
+  void flush() override;
 
  private:
   std::string& os_;

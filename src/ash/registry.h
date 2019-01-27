@@ -182,12 +182,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
     return class_name;
   }
 
-  info operator[](const char* class_name) const {
-    const auto it = factory_function_map_.find(class_name);
-    if (it == factory_function_map_.end())
-      throw errors::not_found("Class factory function not found");
-    return it->second;
-  }
+  info operator[](const char* class_name) const;
 
  private:
   ash::flat_map<const char*, info, const_char_ptr_compare>
