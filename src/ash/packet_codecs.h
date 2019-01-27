@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_PACKET_CODECS_H_
-#define INCLUDE_ASH_PACKET_CODECS_H_
+#ifndef ASH_PACKET_CODECS_H_
+#define ASH_PACKET_CODECS_H_
 
 #include <algorithm>
 #include <cassert>
@@ -172,4 +172,4 @@ class cobs_codec : public packet_codec {
 };  // namespace ash
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_PACKET_CODECS_H_
+#endif  // ASH_PACKET_CODECS_H_

@@ -1,5 +1,5 @@
 /// \file
-/// \brief Compare operator for `const char *` value based on `strcmp`.
+/// \brief Connections are bidirectional streams.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,14 +19,20 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CONST_CHAR_PTR_COMPARE_H_
-#define ASH_CONST_CHAR_PTR_COMPARE_H_
+#include "ash/common/connection.h"
 
 namespace ash {
 
-struct const_char_ptr_compare {
-  bool operator()(const char* a, const char* b) const;
-};
-}  // namespace ash
+connection::~connection() {}
 
-#endif  // ASH_CONST_CHAR_PTR_COMPARE_H_
+void connection::connect() {
+  throw errors::not_implemented("Constructor-only connection");
+}
+
+packet_connection::~packet_connection() {}
+
+void packet_connection::connect() {
+  throw errors::not_implemented("Constructor-only connection");
+}
+
+}  // namespace ash

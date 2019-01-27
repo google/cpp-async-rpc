@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_TESTING_STATIC_CHECKS_H_
-#define INCLUDE_ASH_TESTING_STATIC_CHECKS_H_
+#ifndef ASH_TESTING_STATIC_CHECKS_H_
+#define ASH_TESTING_STATIC_CHECKS_H_
 
 #include <type_traits>
 
@@ -40,4 +40,4 @@ struct check_type {
 }  // namespace testing
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_TESTING_STATIC_CHECKS_H_
+#endif  // ASH_TESTING_STATIC_CHECKS_H_

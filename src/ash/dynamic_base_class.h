@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_DYNAMIC_BASE_CLASS_H_
-#define INCLUDE_ASH_DYNAMIC_BASE_CLASS_H_
+#ifndef ASH_DYNAMIC_BASE_CLASS_H_
+#define ASH_DYNAMIC_BASE_CLASS_H_
 
 #include <type_traits>
 #include "ash/mpt.h"
@@ -59,4 +59,4 @@ struct dynamic_class_descriptor {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_DYNAMIC_BASE_CLASS_H_
+#endif  // ASH_DYNAMIC_BASE_CLASS_H_

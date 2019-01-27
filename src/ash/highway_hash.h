@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_HIGHWAY_HASH_H_
-#define INCLUDE_ASH_HIGHWAY_HASH_H_
+#ifndef ASH_HIGHWAY_HASH_H_
+#define ASH_HIGHWAY_HASH_H_
 
 #include <cstdint>
 
@@ -101,4 +101,4 @@ class highway_hash {
 };
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_HIGHWAY_HASH_H_
+#endif  // ASH_HIGHWAY_HASH_H_

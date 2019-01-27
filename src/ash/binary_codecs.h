@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_BINARY_CODECS_H_
-#define INCLUDE_ASH_BINARY_CODECS_H_
+#ifndef ASH_BINARY_CODECS_H_
+#define ASH_BINARY_CODECS_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -777,4 +777,4 @@ using big_endian_binary_decoder =
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_BINARY_CODECS_H_
+#endif  // ASH_BINARY_CODECS_H_

@@ -19,12 +19,13 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_IO_H_
-#define INCLUDE_ASH_IO_H_
+#ifndef ASH_IO_H_
+#define ASH_IO_H_
 
 #include "ash/posix/io.h"
+
 namespace ash {
-using namespace ::ash::posix;
+using namespace ::ash::posix;  // NOLINT(build/namespaces)
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_IO_H_
+#endif  // ASH_IO_H_

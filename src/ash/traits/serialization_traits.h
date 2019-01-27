@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_TRAITS_SERIALIZATION_TRAITS_H_
-#define INCLUDE_ASH_TRAITS_SERIALIZATION_TRAITS_H_
+#ifndef ASH_TRAITS_SERIALIZATION_TRAITS_H_
+#define ASH_TRAITS_SERIALIZATION_TRAITS_H_
 
 #include <cstdint>
 #include <type_traits>
@@ -163,4 +163,4 @@ inline constexpr bool can_be_serialized_v = can_be_serialized<T>::value;
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_TRAITS_SERIALIZATION_TRAITS_H_
+#endif  // ASH_TRAITS_SERIALIZATION_TRAITS_H_

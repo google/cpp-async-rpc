@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONTAINER_DETAIL_FLAT_TREE_H_
-#define INCLUDE_ASH_CONTAINER_DETAIL_FLAT_TREE_H_
+#ifndef ASH_CONTAINER_DETAIL_FLAT_TREE_H_
+#define ASH_CONTAINER_DETAIL_FLAT_TREE_H_
 
 #include <algorithm>
 #include <functional>
@@ -326,4 +326,4 @@ class flat_tree : protected std::vector<Value, Allocator> {
 }  // namespace detail
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_CONTAINER_DETAIL_FLAT_TREE_H_
+#endif  // ASH_CONTAINER_DETAIL_FLAT_TREE_H_

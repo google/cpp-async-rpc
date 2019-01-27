@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_INTERFACE_H_
-#define INCLUDE_ASH_INTERFACE_H_
+#ifndef ASH_INTERFACE_H_
+#define ASH_INTERFACE_H_
 
 #include <array>
 #include <utility>
@@ -131,35 +131,38 @@ struct interface : virtual Extends... {
   ASH_FOREACH(ASH_INTERFACE_METHOD_NAMES_ONE, ASH_INTERFACE_METHOD_NAMES_SEP, \
               __VA_ARGS__)
 
-#define ASH_INTERFACE(NAME, EXTENDS, METHODS)                                  \
-  struct NAME : ::ash::interface<NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(   \
-                    , ) ASH_EXPAND(ASH_INTERFACE_EXTENDS EXTENDS)> {           \
-    ASH_EXPAND(ASH_INTERFACE_DECLS METHODS)                                    \
-    using method_descriptors =                                                 \
-        ::ash::mpt::pack<ASH_EXPAND(ASH_INTERFACE_METHODS METHODS)>;           \
-    static const std::array<const char *,                                      \
-                            ::ash::mpt::size_v<method_descriptors>>            \
-        &method_names() {                                                      \
-      static const std::array<const char *,                                    \
-                              ::ash::mpt::size_v<method_descriptors>>          \
-          names{ASH_EXPAND(ASH_INTERFACE_METHOD_NAMES METHODS)};               \
-      return names;                                                            \
-    }                                                                          \
-    template <typename O>                                                      \
-    struct proxy;                                                              \
-  };                                                                           \
-  template <typename O>                                                        \
-  struct NAME::proxy : virtual NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(, )  \
-                           ASH_EXPAND(ASH_INTERFACE_PROXY_EXTENDS EXTENDS) {   \
-    proxy(O obj)                                                               \
-        : ASH_EXPAND(ASH_INTERFACE_PROXY_CTOR EXTENDS)                         \
-              ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(, ) obj_(std::move(obj)) { \
-    }                                                                          \
-    ASH_EXPAND(ASH_INTERFACE_PROXY_IMPLS METHODS)                              \
-   private:                                                                    \
-    O obj_;                                                                    \
+#define ASH_INTERFACE(NAME, EXTENDS, METHODS)                                \
+  struct NAME                                                                \
+      : ::ash::interface<NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(         \
+            , /* NOLINT(whitespace/parens) */)                               \
+                             ASH_EXPAND(ASH_INTERFACE_EXTENDS EXTENDS)> {    \
+    ASH_EXPAND(ASH_INTERFACE_DECLS METHODS)                                  \
+    using method_descriptors =                                               \
+        ::ash::mpt::pack<ASH_EXPAND(ASH_INTERFACE_METHODS METHODS)>;         \
+    static const std::array<const char *,                                    \
+                            ::ash::mpt::size_v<method_descriptors>>          \
+        &method_names() {                                                    \
+      static const std::array<const char *,                                  \
+                              ::ash::mpt::size_v<method_descriptors>>        \
+          names{ASH_EXPAND(ASH_INTERFACE_METHOD_NAMES METHODS)};             \
+      return names;                                                          \
+    }                                                                        \
+    template <typename O>                                                    \
+    struct proxy;                                                            \
+  };                                                                         \
+  template <typename O>                                                      \
+  struct NAME::proxy : virtual NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(   \
+                           , /* NOLINT(whitespace/parens) */)                \
+                           ASH_EXPAND(ASH_INTERFACE_PROXY_EXTENDS EXTENDS) { \
+    proxy(O obj)                                                             \
+        : ASH_EXPAND(ASH_INTERFACE_PROXY_CTOR EXTENDS)                       \
+              ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(                         \
+                  , /* NOLINT(whitespace/parens) */) obj_(std::move(obj)) {} \
+    ASH_EXPAND(ASH_INTERFACE_PROXY_IMPLS METHODS)                            \
+   private:                                                                  \
+    O obj_;                                                                  \
   }
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_INTERFACE_H_
+#endif  // ASH_INTERFACE_H_

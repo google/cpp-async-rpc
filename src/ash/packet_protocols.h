@@ -20,12 +20,13 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_PACKET_PROTOCOLS_H_
-#define INCLUDE_ASH_PACKET_PROTOCOLS_H_
+#ifndef ASH_PACKET_PROTOCOLS_H_
+#define ASH_PACKET_PROTOCOLS_H_
 
 #include <iostream>
 #include <limits>
 #include <string>
+#include <utility>
 #include "ash/binary_codecs.h"
 #include "ash/errors.h"
 #include "ash/io_adapters.h"
@@ -87,4 +88,4 @@ class protected_stream_packet_protocol {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_PACKET_PROTOCOLS_H_
+#endif  // ASH_PACKET_PROTOCOLS_H_

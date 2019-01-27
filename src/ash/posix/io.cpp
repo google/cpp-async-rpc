@@ -124,7 +124,9 @@ bool operator>=(const channel& a, const channel& b) {
   return a.get() >= b.get();
 }
 
-awaitable::awaitable(int fd, short events) : fd_(fd), events_(events) {}
+awaitable::awaitable(int fd, short events)  // NOLINT(runtime/int)
+    : fd_(fd), events_(events) {}
+
 awaitable::awaitable(int timeout_ms) : timeout_ms_(timeout_ms) {}
 
 int awaitable::timeout() const { return timeout_ms_; }

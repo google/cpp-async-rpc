@@ -19,18 +19,19 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_POSIX_IO_H_
-#define INCLUDE_ASH_POSIX_IO_H_
+#ifndef ASH_POSIX_IO_H_
+#define ASH_POSIX_IO_H_
 
 #include <fcntl.h>
 #include <poll.h>
-#include <array>
-#include <chrono>
-#include <string>
-
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <string>
+#include <utility>
 
 namespace ash {
 namespace posix {
@@ -76,7 +77,7 @@ bool operator>(const channel& a, const channel& b);
 bool operator>=(const channel& a, const channel& b);
 class awaitable {
  public:
-  awaitable(int fd, short events);
+  awaitable(int fd, short events);  // NOLINT(runtime/int)
   explicit awaitable(int timeout_ms);
 
  private:
@@ -87,7 +88,7 @@ class awaitable {
   friend std::array<bool, sizeof...(Args)> select(const Args&... args);
 
   int fd_ = -1;
-  short events_ = 0;
+  short events_ = 0;  // NOLINT(runtime/int)
   int timeout_ms_ = -1;
 };
 
@@ -149,4 +150,4 @@ std::array<bool, sizeof...(Args)> select(const Args&... args) {
 }  // namespace posix
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_POSIX_IO_H_
+#endif  // ASH_POSIX_IO_H_

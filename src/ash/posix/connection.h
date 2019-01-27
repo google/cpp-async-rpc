@@ -19,13 +19,13 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_POSIX_CONNECTION_H_
-#define INCLUDE_ASH_POSIX_CONNECTION_H_
+#ifndef ASH_POSIX_CONNECTION_H_
+#define ASH_POSIX_CONNECTION_H_
 
 #include <condition_variable>
 #include <mutex>
 #include <string>
-#include "ash/connection_common.h"
+#include "ash/common/connection.h"
 #include "ash/posix/io.h"
 
 namespace ash {
@@ -75,4 +75,4 @@ class char_dev_connection : public fd_connection {
 }  // namespace posix
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_POSIX_CONNECTION_H_
+#endif  // ASH_POSIX_CONNECTION_H_

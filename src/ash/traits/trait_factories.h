@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_TRAITS_TRAIT_FACTORIES_H_
-#define INCLUDE_ASH_TRAITS_TRAIT_FACTORIES_H_
+#ifndef ASH_TRAITS_TRAIT_FACTORIES_H_
+#define ASH_TRAITS_TRAIT_FACTORIES_H_
 
 #include <type_traits>
 #include "ash/traits/type_traits.h"
@@ -137,4 +137,4 @@ namespace traits {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_TRAITS_TRAIT_FACTORIES_H_
+#endif  // ASH_TRAITS_TRAIT_FACTORIES_H_

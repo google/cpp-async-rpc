@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CONNECTION_COMMON_H_
-#define INCLUDE_ASH_CONNECTION_COMMON_H_
+#ifndef ASH_COMMON_CONNECTION_H_
+#define ASH_COMMON_CONNECTION_H_
 
 #include <condition_variable>
 #include <functional>
@@ -39,12 +39,10 @@ namespace ash {
 class connection : public input_stream, public output_stream {
  public:
   /// Destructor.
-  virtual ~connection() {}
+  virtual ~connection();
 
   /// (Re)connect to the connection's target.
-  virtual void connect() {
-    throw errors::not_implemented("Constructor-only connection");
-  }
+  virtual void connect();
 
   /// Disconnect if the connection was active.
   virtual void disconnect() = 0;
@@ -124,12 +122,10 @@ class reconnectable_connection : public connection {
 class packet_connection {
  public:
   /// Destructor.
-  virtual ~packet_connection() {}
+  virtual ~packet_connection();
 
   /// (Re)connect to the connection's target.
-  virtual void connect() {
-    throw errors::not_implemented("Constructor-only connection");
-  }
+  virtual void connect();
 
   /// Disconnect if the connection was active.
   virtual void disconnect() = 0;
@@ -166,4 +162,4 @@ class packet_connection_impl : public packet_connection {
 };
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_CONNECTION_COMMON_H_
+#endif  // ASH_COMMON_CONNECTION_H_

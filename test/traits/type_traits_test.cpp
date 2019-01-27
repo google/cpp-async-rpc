@@ -43,12 +43,16 @@ TEST_CASE("is_bit_transferrable_scalar") {
   check_is_bit_transferrable_scalar<int, true>();
   check_is_bit_transferrable_scalar<signed int, true>();
   check_is_bit_transferrable_scalar<unsigned int, true>();
-  check_is_bit_transferrable_scalar<long, true>();
-  check_is_bit_transferrable_scalar<signed long, true>();
-  check_is_bit_transferrable_scalar<unsigned long, true>();
-  check_is_bit_transferrable_scalar<long long, true>();
-  check_is_bit_transferrable_scalar<signed long long, true>();
-  check_is_bit_transferrable_scalar<unsigned long long, true>();
+  check_is_bit_transferrable_scalar<long, true>();  // NOLINT(runtime/int)
+  check_is_bit_transferrable_scalar<signed long,    // NOLINT(runtime/int)
+                                    true>();
+  check_is_bit_transferrable_scalar<unsigned long,  // NOLINT(runtime/int)
+                                    true>();
+  check_is_bit_transferrable_scalar<long long, true>();  // NOLINT(runtime/int)
+  check_is_bit_transferrable_scalar<signed long long,    // NOLINT(runtime/int)
+                                    true>();
+  check_is_bit_transferrable_scalar<unsigned long long,  // NOLINT(runtime/int)
+                                    true>();
 }
 
 template <typename T1, typename T2>

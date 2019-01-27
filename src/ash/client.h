@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_CLIENT_H_
-#define INCLUDE_ASH_CLIENT_H_
+#ifndef ASH_CLIENT_H_
+#define ASH_CLIENT_H_
 
 #include <condition_variable>
 #include <future>
@@ -220,4 +220,4 @@ class client_connection {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_CLIENT_H_
+#endif  // ASH_CLIENT_H_

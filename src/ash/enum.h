@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_ENUM_H_
-#define INCLUDE_ASH_ENUM_H_
+#ifndef ASH_ENUM_H_
+#define ASH_ENUM_H_
 
 #include <algorithm>
 #include <type_traits>
@@ -75,4 +75,4 @@ struct enum_names {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_ENUM_H_
+#endif  // ASH_ENUM_H_

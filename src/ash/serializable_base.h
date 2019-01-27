@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_SERIALIZABLE_BASE_H_
-#define INCLUDE_ASH_SERIALIZABLE_BASE_H_
+#ifndef ASH_SERIALIZABLE_BASE_H_
+#define ASH_SERIALIZABLE_BASE_H_
 
 #include <array>
 #include <cstdint>
@@ -132,4 +132,4 @@ using dynamic = std::conditional_t<
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_SERIALIZABLE_BASE_H_
+#endif  // ASH_SERIALIZABLE_BASE_H_

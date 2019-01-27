@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_REGISTRY_H_
-#define INCLUDE_ASH_REGISTRY_H_
+#ifndef ASH_REGISTRY_H_
+#define ASH_REGISTRY_H_
 
 #include <cstdint>
 #include <cstring>
@@ -223,4 +223,4 @@ std::enable_if_t<is_dynamic_v<T>, bool> check_dynamic_compatibility(void* obj) {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_REGISTRY_H_
+#endif  // ASH_REGISTRY_H_

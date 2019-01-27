@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_TRAITS_TYPE_TRAITS_H_
-#define INCLUDE_ASH_TRAITS_TYPE_TRAITS_H_
+#ifndef ASH_TRAITS_TYPE_TRAITS_H_
+#define ASH_TRAITS_TYPE_TRAITS_H_
 
 #include <tuple>
 #include <type_traits>
@@ -151,4 +151,4 @@ struct member_function_pointer_traits<mptr> {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_TRAITS_TYPE_TRAITS_H_
+#endif  // ASH_TRAITS_TYPE_TRAITS_H_

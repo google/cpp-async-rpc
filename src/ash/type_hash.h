@@ -19,11 +19,12 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_TYPE_HASH_H_
-#define INCLUDE_ASH_TYPE_HASH_H_
+#ifndef ASH_TYPE_HASH_H_
+#define ASH_TYPE_HASH_H_
 
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -290,4 +291,4 @@ inline constexpr std::uint32_t type_hash_v = type_hash<T>::value;
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_TYPE_HASH_H_
+#endif  // ASH_TYPE_HASH_H_

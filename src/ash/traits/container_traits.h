@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_TRAITS_CONTAINER_TRAITS_H_
-#define INCLUDE_ASH_TRAITS_CONTAINER_TRAITS_H_
+#ifndef ASH_TRAITS_CONTAINER_TRAITS_H_
+#define ASH_TRAITS_CONTAINER_TRAITS_H_
 
 #include <array>
 #include <iterator>
@@ -179,4 +179,4 @@ inline constexpr std::size_t static_size_v = static_size<T>::value;
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_TRAITS_CONTAINER_TRAITS_H_
+#endif  // ASH_TRAITS_CONTAINER_TRAITS_H_

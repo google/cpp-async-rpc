@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef INCLUDE_ASH_STRING_ADAPTERS_H_
-#define INCLUDE_ASH_STRING_ADAPTERS_H_
+#ifndef ASH_STRING_ADAPTERS_H_
+#define ASH_STRING_ADAPTERS_H_
 
 #include <algorithm>
 #include <cstddef>
@@ -80,4 +80,4 @@ class string_output_stream : public output_stream {
 
 }  // namespace ash
 
-#endif  // INCLUDE_ASH_STRING_ADAPTERS_H_
+#endif  // ASH_STRING_ADAPTERS_H_

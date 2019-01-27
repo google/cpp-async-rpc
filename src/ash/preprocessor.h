@@ -1,5 +1,26 @@
-#ifndef INCLUDE_ASH_PREPROCESSOR_H_
-#define INCLUDE_ASH_PREPROCESSOR_H_
+/// \channel
+/// \brief Preprocessor-based iteration and code generation.
+///
+/// \copyright
+///   Copyright 2018 by Google Inc. All Rights Reserved.
+///
+/// \copyright
+///   Licensed under the Apache License, Version 2.0 (the "License"); you may
+///   not use this channel except in compliance with the License. You may obtain
+///   a copy of the License at
+///
+/// \copyright
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// \copyright
+///   Unless required by applicable law or agreed to in writing, software
+///   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+///   License for the specific language governing permissions and limitations
+///   under the License.
+
+#ifndef ASH_PREPROCESSOR_H_
+#define ASH_PREPROCESSOR_H_
 
 #define ASH_MATCH_ARG_N(                                                       \
     _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16,     \
@@ -655,4 +676,4 @@
   what(first)sep() ASH_FOREACH_255(what, sep, __VA_ARGS__)
 // clang-format on
 
-#endif  // INCLUDE_ASH_PREPROCESSOR_H_
+#endif  // ASH_PREPROCESSOR_H_
