@@ -24,6 +24,7 @@
 #include <cerrno>
 #include <utility>
 #include "ash/errors.h"
+#include "ash/io.h"
 
 namespace ash {
 namespace posix {
@@ -109,6 +110,10 @@ channel channel::dup() const {
   return res;
 }
 
+awaitable channel::read() const { return awaitable(*this, false); }
+
+awaitable channel::write() const { return awaitable(*this, true); }
+
 bool operator==(const channel& a, const channel& b) {
   return a.get() == b.get();
 }
@@ -124,18 +129,6 @@ bool operator>=(const channel& a, const channel& b) {
   return a.get() >= b.get();
 }
 
-awaitable::awaitable(int fd, short events)  // NOLINT(runtime/int)
-    : fd_(fd), events_(events) {}
-
-awaitable::awaitable(int timeout_ms) : timeout_ms_(timeout_ms) {}
-
-int awaitable::timeout() const { return timeout_ms_; }
-pollfd awaitable::event() const { return {.fd = fd_, .events = events_}; }
-
-awaitable channel::read() const { return awaitable(fd_, POLLIN | POLLHUP); }
-
-awaitable channel::write() const { return awaitable(fd_, POLLOUT | POLLERR); }
-
 void pipe(channel fds[2]) {
   int fd[2];
   if (::pipe(fd)) detail::throw_io_error("Error creating pipe pair");
@@ -144,7 +137,16 @@ void pipe(channel fds[2]) {
 }
 
 channel file(const std::string& path, open_mode mode) {
-  channel res(::open(path.c_str(), static_cast<int>(mode)));
+  static constexpr int posix_modes[] = {
+      O_RDONLY,                       // READ
+      O_WRONLY | O_CREAT | O_TRUNC,   // WRITE
+      O_WRONLY | O_CREAT | O_APPEND,  // APPEND
+      O_RDWR,                         // READ_PLUS
+      O_RDWR | O_CREAT | O_TRUNC,     // WRITE_PLUS
+      O_RDWR | O_CREAT | O_APPEND,    // APPEND
+  };
+  channel res(
+      ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
   if (!res) detail::throw_io_error("Error opening channel");
   return res;
 }

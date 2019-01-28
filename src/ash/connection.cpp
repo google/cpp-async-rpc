@@ -1,5 +1,5 @@
 /// \file
-/// \brief POSIX-specific connection implementations.
+/// \brief Connections are bidirectional streams.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,21 +19,32 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/posix/connection.h"
-
+#include "ash/connection.h"
 #include <algorithm>
 #include <utility>
 #include "ash/errors.h"
 
 namespace ash {
-namespace posix {
 
-fd_connection::fd_lock::fd_lock(fd_connection& conn) : conn_(conn) {
+connection::~connection() {}
+
+void connection::connect() {
+  throw errors::not_implemented("Constructor-only connection");
+}
+
+packet_connection::~packet_connection() {}
+
+void packet_connection::connect() {
+  throw errors::not_implemented("Constructor-only connection");
+}
+
+channel_connection::channel_lock::channel_lock(channel_connection& conn)
+    : conn_(conn) {
   std::scoped_lock lock(conn_.mu_);
   conn_.lock_count_++;
 }
 
-fd_connection::fd_lock::~fd_lock() {
+channel_connection::channel_lock::~channel_lock() {
   bool last = false;
 
   {
@@ -46,21 +57,21 @@ fd_connection::fd_lock::~fd_lock() {
   if (last) conn_.idle_.notify_all();
 }
 
-fd_connection::fd_connection(channel&& fd) : fd_(std::move(fd)) {
+channel_connection::channel_connection(channel&& ch) : channel_(std::move(ch)) {
   pipe(pipe_);
-  fd_.make_non_blocking();
+  channel_.make_non_blocking();
 }
 
-fd_connection::~fd_connection() { disconnect(); }
+channel_connection::~channel_connection() { disconnect(); }
 
-bool fd_connection::connected() {
+bool channel_connection::connected() {
   std::scoped_lock lock(mu_);
-  return !!fd_;
+  return !!channel_;
 }
 
-void fd_connection::disconnect() {
+void channel_connection::disconnect() {
   std::unique_lock lock(mu_);
-  if (!fd_) {
+  if (!channel_) {
     // Already disconnected.
     return;
   }
@@ -75,46 +86,46 @@ void fd_connection::disconnect() {
 
   if (closing_) {
     pipe_[0].close();
-    fd_.close();
+    channel_.close();
     closing_ = false;
   }
 }
 
-void fd_connection::write(const char* data, std::size_t size) {
-  fd_lock lock(*this);
+void channel_connection::write(const char* data, std::size_t size) {
+  channel_lock lock(*this);
   check_connected();
 
   while (size > 0) {
     try {
-      auto written = fd_.write(data, size);
+      auto written = channel_.write(data, size);
       size -= written;
       data += written;
     } catch (const errors::try_again&) {
-      auto s = select(fd_.write(), pipe_[0].read());
+      auto s = select(channel_.write(), pipe_[0].read());
       if (s[1])
         throw errors::shutting_down("Write interrupted by connection shutdown");
     }
   }
 }
 
-void fd_connection::putc(char c) { write(&c, 1); }
+void channel_connection::putc(char c) { write(&c, 1); }
 
-void fd_connection::flush() {}
+void channel_connection::flush() {}
 
-std::size_t fd_connection::read(char* data, std::size_t size) {
-  fd_lock lock(*this);
+std::size_t channel_connection::read(char* data, std::size_t size) {
+  channel_lock lock(*this);
   check_connected();
 
   std::size_t total_read = 0;
   while (size > 0) {
     try {
-      auto read = fd_.read(data, size);
+      auto read = channel_.read(data, size);
       if (read == 0) break;
       size -= read;
       data += read;
       total_read += read;
     } catch (const errors::try_again&) {
-      auto s = select(fd_.read(), pipe_[0].read());
+      auto s = select(channel_.read(), pipe_[0].read());
       if (s[1])
         throw errors::shutting_down("Read interrupted by connection shutdown");
     }
@@ -122,22 +133,21 @@ std::size_t fd_connection::read(char* data, std::size_t size) {
   return total_read;
 }
 
-char fd_connection::getc() {
+char channel_connection::getc() {
   char c;
   read_fully(&c, 1);
   return c;
 }
 
-void fd_connection::check_connected() {
-  if (closing_ || !fd_) throw errors::io_error("Connection is closed");
+void channel_connection::check_connected() {
+  if (closing_ || !channel_) throw errors::io_error("Connection is closed");
 }
 
 char_dev_connection::char_dev_connection(const std::string& path)
-    : fd_connection(open_path(path)) {}
+    : channel_connection(open_path(path)) {}
 
 channel char_dev_connection::open_path(const std::string& path) {
   return file(path, open_mode::READ_PLUS);
 }
 
-}  // namespace posix
 }  // namespace ash

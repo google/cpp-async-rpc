@@ -32,6 +32,7 @@
 #include <chrono>
 #include <string>
 #include <utility>
+#include "ash/common/io.h"
 
 namespace ash {
 namespace posix {
@@ -40,8 +41,6 @@ namespace detail {
 void throw_io_error(const std::string& message);
 
 }  // namespace detail
-
-class awaitable;
 
 class channel {
  public:
@@ -75,64 +74,29 @@ bool operator<(const channel& a, const channel& b);
 bool operator<=(const channel& a, const channel& b);
 bool operator>(const channel& a, const channel& b);
 bool operator>=(const channel& a, const channel& b);
-class awaitable {
- public:
-  awaitable(int fd, short events);  // NOLINT(runtime/int)
-  explicit awaitable(int timeout_ms);
-
- private:
-  int timeout() const;
-  pollfd event() const;
-
-  template <typename... Args>
-  friend std::array<bool, sizeof...(Args)> select(const Args&... args);
-
-  int fd_ = -1;
-  short events_ = 0;  // NOLINT(runtime/int)
-  int timeout_ms_ = -1;
-};
-
-template <typename Duration>
-awaitable timeout(Duration duration) {
-  return awaitable(duration / std::chrono::milliseconds(1));
-}
-
-template <typename Timepoint>
-awaitable deadline(Timepoint when) {
-  std::chrono::milliseconds delta =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          when - std::chrono::system_clock::now());
-  return awaitable(std::max(std::chrono::milliseconds::zero(), delta) /
-                   std::chrono::milliseconds(1));
-}
 
 void pipe(channel fds[2]);
-
-enum class open_mode : int {
-  READ = O_RDONLY,
-  WRITE = O_WRONLY | O_CREAT | O_TRUNC,
-  APPEND = O_WRONLY | O_CREAT | O_APPEND,
-  READ_PLUS = O_RDWR,
-  WRITE_PLUS = O_RDWR | O_CREAT | O_TRUNC,
-  APPEND_PLUS = O_RDWR | O_CREAT | O_APPEND,
-};
 
 channel file(const std::string& path, open_mode mode = open_mode::READ);
 
 template <typename... Args>
 std::array<bool, sizeof...(Args)> select(const Args&... args) {
   constexpr std::size_t n = sizeof...(Args);
-  pollfd fds[n] = {args.event()...};
-  int timeouts[n] = {args.timeout()...};
+  pollfd fds[n] = {
+      {.fd = *args.channel(),
+       .events = static_cast<short>(args.for_write() ? (POLLOUT | POLLERR)
+                                                     : (POLLIN | POLLHUP))}...};
+  std::chrono::milliseconds timeouts[n] = {args.timeout()...};
 
-  int timeout_ms = -1;
+  std::chrono::milliseconds timeout = std::chrono::milliseconds(-1);
+  constexpr auto zero = std::chrono::milliseconds ::zero();
   for (std::size_t i = 0; i < n; i++) {
-    if (timeouts[i] >= 0 && (timeout_ms < 0 || timeout_ms > timeouts[i])) {
-      timeout_ms = timeouts[i];
+    if (timeouts[i] >= zero && (timeout < zero || timeout > timeouts[i])) {
+      timeout = timeouts[i];
     }
   }
 
-  int pres = poll(fds, n, timeout_ms);
+  int pres = poll(fds, n, timeout / std::chrono::milliseconds(1));
   if (pres < 0) detail::throw_io_error("Error in select");
 
   std::array<bool, n> res;
@@ -142,7 +106,7 @@ std::array<bool, sizeof...(Args)> select(const Args&... args) {
     }
   } else {
     for (std::size_t i = 0; i < n; i++) {
-      res[i] = timeouts[i] >= 0 && timeouts[i] <= timeout_ms;
+      res[i] = timeouts[i] >= zero && timeouts[i] <= timeout;
     }
   }
   return res;

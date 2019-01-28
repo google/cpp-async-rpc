@@ -36,7 +36,6 @@
 #include "ash/mpt.h"
 #include "ash/packet_codecs.h"
 #include "ash/packet_protocols.h"
-#include "ash/posix/connection.h"
 #include "ash/serializable.h"
 #include "ash/string_adapters.h"
 #include "ash/type_hash.h"

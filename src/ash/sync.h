@@ -1,13 +1,13 @@
-/// \file
-/// \brief Connections are bidirectional streams.
+/// \channel
+/// \brief select-friendly synchronization objects.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
-///   not use this file except in compliance with the License. You may obtain a
-///   copy of the License at
+///   not use this channel except in compliance with the License. You may obtain
+///   a copy of the License at
 ///
 /// \copyright
 ///   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,20 +19,29 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/common/connection.h"
+#ifndef ASH_SYNC_H_
+#define ASH_SYNC_H_
+
+#include <mutex>
+#include "ash/io.h"
 
 namespace ash {
 
-connection::~connection() {}
+class flag {
+ public:
+  flag();
 
-void connection::connect() {
-  throw errors::not_implemented("Constructor-only connection");
-}
+  void set();
+  void reset();
+  bool is_set() const;
+  explicit operator bool() const;
+  awaitable wait_set() const;
 
-packet_connection::~packet_connection() {}
-
-void packet_connection::connect() {
-  throw errors::not_implemented("Constructor-only connection");
-}
+ private:
+  mutable std::mutex mu_;
+  channel pipe_[2];
+};
 
 }  // namespace ash
+
+#endif  // ASH_SYNC_H_

@@ -22,10 +22,42 @@
 #ifndef ASH_IO_H_
 #define ASH_IO_H_
 
+#include <algorithm>
+#include "ash/common/io.h"
 #include "ash/posix/io.h"
 
 namespace ash {
 using namespace ::ash::posix;  // NOLINT(build/namespaces)
+
+class awaitable {
+ public:
+  explicit awaitable(const ::ash::channel& ch, bool for_write = false);
+  explicit awaitable(std::chrono::milliseconds timeout);
+
+  const ::ash::channel& channel() const;
+  bool for_write() const;
+  std::chrono::milliseconds timeout() const;
+
+ private:
+  const ::ash::channel channel_;
+  const bool for_write_;
+  const std::chrono::milliseconds timeout_ = std::chrono::milliseconds(-1);
+};
+
+template <typename Duration>
+awaitable timeout(Duration duration) {
+  return awaitable(
+      std::chrono::duration_cast<std::chrono::milliseconds>(duration));
+}
+
+template <typename Timepoint>
+awaitable deadline(Timepoint when) {
+  std::chrono::milliseconds delta =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          when - std::chrono::system_clock::now());
+  return awaitable(std::max(std::chrono::milliseconds::zero(), delta));
+}
+
 }  // namespace ash
 
 #endif  // ASH_IO_H_
