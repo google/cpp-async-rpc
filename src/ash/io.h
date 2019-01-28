@@ -72,8 +72,8 @@ class channel {
   void make_blocking();
   void make_non_blocking();
   channel dup() const;
-  awaitable read() const;
-  awaitable write() const;
+  awaitable read();
+  awaitable write();
 
  private:
   int fd_;
@@ -96,11 +96,15 @@ std::array<bool, sizeof...(Args)> select(const Args&... args);
 class awaitable {
  public:
   using checker_fn_type = std::function<bool()>;
+  using finish_fn_type = std::function<void()>;
 
   explicit awaitable(const channel& ch, bool for_write = false,
-                     checker_fn_type checker = nullptr);
+                     checker_fn_type checker = nullptr,
+                     finish_fn_type finish = nullptr);
   explicit awaitable(std::chrono::milliseconds timeout,
-                     checker_fn_type checker = nullptr);
+                     checker_fn_type checker = nullptr,
+                     finish_fn_type finish = nullptr);
+  ~awaitable();
 
   checker_fn_type get_checker() const;
   int get_fd() const;
@@ -109,19 +113,20 @@ class awaitable {
 
  private:
   const checker_fn_type checker_;
+  const finish_fn_type finish_;
   const int fd_ = -1;
   const bool for_write_;
   const std::chrono::milliseconds timeout_ = std::chrono::milliseconds(-1);
 };
 
-template <typename Duration>
-awaitable timeout(Duration duration) {
+template <typename Rep, typename Period>
+awaitable timeout(const std::chrono::duration<Rep, Period>& duration) {
   return awaitable(
       std::chrono::duration_cast<std::chrono::milliseconds>(duration));
 }
 
-template <typename Timepoint>
-awaitable deadline(Timepoint when) {
+template <typename Clock, typename Duration>
+awaitable deadline(const std::chrono::time_point<Clock, Duration>& when) {
   std::chrono::milliseconds delta =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           when - std::chrono::system_clock::now());

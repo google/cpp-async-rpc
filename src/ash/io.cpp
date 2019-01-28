@@ -109,9 +109,9 @@ channel channel::dup() const {
   return res;
 }
 
-awaitable channel::read() const { return awaitable(*this, false); }
+awaitable channel::read() { return awaitable(*this, false); }
 
-awaitable channel::write() const { return awaitable(*this, true); }
+awaitable channel::write() { return awaitable(*this, true); }
 
 bool operator==(const channel& a, const channel& b) {
   return a.get() == b.get();
@@ -151,12 +151,19 @@ channel file(const std::string& path, open_mode mode) {
 }
 
 awaitable::awaitable(const channel& ch, bool for_write,
-                     std::function<bool()> checker)
-    : checker_(checker), fd_(*ch), for_write_(for_write) {}
+                     std::function<bool()> checker, finish_fn_type finish)
+    : checker_(checker), finish_(finish), fd_(*ch), for_write_(for_write) {}
 
 awaitable::awaitable(std::chrono::milliseconds timeout,
-                     std::function<bool()> checker)
-    : checker_(checker), for_write_(false), timeout_(timeout) {}
+                     std::function<bool()> checker, finish_fn_type finish)
+    : checker_(checker),
+      finish_(finish),
+      for_write_(false),
+      timeout_(timeout) {}
+
+awaitable::~awaitable() {
+  if (finish_) finish_();
+}
 
 awaitable::checker_fn_type awaitable::get_checker() const { return checker_; }
 int awaitable::get_fd() const { return fd_; }

@@ -35,10 +35,25 @@ class flag {
   void reset();
   bool is_set() const;
   explicit operator bool() const;
-  awaitable wait_set() const;
+  awaitable wait();
 
  private:
   mutable std::mutex mu_;
+  bool set_ = false;
+  channel pipe_[2];
+};
+
+class notification {
+ public:
+  notification();
+
+  void notify_one();
+  void notify_all();
+  awaitable wait();
+
+ private:
+  std::mutex mu_;
+  std::size_t num_waiters_ = 0;
   channel pipe_[2];
 };
 

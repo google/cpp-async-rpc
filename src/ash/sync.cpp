@@ -20,32 +20,76 @@
 ///   under the License.
 
 #include "ash/sync.h"
+#include "ash/errors.h"
 
 namespace ash {
 
-flag::flag() { pipe(pipe_); }
+flag::flag() {
+  pipe(pipe_);
+  pipe_[0].make_non_blocking();
+  pipe_[1].make_non_blocking();
+}
 
 void flag::set() {
   std::scoped_lock lock(mu_);
-  pipe_[1].close();
+  pipe_[1].write("*", 1);
+  set_ = true;
 }
 
 void flag::reset() {
   std::scoped_lock lock(mu_);
-  if (!pipe_[1]) {
-    pipe(pipe_);
-  }
+  do {
+    try {
+      char c;
+      pipe_[0].read(&c, 1);
+    } catch (const errors::try_again&) {
+      set_ = false;
+      return;
+    }
+  } while (true);
 }
 
 bool flag::is_set() const {
   std::scoped_lock lock(mu_);
-  return !pipe_[1];
+  return set_;
 }
 
 flag::operator bool() const { return is_set(); }
 
-awaitable flag::wait_set() const {
-  return awaitable(pipe_[0], false, [this]() { return is_set(); });
+awaitable flag::wait() { return pipe_[0].read(); }
+
+notification::notification() {
+  pipe(pipe_);
+  pipe_[0].make_non_blocking();
+  pipe_[1].make_non_blocking();
+}
+
+void notification::notify_one() {
+  std::scoped_lock lock(mu_);
+  if (num_waiters_) pipe_[1].write("*", 1);
+}
+void notification::notify_all() {
+  std::scoped_lock lock(mu_);
+  for (std::size_t i = 0; i < num_waiters_; i++) pipe_[1].write("*", 1);
+}
+
+awaitable notification::wait() {
+  std::scoped_lock lock(mu_);
+  num_waiters_++;
+  return awaitable(pipe_[0], false,
+                   [this]() {
+                     try {
+                       char c;
+                       pipe_[0].read(&c, 1);
+                       return true;
+                     } catch (const errors::try_again&) {
+                       return false;
+                     }
+                   },
+                   [this]() {
+                     std::scoped_lock lock(mu_);
+                     num_waiters_--;
+                   });
 }
 
 }  // namespace ash

@@ -176,6 +176,25 @@ struct bad_connection {
 };
 
 int main() {
+  ash::flag n;
+
+  auto tl = [&n]() {
+    auto r =
+        ash::select(n.wait(), ash::timeout(std::chrono::milliseconds(3000)));
+    if (r[0]) {
+      std::cerr << "Notified!" << std::endl;
+    } else {
+      std::cerr << "Timed out!" << std::endl;
+    }
+  };
+
+  std::thread th1(tl);
+  std::thread th2(tl);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  n.set();
+  th1.join();
+  th2.join();
+
   ash::channel in(0);
   auto s =
       ash::select(in.read(), ash::timeout(std::chrono::milliseconds(3000)));
