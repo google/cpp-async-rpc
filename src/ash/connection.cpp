@@ -58,7 +58,6 @@ channel_connection::channel_lock::~channel_lock() {
 }
 
 channel_connection::channel_connection(channel&& ch) : channel_(std::move(ch)) {
-  pipe(pipe_);
   channel_.make_non_blocking();
 }
 
@@ -77,17 +76,15 @@ void channel_connection::disconnect() {
   }
 
   if (!closing_) {
-    closing_ = true;
-    pipe_[1].close();
+    closing_.set();
   }
 
   // Wait for all shared owners to go away.
   idle_.wait(lock, [this] { return lock_count_ == 0; });
 
   if (closing_) {
-    pipe_[0].close();
     channel_.close();
-    closing_ = false;
+    closing_.reset();
   }
 }
 
@@ -101,7 +98,7 @@ void channel_connection::write(const char* data, std::size_t size) {
       size -= written;
       data += written;
     } catch (const errors::try_again&) {
-      auto s = select(channel_.write(), pipe_[0].read());
+      auto s = select(channel_.write(), closing_.wait_set());
       if (s[1])
         throw errors::shutting_down("Write interrupted by connection shutdown");
     }
@@ -125,7 +122,7 @@ std::size_t channel_connection::read(char* data, std::size_t size) {
       data += read;
       total_read += read;
     } catch (const errors::try_again&) {
-      auto s = select(channel_.read(), pipe_[0].read());
+      auto s = select(channel_.read(), closing_.wait_set());
       if (s[1])
         throw errors::shutting_down("Read interrupted by connection shutdown");
     }

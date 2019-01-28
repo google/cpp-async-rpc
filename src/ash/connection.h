@@ -34,6 +34,7 @@
 #include "ash/io.h"
 #include "ash/io_adapters.h"
 #include "ash/mpt.h"
+#include "ash/sync.h"
 
 namespace ash {
 
@@ -190,8 +191,7 @@ class channel_connection : public connection {
   std::mutex mu_;
   std::condition_variable idle_;
   channel channel_;
-  channel pipe_[2];
-  bool closing_ = false;
+  flag closing_;
   int lock_count_ = 0;
 };  // namespace ash
 
