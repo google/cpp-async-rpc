@@ -44,6 +44,8 @@ bool flag::is_set() const {
 
 flag::operator bool() const { return is_set(); }
 
-awaitable flag::wait_set() const { return pipe_[0].read(); }
+awaitable flag::wait_set() const {
+  return awaitable(pipe_[0], false, [this]() { return is_set(); });
+}
 
 }  // namespace ash

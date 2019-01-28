@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -90,50 +91,25 @@ void pipe(channel fds[2]);
 channel file(const std::string& path, open_mode mode = open_mode::READ);
 
 template <typename... Args>
-std::array<bool, sizeof...(Args)> select(const Args&... args) {
-  constexpr std::size_t n = sizeof...(Args);
-  pollfd fds[n] = {
-      {.fd = *args.get_channel(),
-       .events = static_cast<short>(/* NOLINT(runtime/int) */ args.for_write()
-                                        ? (POLLOUT | POLLERR)
-                                        : (POLLIN | POLLHUP))}...};
-  std::chrono::milliseconds timeouts[n] = {args.timeout()...};
-
-  std::chrono::milliseconds timeout = std::chrono::milliseconds(-1);
-  constexpr auto zero = std::chrono::milliseconds ::zero();
-  for (std::size_t i = 0; i < n; i++) {
-    if (timeouts[i] >= zero && (timeout < zero || timeout > timeouts[i])) {
-      timeout = timeouts[i];
-    }
-  }
-
-  int pres = poll(fds, n, timeout / std::chrono::milliseconds(1));
-  if (pres < 0) detail::throw_io_error("Error in select");
-
-  std::array<bool, n> res;
-  if (pres > 0) {
-    for (std::size_t i = 0; i < n; i++) {
-      res[i] = (fds[i].revents & fds[i].events) != 0;
-    }
-  } else {
-    for (std::size_t i = 0; i < n; i++) {
-      res[i] = timeouts[i] >= zero && timeouts[i] <= timeout;
-    }
-  }
-  return res;
-}
+std::array<bool, sizeof...(Args)> select(const Args&... args);
 
 class awaitable {
  public:
-  explicit awaitable(const channel& ch, bool for_write = false);
-  explicit awaitable(std::chrono::milliseconds timeout);
+  using checker_fn_type = std::function<bool()>;
 
-  const channel& get_channel() const;
+  explicit awaitable(const channel& ch, bool for_write = false,
+                     checker_fn_type checker = nullptr);
+  explicit awaitable(std::chrono::milliseconds timeout,
+                     checker_fn_type checker = nullptr);
+
+  checker_fn_type get_checker() const;
+  int get_fd() const;
   bool for_write() const;
   std::chrono::milliseconds timeout() const;
 
  private:
-  const channel channel_;
+  const checker_fn_type checker_;
+  const int fd_ = -1;
   const bool for_write_;
   const std::chrono::milliseconds timeout_ = std::chrono::milliseconds(-1);
 };
@@ -150,6 +126,60 @@ awaitable deadline(Timepoint when) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           when - std::chrono::system_clock::now());
   return awaitable(std::max(std::chrono::milliseconds::zero(), delta));
+}
+
+template <typename... Args>
+std::array<bool, sizeof...(Args)> select(const Args&... args) {
+  constexpr std::size_t n = sizeof...(Args);
+
+  pollfd fds[n] = {
+      {.fd = args.get_fd(),
+       .events = static_cast<short>(/* NOLINT(runtime/int) */ args.for_write()
+                                        ? (POLLOUT | POLLERR)
+                                        : (POLLIN | POLLHUP))}...};
+
+  std::chrono::milliseconds timeouts[n] = {args.timeout()...};
+
+  awaitable::checker_fn_type checkers[n] = {args.get_checker()...};
+
+  std::chrono::milliseconds timeout = std::chrono::milliseconds(-1);
+  constexpr auto zero = std::chrono::milliseconds ::zero();
+  for (std::size_t i = 0; i < n; i++) {
+    if (timeouts[i] >= zero && (timeout < zero || timeout > timeouts[i])) {
+      timeout = timeouts[i];
+    }
+  }
+
+  std::chrono::milliseconds elapsed = zero;
+  auto last = std::chrono::steady_clock::now();
+
+  do {
+    int pres = poll(fds, n, (timeout - elapsed) / std::chrono::milliseconds(1));
+    if (pres < 0) detail::throw_io_error("Error in select");
+
+    std::array<bool, n> res;
+    if (pres > 0) {
+      for (std::size_t i = 0; i < n; i++) {
+        res[i] = (fds[i].revents & fds[i].events) != 0 &&
+                 (!checkers[i] || checkers[i]());
+      }
+    } else {
+      for (std::size_t i = 0; i < n; i++) {
+        res[i] = timeouts[i] >= zero && timeouts[i] <= timeout &&
+                 (!checkers[i] || checkers[i]());
+      }
+    }
+    for (std::size_t i = 0; i < n; i++) {
+      if (res[i]) {
+        return res;
+      }
+    }
+
+    auto now = std::chrono::steady_clock::now();
+    elapsed +=
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - last);
+    last = now;
+  } while (true);
 }
 
 }  // namespace ash

@@ -150,13 +150,16 @@ channel file(const std::string& path, open_mode mode) {
   return res;
 }
 
-awaitable::awaitable(const channel& ch, bool for_write)
-    : channel_(ch.dup()), for_write_(for_write) {}
+awaitable::awaitable(const channel& ch, bool for_write,
+                     std::function<bool()> checker)
+    : checker_(checker), fd_(*ch), for_write_(for_write) {}
 
-awaitable::awaitable(std::chrono::milliseconds timeout)
-    : for_write_(false), timeout_(timeout) {}
+awaitable::awaitable(std::chrono::milliseconds timeout,
+                     std::function<bool()> checker)
+    : checker_(checker), for_write_(false), timeout_(timeout) {}
 
-const channel& awaitable::get_channel() const { return channel_; }
+awaitable::checker_fn_type awaitable::get_checker() const { return checker_; }
+int awaitable::get_fd() const { return fd_; }
 bool awaitable::for_write() const { return for_write_; }
 std::chrono::milliseconds awaitable::timeout() const { return timeout_; }
 
