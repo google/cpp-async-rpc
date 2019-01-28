@@ -32,21 +32,19 @@ flag::flag() {
 
 void flag::set() {
   std::scoped_lock lock(mu_);
-  pipe_[1].write("*", 1);
-  set_ = true;
+  if (!set_) {
+    pipe_[1].write("*", 1);
+    set_ = true;
+  }
 }
 
 void flag::reset() {
   std::scoped_lock lock(mu_);
-  do {
-    try {
-      char c;
-      pipe_[0].read(&c, 1);
-    } catch (const errors::try_again&) {
-      set_ = false;
-      return;
-    }
-  } while (true);
+  if (set_) {
+    char c;
+    pipe_[0].read(&c, 1);
+    set_ = false;
+  }
 }
 
 bool flag::is_set() const {
