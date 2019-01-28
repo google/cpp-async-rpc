@@ -20,16 +20,143 @@
 ///   under the License.
 
 #include "ash/io.h"
+#include <algorithm>
+#include <cerrno>
+#include <utility>
+#include "ash/errors.h"
 
 namespace ash {
 
-awaitable::awaitable(const ::ash::channel& ch, bool for_write)
+namespace detail {
+
+void throw_io_error(const std::string& message) {
+  if (errno == EAGAIN || errno == EWOULDBLOCK) {
+    throw errors::try_again("Try again");
+  }
+  throw errors::io_error(message + std::string(": ") + std::to_string(errno));
+}
+
+}  // namespace detail
+
+channel::channel() noexcept : fd_(-1) {}
+
+channel::channel(int fd) noexcept : fd_(fd) {}
+
+channel::channel(channel&& fd) noexcept : fd_(-1) { swap(fd); }
+
+channel::~channel() noexcept {
+  if (fd_ >= 0) {
+    ::close(fd_);  // Ignore close-time errors to prevent exceptions.
+  }
+}
+
+void channel::swap(channel& fd) noexcept { std::swap(fd_, fd.fd_); }
+channel& channel::operator=(channel&& fd) noexcept {
+  channel tmp;
+  tmp.swap(fd);
+  swap(tmp);
+  return *this;
+}
+
+int channel::release() noexcept {
+  int res = -1;
+  std::swap(res, fd_);
+  return res;
+}
+
+int channel::get() const noexcept { return fd_; }
+
+int channel::operator*() const noexcept { return fd_; }
+
+void channel::reset(int fd) noexcept {
+  channel tmp(fd);
+  swap(tmp);
+}
+
+channel::operator bool() const noexcept { return (fd_ >= 0); }
+
+void channel::close() noexcept { reset(); }
+
+std::size_t channel::read(void* buf, std::size_t len) {
+  auto num = ::read(fd_, buf, len);
+  if (num < 0) detail::throw_io_error("Error reading");
+  return num;
+}
+
+std::size_t channel::write(const void* buf, std::size_t len) {
+  auto num = ::write(fd_, buf, len);
+  if (num < 0) detail::throw_io_error("Error writing");
+  return num;
+}
+
+void channel::make_blocking() {
+  if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
+                 fcntl(fd_, F_SETFL, flags & ~O_NONBLOCK) < 0)
+    detail::throw_io_error("Error making channel descriptor blocking");
+}
+
+void channel::make_non_blocking() {
+  if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
+                 fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0)
+    detail::throw_io_error("Error making channel descriptor non-blocking");
+}
+
+channel channel::dup() const {
+  if (!*this)
+    detail::throw_io_error("Trying to duplicate an empty channel descriptor");
+  channel res(::dup(fd_));
+  if (!res) detail::throw_io_error("Error duplicating the channel descriptor");
+  return res;
+}
+
+awaitable channel::read() const { return awaitable(*this, false); }
+
+awaitable channel::write() const { return awaitable(*this, true); }
+
+bool operator==(const channel& a, const channel& b) {
+  return a.get() == b.get();
+}
+bool operator!=(const channel& a, const channel& b) {
+  return a.get() != b.get();
+}
+bool operator<(const channel& a, const channel& b) { return a.get() < b.get(); }
+bool operator<=(const channel& a, const channel& b) {
+  return a.get() <= b.get();
+}
+bool operator>(const channel& a, const channel& b) { return a.get() > b.get(); }
+bool operator>=(const channel& a, const channel& b) {
+  return a.get() >= b.get();
+}
+
+void pipe(channel fds[2]) {
+  int fd[2];
+  if (::pipe(fd)) detail::throw_io_error("Error creating pipe pair");
+  fds[0].reset(fd[0]);
+  fds[1].reset(fd[1]);
+}
+
+channel file(const std::string& path, open_mode mode) {
+  static constexpr int posix_modes[] = {
+      O_RDONLY,                       // READ
+      O_WRONLY | O_CREAT | O_TRUNC,   // WRITE
+      O_WRONLY | O_CREAT | O_APPEND,  // APPEND
+      O_RDWR,                         // READ_PLUS
+      O_RDWR | O_CREAT | O_TRUNC,     // WRITE_PLUS
+      O_RDWR | O_CREAT | O_APPEND,    // APPEND
+  };
+  channel res(
+      ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
+  if (!res) detail::throw_io_error("Error opening channel");
+  return res;
+}
+
+awaitable::awaitable(const channel& ch, bool for_write)
     : channel_(ch.dup()), for_write_(for_write) {}
 
 awaitable::awaitable(std::chrono::milliseconds timeout)
     : for_write_(false), timeout_(timeout) {}
 
-const ::ash::channel& awaitable::channel() const { return channel_; }
+const channel& awaitable::get_channel() const { return channel_; }
 bool awaitable::for_write() const { return for_write_; }
 std::chrono::milliseconds awaitable::timeout() const { return timeout_; }
 
