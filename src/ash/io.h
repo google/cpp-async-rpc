@@ -106,12 +106,17 @@ class awaitable {
                      finish_fn_type finish = nullptr);
   ~awaitable();
 
+  awaitable then(checker_fn_type checker);
+
   checker_fn_type get_checker() const;
   int get_fd() const;
   bool for_write() const;
   std::chrono::milliseconds timeout() const;
 
  private:
+  awaitable(int fd, bool for_write, std::chrono::milliseconds timeout,
+            checker_fn_type checker, finish_fn_type finish);
+
   const checker_fn_type checker_;
   const finish_fn_type finish_;
   const int fd_ = -1;

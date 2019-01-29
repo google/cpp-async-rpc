@@ -176,24 +176,40 @@ struct bad_connection {
 };
 
 int main() {
-  ash::flag n;
+  ash::queue<std::unique_ptr<int>> q(10);
 
-  auto tl = [&n]() {
-    auto r =
-        ash::select(n.wait(), ash::timeout(std::chrono::milliseconds(3000)));
-    if (r[0]) {
-      std::cerr << "Notified!" << std::endl;
-    } else {
-      std::cerr << "Timed out!" << std::endl;
-    }
+  auto tl = [&q]() {
+    do {
+      std::unique_ptr<int> d;
+      auto r = ash::select(q.wait_get(d),
+                           ash::timeout(std::chrono::milliseconds(3000)));
+      if (r[0]) {
+        std::cerr << "Got! " << *d << " Here!" << std::endl;
+        return;
+      } else {
+        std::cerr << "1 Timed out!" << std::endl;
+        return;
+      }
+    } while (true);
   };
 
   std::thread th1(tl);
   std::thread th2(tl);
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  n.set();
+  std::thread th3(tl);
+  std::thread th4(tl);
+  std::thread th5(tl);
+  std::thread th6(tl);
+
+  q.put(std::make_unique<int>(12));
+  q.put(std::make_unique<int>(1337));
+  q.put(std::make_unique<int>(464));
+
   th1.join();
   th2.join();
+  th3.join();
+  th4.join();
+  th5.join();
+  th6.join();
 
   ash::channel in(0);
   auto s =

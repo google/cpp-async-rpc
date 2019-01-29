@@ -20,9 +20,44 @@
 ///   under the License.
 
 #include "ash/sync.h"
-#include "ash/errors.h"
 
 namespace ash {
+
+mutex::mutex() {
+  pipe(pipe_);
+  pipe_[0].make_non_blocking();
+  pipe_[1].make_non_blocking();
+  pipe_[1].write("*", 1);
+}
+
+void mutex::lock() {
+  do {
+    try {
+      select(wait());
+      lock_nowait();
+      return;
+    } catch (const errors::try_again&) {
+    }
+  } while (true);
+}
+
+void mutex::lock_nowait() {
+  char c;
+  pipe_[0].read(&c, 1);
+}
+
+bool mutex::try_lock() {
+  try {
+    lock_nowait();
+    return true;
+  } catch (const errors::try_again&) {
+    return false;
+  }
+}
+
+void mutex::unlock() { pipe_[1].write("*", 1); }
+
+awaitable mutex::wait() { return pipe_[0].read(); }
 
 flag::flag() {
   pipe(pipe_);

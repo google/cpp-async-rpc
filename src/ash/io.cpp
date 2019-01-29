@@ -161,8 +161,26 @@ awaitable::awaitable(std::chrono::milliseconds timeout,
       for_write_(false),
       timeout_(timeout) {}
 
+awaitable::awaitable(int fd, bool for_write, std::chrono::milliseconds timeout,
+                     checker_fn_type checker, finish_fn_type finish)
+    : checker_(checker),
+      finish_(finish),
+      fd_(fd),
+      for_write_(for_write),
+      timeout_(timeout) {}
+
 awaitable::~awaitable() {
   if (finish_) finish_();
+}
+
+awaitable awaitable::then(checker_fn_type checker) {
+  auto pre_checker = checker_;
+  return awaitable(fd_, for_write_, timeout_,
+                   [pre_checker, checker]() {
+                     return (!pre_checker || pre_checker()) &&
+                            (!checker || checker());
+                   },
+                   finish_);
 }
 
 awaitable::checker_fn_type awaitable::get_checker() const { return checker_; }
