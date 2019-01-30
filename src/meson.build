@@ -1,4 +1,4 @@
-includes = include_directories('.')
+includes = include_directories('.', '../function2/include')
 
 find_program_path = find_program('find') 
 

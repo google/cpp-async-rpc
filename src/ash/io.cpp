@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <cerrno>
 #include <utility>
-#include "ash/errors.h"
 
 namespace ash {
 
@@ -150,42 +149,36 @@ channel file(const std::string& path, open_mode mode) {
   return res;
 }
 
-awaitable::awaitable(const channel& ch, bool for_write,
-                     std::function<bool()> checker, finish_fn_type finish)
-    : checker_(checker), finish_(finish), fd_(*ch), for_write_(for_write) {}
+awaitable::awaitable(const channel& ch, bool for_write)
+    : fd_(*ch), for_write_(for_write) {}
 
-awaitable::awaitable(std::chrono::milliseconds timeout,
-                     std::function<bool()> checker, finish_fn_type finish)
-    : checker_(checker),
-      finish_(finish),
-      for_write_(false),
-      timeout_(timeout) {}
+awaitable::awaitable(std::chrono::milliseconds timeout, bool for_polling)
+    : timeout_(timeout), for_polling_(for_polling) {}
 
-awaitable::awaitable(int fd, bool for_write, std::chrono::milliseconds timeout,
-                     checker_fn_type checker, finish_fn_type finish)
-    : checker_(checker),
-      finish_(finish),
-      fd_(fd),
-      for_write_(for_write),
-      timeout_(timeout) {}
+awaitable::~awaitable() {}
 
-awaitable::~awaitable() {
-  if (finish_) finish_();
+awaitable& awaitable::then(checker_fn_type&& checker) {
+  if (!checker) {
+    return *this;
+  }
+  if (!checker_) {
+    checker_ = std::move(checker);
+  } else {
+    auto previous_checker = std::move(checker_);
+
+    checker = [previous_checker(std::move(previous_checker)),
+               checker(std::move(checker))]() mutable {
+      previous_checker();
+      checker();
+    };
+  }
+  return *this;
 }
 
-awaitable awaitable::then(checker_fn_type checker) {
-  auto pre_checker = checker_;
-  return awaitable(fd_, for_write_, timeout_,
-                   [pre_checker, checker]() {
-                     return (!pre_checker || pre_checker()) &&
-                            (!checker || checker());
-                   },
-                   finish_);
-}
-
-awaitable::checker_fn_type awaitable::get_checker() const { return checker_; }
+awaitable::checker_fn_type& awaitable::get_checker() { return checker_; }
 int awaitable::get_fd() const { return fd_; }
 bool awaitable::for_write() const { return for_write_; }
 std::chrono::milliseconds awaitable::timeout() const { return timeout_; }
+bool awaitable::for_polling() const { return for_polling_; }
 
 }  // namespace ash

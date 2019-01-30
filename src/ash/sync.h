@@ -35,10 +35,11 @@ class mutex {
   mutex();
 
   void lock();
-  void lock_nowait();
+  void maybe_lock();
   bool try_lock();
   void unlock();
-  awaitable wait();
+  awaitable can_lock();
+  awaitable async_lock();
 
  private:
   channel pipe_[2];
@@ -52,25 +53,11 @@ class flag {
   void reset();
   bool is_set() const;
   explicit operator bool() const;
-  awaitable wait();
+  awaitable wait_set();
 
  private:
   mutable std::mutex mu_;
   bool set_ = false;
-  channel pipe_[2];
-};
-
-class notification {
- public:
-  notification();
-
-  void notify_one();
-  void notify_all();
-  awaitable wait();
-
- private:
-  std::mutex mu_;
-  std::size_t num_waiters_ = 0;
   channel pipe_[2];
 };
 
@@ -95,23 +82,16 @@ class queue {
     std::scoped_lock lock(mu_);
     return size_ == data_.size();
   }
-  void try_put(const T& t) {
+  template <typename U>
+  void maybe_put(U&& u) {
     std::scoped_lock lock(mu_);
     if (size_ == data_.size()) throw errors::try_again("Queue is full");
-    data_[head_++] = t;
+    data_[head_++] = std::forward<U>(u);
     head_ %= data_.size();
     size_++;
     update_flags();
   }
-  void try_put(T&& t) {
-    std::scoped_lock lock(mu_);
-    if (size_ == data_.size()) throw errors::try_again("Queue is full");
-    data_[head_++] = std::move(t);
-    head_ %= data_.size();
-    size_++;
-    update_flags();
-  }
-  value_type try_get() {
+  value_type maybe_get() {
     std::scoped_lock lock(mu_);
     value_type result;
     if (size_ == 0) throw errors::try_again("Queue is empty");
@@ -121,86 +101,45 @@ class queue {
     update_flags();
     return result;
   }
-  void put(const T& t) {
-    do {
-      try {
-        select(has_space());
-        try_put(t);
-        return;
-      } catch (const errors::try_again&) {
-      }
-    } while (true);
-  }
-  void put(T&& t) {
-    do {
-      try {
-        select(has_space());
-        try_put(std::move(t));
-        return;
-      } catch (const errors::try_again&) {
-      }
-    } while (true);
+  template <typename U>
+  void put(U&& u) {
+    select(async_put(std::forward<U>(u)));
   }
   value_type get() {
-    do {
-      try {
-        select(has_data());
-        return try_get();
-      } catch (const errors::try_again&) {
-      }
-    } while (true);
+    value_type res;
+    select(async_get(res));
+    return res;
   }
-  awaitable wait_put(const T& t) {
-    return has_space_.wait().then([&t, this]() {
-      try {
-        try_put(t);
-        return true;
-      } catch (const errors::try_again&) {
-        return false;
-      }
-    });
+  template <typename U>
+  awaitable async_put(U&& u) {
+    return std::move(can_put().then(std::move(
+        [u(std::move(u)), this]() mutable { maybe_put(std::forward<U>(u)); })));
   }
-  awaitable wait_put(T&& t) {
-    return has_space_.wait().then([t(std::move(t)), this]() {
-      try {
-        try_put(t);
-        return true;
-      } catch (const errors::try_again&) {
-        return false;
-      }
-    });
+  awaitable async_get(value_type& t) {
+    return std::move(can_get().then(
+        std::move([&t, this]() { t = std::move(maybe_get()); })));
   }
-  awaitable wait_get(T& t) {
-    return has_data_.wait().then([&t, this]() {
-      try {
-        t = try_get();
-        return true;
-      } catch (const errors::try_again&) {
-        return false;
-      }
-    });
-  }
-  awaitable has_space() { return has_space_.wait(); }
-  awaitable has_data() { return has_data_.wait(); }
+  awaitable can_put() { return can_put_.wait_set(); }
+  awaitable can_get() { return can_get_.wait_set(); }
 
  private:
   void update_flags() {
     if (size_ == 0) {
-      has_data_.reset();
+      can_get_.reset();
     } else {
-      has_data_.set();
+      can_get_.set();
     }
     if (size_ == data_.size()) {
-      has_space_.reset();
+      can_put_.reset();
     } else {
-      has_space_.set();
+      can_put_.set();
     }
   }
 
   mutable std::mutex mu_;
   std::size_t head_ = 0, tail_ = 0, size_ = 0;
   std::vector<T> data_;
-  flag has_data_, has_space_;
+  flag can_get_, can_put_;
 };
 
 }  // namespace ash

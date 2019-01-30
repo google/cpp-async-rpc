@@ -179,14 +179,14 @@ int main() {
   ash::queue<std::unique_ptr<int>> q(10);
 
   auto tl = [&q]() {
+    std::unique_ptr<int> d;
     do {
-      std::unique_ptr<int> d;
-      auto r = ash::select(q.wait_get(d),
+      auto r = ash::select(q.async_get(d),
                            ash::timeout(std::chrono::milliseconds(3000)));
       if (r[0]) {
-        std::cerr << "Got! " << *d << " Here!" << std::endl;
+        std::cerr << "Got! Here! " << *d << std::endl;
         return;
-      } else {
+      } else if (r[1]) {
         std::cerr << "1 Timed out!" << std::endl;
         return;
       }
@@ -195,21 +195,11 @@ int main() {
 
   std::thread th1(tl);
   std::thread th2(tl);
-  std::thread th3(tl);
-  std::thread th4(tl);
-  std::thread th5(tl);
-  std::thread th6(tl);
 
-  q.put(std::make_unique<int>(12));
-  q.put(std::make_unique<int>(1337));
-  q.put(std::make_unique<int>(464));
+  q.put(std::make_unique<int>(32));
 
   th1.join();
   th2.join();
-  th3.join();
-  th4.join();
-  th5.join();
-  th6.join();
 
   ash::channel in(0);
   auto s =
