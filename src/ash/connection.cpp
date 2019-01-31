@@ -98,8 +98,8 @@ void channel_connection::write(const char* data, std::size_t size) {
       size -= written;
       data += written;
     } catch (const errors::try_again&) {
-      auto s = select(channel_.write(), closing_.wait_set());
-      if (s[1])
+      auto [can_write, closing] = select(channel_.write(), closing_.wait_set());
+      if (closing)
         throw errors::shutting_down("Write interrupted by connection shutdown");
     }
   }
@@ -122,8 +122,8 @@ std::size_t channel_connection::read(char* data, std::size_t size) {
       data += read;
       total_read += read;
     } catch (const errors::try_again&) {
-      auto s = select(channel_.read(), closing_.wait_set());
-      if (s[1])
+      auto [can_read, closing] = select(channel_.read(), closing_.wait_set());
+      if (closing)
         throw errors::shutting_down("Read interrupted by connection shutdown");
     }
   }

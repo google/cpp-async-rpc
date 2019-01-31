@@ -634,6 +634,9 @@ constexpr auto tail(T&& t) {
   return range<1, size_v<T>>(t);
 }
 
+template <typename I, typename T, typename O, typename... Args>
+constexpr auto accumulate(I&& a, T&& t, O o, Args&&... args);
+
 namespace detail {
 template <std::size_t n>
 struct accumulate_helper {

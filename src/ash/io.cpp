@@ -19,7 +19,7 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/io.h"
+#include <ash/io.h>
 #include <algorithm>
 #include <cerrno>
 #include <utility>
@@ -108,9 +108,9 @@ channel channel::dup() const {
   return res;
 }
 
-awaitable channel::read() { return awaitable(*this, false); }
+awaitable<void> channel::read() { return awaitable<void>(*this, false); }
 
-awaitable channel::write() { return awaitable(*this, true); }
+awaitable<void> channel::write() { return awaitable<void>(*this, true); }
 
 bool operator==(const channel& a, const channel& b) {
   return a.get() == b.get();
@@ -148,37 +148,5 @@ channel file(const std::string& path, open_mode mode) {
   if (!res) detail::throw_io_error("Error opening channel");
   return res;
 }
-
-awaitable::awaitable(const channel& ch, bool for_write)
-    : fd_(*ch), for_write_(for_write) {}
-
-awaitable::awaitable(std::chrono::milliseconds timeout, bool for_polling)
-    : timeout_(timeout), for_polling_(for_polling) {}
-
-awaitable::~awaitable() {}
-
-awaitable& awaitable::then(checker_fn_type&& checker) {
-  if (!checker) {
-    return *this;
-  }
-  if (!checker_) {
-    checker_ = std::move(checker);
-  } else {
-    auto previous_checker = std::move(checker_);
-
-    checker = [previous_checker(std::move(previous_checker)),
-               checker(std::move(checker))]() mutable {
-      previous_checker();
-      checker();
-    };
-  }
-  return *this;
-}
-
-awaitable::checker_fn_type& awaitable::get_checker() { return checker_; }
-int awaitable::get_fd() const { return fd_; }
-bool awaitable::for_write() const { return for_write_; }
-std::chrono::milliseconds awaitable::timeout() const { return timeout_; }
-bool awaitable::for_polling() const { return for_polling_; }
 
 }  // namespace ash

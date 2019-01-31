@@ -48,9 +48,9 @@ bool mutex::try_lock() {
 
 void mutex::unlock() { pipe_[1].write("*", 1); }
 
-awaitable mutex::can_lock() { return pipe_[0].read(); }
-awaitable mutex::async_lock() {
-  return std::move(can_lock().then([this]() { maybe_lock(); }));
+awaitable<void> mutex::can_lock() { return pipe_[0].read(); }
+awaitable<void> mutex::async_lock() {
+  return std::move(can_lock().then(std::move([this]() { maybe_lock(); })));
 }
 
 flag::flag() {
@@ -83,6 +83,6 @@ bool flag::is_set() const {
 
 flag::operator bool() const { return is_set(); }
 
-awaitable flag::wait_set() { return pipe_[0].read(); }
+awaitable<void> flag::wait_set() { return pipe_[0].read(); }
 
 }  // namespace ash

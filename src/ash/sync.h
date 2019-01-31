@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 #include "ash/errors.h"
-#include "ash/io.h"
+#include "io.h"
 
 namespace ash {
 
@@ -38,8 +38,8 @@ class mutex {
   void maybe_lock();
   bool try_lock();
   void unlock();
-  awaitable can_lock();
-  awaitable async_lock();
+  awaitable<void> can_lock();
+  awaitable<void> async_lock();
 
  private:
   channel pipe_[2];
@@ -53,7 +53,7 @@ class flag {
   void reset();
   bool is_set() const;
   explicit operator bool() const;
-  awaitable wait_set();
+  awaitable<void> wait_set();
 
  private:
   mutable std::mutex mu_;
@@ -111,16 +111,16 @@ class queue {
     return res;
   }
   template <typename U>
-  awaitable async_put(U&& u) {
+  awaitable<void> async_put(U&& u) {
     return std::move(can_put().then(std::move(
         [u(std::move(u)), this]() mutable { maybe_put(std::forward<U>(u)); })));
   }
-  awaitable async_get(value_type& t) {
-    return std::move(can_get().then(
-        std::move([&t, this]() { t = std::move(maybe_get()); })));
+  awaitable<value_type> async_get() {
+    return std::move(
+        can_get().then(std::move([this]() { return std::move(maybe_get()); })));
   }
-  awaitable can_put() { return can_put_.wait_set(); }
-  awaitable can_get() { return can_get_.wait_set(); }
+  awaitable<void> can_put() { return can_put_.wait_set(); }
+  awaitable<void> can_get() { return can_get_.wait_set(); }
 
  private:
   void update_flags() {

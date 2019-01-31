@@ -179,14 +179,13 @@ int main() {
   ash::queue<std::unique_ptr<int>> q(10);
 
   auto tl = [&q]() {
-    std::unique_ptr<int> d;
     do {
-      auto r = ash::select(q.async_get(d),
-                           ash::timeout(std::chrono::milliseconds(3000)));
-      if (r[0]) {
-        std::cerr << "Got! Here! " << *d << std::endl;
+      auto [get, timeout] = ash::select(
+          q.async_get(), ash::timeout(std::chrono::milliseconds(3000)));
+      if (get) {
+        std::cerr << "Got! Here! " << **get << std::endl;
         return;
-      } else if (r[1]) {
+      } else if (timeout) {
         std::cerr << "1 Timed out!" << std::endl;
         return;
       }
@@ -202,9 +201,9 @@ int main() {
   th2.join();
 
   ash::channel in(0);
-  auto s =
+  auto [read, timeout] =
       ash::select(in.read(), ash::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << s[0] << s[1] << std::endl;
+  std::cerr << read << timeout << std::endl;
   in.release();
 
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();

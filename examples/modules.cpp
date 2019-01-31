@@ -19,18 +19,17 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
+#include <ash/io.h>
 #include <chrono>
 #include <iostream>
-#include "ash/io.h"
-
 #include "module1.h"
 #include "module2.h"
 
 int main() {
   ash::channel in(0);
-  auto s =
+  auto [read, timeout] =
       ash::select(in.read(), ash::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << s[0] << s[1] << std::endl;
+  std::cerr << read << timeout << std::endl;
   in.release();
 
   run_module1();
