@@ -106,9 +106,8 @@ class queue {
     select(async_put(std::forward<U>(u)));
   }
   value_type get() {
-    value_type res;
-    select(async_get(res));
-    return res;
+    auto [res] = select(async_get());
+    return std::move(*res);
   }
   template <typename U>
   awaitable<void> async_put(U&& u) {
@@ -144,6 +143,71 @@ class queue {
   flag can_get_, can_put_;
 };
 
+template <>
+class queue<void> {
+ public:
+  using size_type = std::size_t;
+  using value_type = void;
+
+  explicit queue(size_type size) : max_size_(size) { update_flags(); }
+  size_type size() const {
+    std::scoped_lock lock(mu_);
+    return size_;
+  }
+  size_type max_size() const { return max_size_; }
+  size_type capacity() const { return max_size_; }
+  bool empty() const {
+    std::scoped_lock lock(mu_);
+    return size_ == 0;
+  }
+  bool full() const {
+    std::scoped_lock lock(mu_);
+    return size_ == max_size_;
+  }
+  void maybe_put() {
+    std::scoped_lock lock(mu_);
+    if (size_ == max_size_) throw errors::try_again("Queue is full");
+    size_++;
+    update_flags();
+  }
+  void maybe_get() {
+    std::scoped_lock lock(mu_);
+    if (size_ == 0) throw errors::try_again("Queue is empty");
+    size_--;
+    update_flags();
+  }
+  void put() { select(async_put()); }
+  void get() { select(async_get()); }
+
+  awaitable<void> async_put() {
+    return std::move(
+        can_put().then(std::move([this]() mutable { maybe_put(); })));
+  }
+  awaitable<void> async_get() {
+    return std::move(can_get().then(std::move([this]() { maybe_get(); })));
+  }
+  awaitable<void> can_put() { return can_put_.wait_set(); }
+  awaitable<void> can_get() { return can_get_.wait_set(); }
+
+ private:
+  void update_flags() {
+    if (size_ == 0) {
+      can_get_.reset();
+    } else {
+      can_get_.set();
+    }
+    if (size_ == max_size_) {
+      can_put_.reset();
+    } else {
+      can_put_.set();
+    }
+  }
+
+  mutable std::mutex mu_;
+  std::size_t size_ = 0;
+  std::size_t max_size_;
+  flag can_get_, can_put_;
+};
 }  // namespace ash
 
 #endif  // ASH_SYNC_H_

@@ -184,6 +184,7 @@ int main() {
           q.async_get(), ash::timeout(std::chrono::milliseconds(3000)));
       if (get) {
         std::cerr << "Got! Here! " << **get << std::endl;
+        q.put(std::make_unique<int>(**get + 1));
         return;
       } else if (timeout) {
         std::cerr << "1 Timed out!" << std::endl;
@@ -200,6 +201,8 @@ int main() {
 
   th1.join();
   th2.join();
+
+  std::cerr << *(q.get()) << " DONE!" << std::endl;
 
   ash::channel in(0);
   auto [read, timeout] =
