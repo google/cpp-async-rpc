@@ -108,9 +108,9 @@ channel channel::dup() const {
   return res;
 }
 
-awaitable<void> channel::read() { return awaitable<void>(*this, false); }
+awaitable<void> channel::can_read() { return awaitable<void>(*this, false); }
 
-awaitable<void> channel::write() { return awaitable<void>(*this, true); }
+awaitable<void> channel::can_write() { return awaitable<void>(*this, true); }
 
 bool operator==(const channel& a, const channel& b) {
   return a.get() == b.get();

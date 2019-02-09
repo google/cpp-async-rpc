@@ -112,8 +112,10 @@ class queue {
   }
   template <typename U>
   awaitable<void> async_put(U&& u) {
-    return std::move(can_put().then(std::move(
-        [u(std::move(u)), this]() mutable { maybe_put(std::forward<U>(u)); })));
+    return std::move(
+        can_put().then(std::move([u(std::forward<U>(u)), this]() mutable {
+          maybe_put(std::forward<U>(u));
+        })));
   }
   awaitable<value_type> async_get() {
     return std::move(

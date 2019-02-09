@@ -195,14 +195,15 @@ int main() {
   std::thread th1(tl);
   std::thread th2(tl);
 
-  q.put(std::make_unique<int>(32));
+  auto [put] = ash::select(q.async_put(std::make_unique<int>(32)));
+  std::cerr << "DID " << put << " DID" << std::endl;
 
   th1.join();
   th2.join();
 
   ash::channel in(0);
   auto [read, timeout] =
-      ash::select(in.read(), ash::timeout(std::chrono::milliseconds(3000)));
+      ash::select(in.can_read(), ash::timeout(std::chrono::milliseconds(3000)));
   std::cerr << read << timeout << std::endl;
   in.release();
 

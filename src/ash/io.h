@@ -80,8 +80,8 @@ class channel {
   void make_blocking();
   void make_non_blocking();
   channel dup() const;
-  awaitable<void> read();
-  awaitable<void> write();
+  awaitable<void> can_read();
+  awaitable<void> can_write();
 
  private:
   int fd_;
