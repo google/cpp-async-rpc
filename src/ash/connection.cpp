@@ -93,16 +93,14 @@ void channel_connection::write(const char* data, std::size_t size) {
   check_connected();
 
   while (size > 0) {
-    try {
-      auto written = channel_.write(data, size);
-      size -= written;
-      data += written;
-    } catch (const errors::try_again&) {
-      auto [can_write, closing] =
-          select(channel_.can_write(), closing_.wait_set());
-      if (closing)
-        throw errors::shutting_down("Write interrupted by connection shutdown");
+    auto [written, closing] =
+        select(channel_.async_write(data, size), closing_.wait_set());
+    if (written) {
+      size -= *written;
+      data += *written;
     }
+    if (closing)
+      throw errors::shutting_down("Write interrupted by connection shutdown");
   }
 }
 
@@ -116,18 +114,16 @@ std::size_t channel_connection::read(char* data, std::size_t size) {
 
   std::size_t total_read = 0;
   while (size > 0) {
-    try {
-      auto read = channel_.read(data, size);
-      if (read == 0) break;
-      size -= read;
-      data += read;
-      total_read += read;
-    } catch (const errors::try_again&) {
-      auto [can_read, closing] =
-          select(channel_.can_read(), closing_.wait_set());
-      if (closing)
-        throw errors::shutting_down("Read interrupted by connection shutdown");
+    auto [read, closing] =
+        select(channel_.async_read(data, size), closing_.wait_set());
+    if (read) {
+      if (*read == 0) break;
+      size -= *read;
+      data += *read;
+      total_read += *read;
     }
+    if (closing)
+      throw errors::shutting_down("Read interrupted by connection shutdown");
   }
   return total_read;
 }

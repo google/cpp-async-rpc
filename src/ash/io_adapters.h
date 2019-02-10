@@ -35,7 +35,7 @@ class input_stream {
   // EOF.
   virtual std::size_t read(char* p, std::size_t l) = 0;
 
-  // Ensure that l chars are read, or return status::END_OF_FILE.
+  // Ensure that l chars are read, or raise errors::eof.
   void read_fully(char* p, std::size_t l);
 
   // Try to read one more char, or block.

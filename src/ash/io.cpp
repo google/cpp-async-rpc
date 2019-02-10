@@ -82,10 +82,20 @@ std::size_t channel::read(void* buf, std::size_t len) {
   return num;
 }
 
+awaitable<std::size_t> channel::async_read(void* buf, std::size_t len) {
+  return can_read().then(
+      std::move([this, buf, len]() { return read(buf, len); }));
+}
+
 std::size_t channel::write(const void* buf, std::size_t len) {
   auto num = ::write(fd_, buf, len);
   if (num < 0) detail::throw_io_error("Error writing");
   return num;
+}
+
+awaitable<std::size_t> channel::async_write(const void* buf, std::size_t len) {
+  return can_write().then(
+      std::move([this, buf, len]() { return write(buf, len); }));
 }
 
 void channel::make_blocking() {

@@ -82,6 +82,8 @@ class channel {
   channel dup() const;
   awaitable<void> can_read();
   awaitable<void> can_write();
+  awaitable<std::size_t> async_read(void* buf, std::size_t len);
+  awaitable<std::size_t> async_write(const void* buf, std::size_t len);
 
  private:
   int fd_;
