@@ -1,4 +1,4 @@
-/// \channel
+/// \file
 /// \brief select-friendly synchronization objects.
 ///
 /// \copyright

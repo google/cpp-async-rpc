@@ -30,6 +30,7 @@
 #include "ash/client.h"
 #include "ash/connection.h"
 #include "ash/errors.h"
+#include "ash/future.h"
 #include "ash/highway_hash.h"
 #include "ash/interface.h"
 #include "ash/iostream_adapters.h"
@@ -176,6 +177,27 @@ struct bad_connection {
 };
 
 int main() {
+  {
+    ash::future<std::unique_ptr<int>> fi;
+    ash::promise<std::unique_ptr<int>> pi;
+    fi = pi.get_future();
+    std::thread th1([&]() {
+      std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+      pi.set_value(std::make_unique<int>(33));
+    });
+
+    auto [val, to] = ash::select(fi.async_get(),
+                                 ash::timeout(std::chrono::milliseconds(3000)));
+    if (val) {
+      std::cerr << "VAL: " << **val << std::endl;
+    }
+    if (to) {
+      std::cerr << "TIMED OUT" << std::endl;
+    }
+
+    th1.join();
+  }
+
   ash::queue<std::unique_ptr<int>> q(10);
 
   auto tl = [&q]() {

@@ -1,4 +1,4 @@
-/// \channel
+/// \file
 /// \brief select-friendly synchronization objects.
 ///
 /// \copyright
@@ -208,6 +208,10 @@ class queue<void> {
   std::size_t max_size_;
   flag can_get_, can_put_;
 };
+
+/// A semaphore is just a queue<void>.
+using semaphore = queue<void>;
+
 }  // namespace ash
 
 #endif  // ASH_SYNC_H_

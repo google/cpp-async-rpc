@@ -1,4 +1,4 @@
-/// \channel
+/// \file
 /// \brief Channel descriptor wrapper.
 ///
 /// \copyright
