@@ -112,7 +112,8 @@ void channel::make_non_blocking() {
 
 channel channel::dup() const {
   if (!*this)
-    detail::throw_io_error("Trying to duplicate an empty channel descriptor");
+    throw errors::invalid_state(
+        "Trying to duplicate an empty channel descriptor");
   channel res(::dup(fd_));
   if (!res) detail::throw_io_error("Error duplicating the channel descriptor");
   return res;
