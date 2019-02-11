@@ -122,21 +122,6 @@ awaitable<void> channel::can_read() { return awaitable<void>(fd_, false); }
 
 awaitable<void> channel::can_write() { return awaitable<void>(fd_, true); }
 
-bool operator==(const channel& a, const channel& b) {
-  return a.get() == b.get();
-}
-bool operator!=(const channel& a, const channel& b) {
-  return a.get() != b.get();
-}
-bool operator<(const channel& a, const channel& b) { return a.get() < b.get(); }
-bool operator<=(const channel& a, const channel& b) {
-  return a.get() <= b.get();
-}
-bool operator>(const channel& a, const channel& b) { return a.get() > b.get(); }
-bool operator>=(const channel& a, const channel& b) {
-  return a.get() >= b.get();
-}
-
 void pipe(channel fds[2]) {
   int fd[2];
   if (::pipe(fd)) detail::throw_io_error("Error creating pipe pair");

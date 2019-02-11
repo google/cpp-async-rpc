@@ -87,13 +87,6 @@ class channel {
   int fd_;
 };
 
-bool operator==(const channel& a, const channel& b);
-bool operator!=(const channel& a, const channel& b);
-bool operator<(const channel& a, const channel& b);
-bool operator<=(const channel& a, const channel& b);
-bool operator>(const channel& a, const channel& b);
-bool operator>=(const channel& a, const channel& b);
-
 void pipe(channel fds[2]);
 
 channel file(const std::string& path, open_mode mode = open_mode::READ);
