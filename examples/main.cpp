@@ -29,6 +29,7 @@
 #include "ash.h"
 #include "ash/client.h"
 #include "ash/connection.h"
+#include "ash/context.h"
 #include "ash/errors.h"
 #include "ash/future.h"
 #include "ash/highway_hash.h"
@@ -177,6 +178,30 @@ struct bad_connection {
 };
 
 int main() {
+  {
+    auto& ctx = ash::context::current();
+    std::cerr << ash::context::current().deadline_left() /
+                     std::chrono::milliseconds(1)
+              << std::endl;
+
+    {
+      auto ctx2 = ctx.with_timeout(std::chrono::milliseconds(44));
+      std::cerr << ash::context::current().deadline_left() /
+                       std::chrono::milliseconds(1)
+                << std::endl;
+
+      ctx.cancel();
+      auto [cancelled] = ash::select(ctx2.wait_cancelled());
+      if (cancelled) {
+        std::cerr << "CANCELLED!" << std::endl;
+      }
+    }
+
+    std::cerr << ash::context::current().deadline_left() /
+                     std::chrono::milliseconds(1)
+              << std::endl;
+  }
+
   {
     ash::future<std::unique_ptr<int>> fi;
     ash::promise<std::unique_ptr<int>> pi;
