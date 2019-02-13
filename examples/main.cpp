@@ -40,6 +40,7 @@
 #include "ash/packet_protocols.h"
 #include "ash/serializable.h"
 #include "ash/string_adapters.h"
+#include "ash/thread.h"
 #include "ash/type_hash.h"
 
 // clang-format off
@@ -179,13 +180,23 @@ struct bad_connection {
 
 int main() {
   {
+    ash::thread t1([]() {
+      std::cerr << "CI " << &ash::context::current() << std::endl;
+      ash::select(ash::context::current().wait_cancelled());
+    });
+    std::cerr << "CO " << &t1.get_context() << std::endl;
+    t1.get_context().cancel();
+    t1.join();
+  }
+
+  {
     auto& ctx = ash::context::current();
     std::cerr << ash::context::current().deadline_left() /
                      std::chrono::milliseconds(1)
               << std::endl;
 
     {
-      auto ctx2 = ctx.with_timeout(std::chrono::milliseconds(44));
+      auto ctx2 = ash::context::with_timeout(std::chrono::milliseconds(44));
       std::cerr << ash::context::current().deadline_left() /
                        std::chrono::milliseconds(1)
                 << std::endl;

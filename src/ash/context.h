@@ -23,6 +23,7 @@
 #define ASH_CONTEXT_H_
 
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include "ash/awaitable.h"
 #include "ash/container/flat_set.h"
@@ -36,6 +37,9 @@ class context {
   using duration = std::chrono::system_clock::duration;
 
   ~context();
+
+  void detach();
+  void detach_children();
 
   void cancel();
 
@@ -56,19 +60,24 @@ class context {
   static context with_cancel();
 
  private:
-  explicit context(time_point deadline = time_point::max());
+  explicit context(context* parent = current_,
+                   time_point deadline = time_point::max(),
+                   bool set_current = true);
   void add_child(context* child);
   void remove_child(context* child);
+  context make_child();
+
+  friend class thread;
 
   std::mutex mu_;
+  std::condition_variable child_detached_;
+  bool set_current_;
   context* parent_;
   ash::flat_set<context*> children_;
   time_point deadline_;
   flag cancelled_;
   static thread_local context* current_;
-};  // namespace ash
-
-namespace detail {}
+};
 
 }  // namespace ash
 

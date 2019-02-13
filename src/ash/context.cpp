@@ -27,26 +27,46 @@ namespace ash {
 thread_local context* context::current_ = nullptr;
 
 context& context::current() {
-  static context base_context;
+  static context base_context{nullptr};
   return *current_;
 }
 
-context::context(time_point deadline) : parent_(current_), deadline_(deadline) {
+context::context(context* parent, time_point deadline, bool set_current)
+    : set_current_(set_current), parent_(parent), deadline_(deadline) {
   if (parent_) {
     parent_->add_child(this);
 
     deadline_ = std::min(deadline_, parent_->deadline_);
   }
 
-  current_ = this;
+  if (set_current_) current_ = this;
 }
 
 context::~context() {
-  current_ = parent_;
+  if (set_current_) current_ = parent_;
+
+  cancel();
+
+  std::unique_lock lock(mu_);
+  child_detached_.wait(lock, [this]() { return children_.empty(); });
 
   if (parent_) parent_->remove_child(this);
 }
 
+void context::detach() {
+  if (parent_) {
+    parent_->remove_child(this);
+    parent_ = nullptr;
+  }
+}
+
+void context::detach_children() {
+  std::scoped_lock lock(mu_);
+  for (auto* child : children_) {
+    child->parent_ = nullptr;
+  }
+  children_.clear();
+}
 void context::add_child(context* child) {
   std::scoped_lock lock(mu_);
   children_.insert(child);
@@ -56,8 +76,11 @@ void context::add_child(context* child) {
 }
 
 void context::remove_child(context* child) {
-  std::scoped_lock lock(mu_);
-  children_.erase(child);
+  {
+    std::scoped_lock lock(mu_);
+    children_.erase(child);
+  }
+  child_detached_.notify_one();
 }
 
 context::time_point context::deadline() { return deadline_; }
@@ -78,12 +101,16 @@ bool context::is_cancelled() { return cancelled_.is_set(); }
 
 awaitable<void> context::wait_cancelled() { return cancelled_.wait_set(); }
 
-context context::with_deadline(time_point when) { return context(when); }
+context context::with_deadline(time_point when) {
+  return context(current_, when);
+}
 
 context context::with_timeout(duration timeout) {
-  return context(std::chrono::system_clock::now() + timeout);
+  return context(current_, std::chrono::system_clock::now() + timeout);
 }
 
 context context::with_cancel() { return context(); }
+
+context context::make_child() { return context(this); }
 
 }  // namespace ash
