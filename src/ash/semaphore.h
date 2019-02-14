@@ -1,5 +1,5 @@
 /// \file
-/// \brief select-friendly synchronization objects.
+/// \brief select-friendly semaphore objects.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,45 +19,16 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SYNC_H_
-#define ASH_SYNC_H_
+#ifndef ASH_SEMAPHORE_H_
+#define ASH_SEMAPHORE_H_
 
-#include <mutex>
-#include "io.h"
+#include "ash/queue.h"
 
 namespace ash {
 
-class mutex {
- public:
-  mutex();
-
-  void lock();
-  void maybe_lock();
-  bool try_lock();
-  void unlock();
-  awaitable<void> can_lock();
-  awaitable<void> async_lock();
-
- private:
-  channel pipe_[2];
-};
-
-class flag {
- public:
-  flag();
-
-  void set();
-  void reset();
-  bool is_set() const;
-  explicit operator bool() const;
-  awaitable<void> wait_set();
-
- private:
-  mutable std::mutex mu_;
-  bool set_ = false;
-  channel pipe_[2];
-};
+/// A semaphore is just a queue<void>.
+using semaphore = queue<void>;
 
 }  // namespace ash
 
-#endif  // ASH_SYNC_H_
+#endif  // ASH_SEMAPHORE_H_

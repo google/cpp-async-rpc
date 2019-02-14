@@ -20,6 +20,8 @@
 ///   under the License.
 
 #include "ash/sync.h"
+#include <utility>
+#include "ash/errors.h"
 
 namespace ash {
 
