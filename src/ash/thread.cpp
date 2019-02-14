@@ -25,9 +25,4 @@ namespace ash {
 
 context& thread::get_context() { return context_; }
 
-void thread::detach() {
-  get_context().detach_children();
-  std::thread::detach();
-}
-
 }  // namespace ash

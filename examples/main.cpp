@@ -183,6 +183,7 @@ int main() {
     ash::thread t1([]() {
       std::cerr << "CI " << &ash::context::current() << std::endl;
       ash::select(ash::context::current().wait_cancelled());
+      std::cerr << "DONE!" << std::endl;
     });
     std::cerr << "CO " << &t1.get_context() << std::endl;
     t1.get_context().cancel();

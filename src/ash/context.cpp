@@ -53,20 +53,6 @@ context::~context() {
   if (parent_) parent_->remove_child(this);
 }
 
-void context::detach() {
-  if (parent_) {
-    parent_->remove_child(this);
-    parent_ = nullptr;
-  }
-}
-
-void context::detach_children() {
-  std::scoped_lock lock(mu_);
-  for (auto* child : children_) {
-    child->parent_ = nullptr;
-  }
-  children_.clear();
-}
 void context::add_child(context* child) {
   std::scoped_lock lock(mu_);
   children_.insert(child);

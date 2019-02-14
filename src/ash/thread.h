@@ -55,7 +55,7 @@ class thread : public std::thread {
 
   context& get_context();
 
-  void detach();
+  void detach() = delete;
 
  private:
   context context_;

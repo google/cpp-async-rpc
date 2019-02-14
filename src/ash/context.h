@@ -38,9 +38,6 @@ class context {
 
   ~context();
 
-  void detach();
-  void detach_children();
-
   void cancel();
 
   bool is_cancelled();
