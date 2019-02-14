@@ -39,6 +39,7 @@
 #include "ash/packet_codecs.h"
 #include "ash/packet_protocols.h"
 #include "ash/queue.h"
+#include "ash/select.h"
 #include "ash/serializable.h"
 #include "ash/string_adapters.h"
 #include "ash/thread.h"

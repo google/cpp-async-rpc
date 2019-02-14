@@ -22,6 +22,7 @@
 #include "ash/sync.h"
 #include <utility>
 #include "ash/errors.h"
+#include "ash/select.h"
 
 namespace ash {
 

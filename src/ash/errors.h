@@ -119,6 +119,8 @@ void throw_with_errno(const std::string& message) {
   throw ET(message + std::string(": ") + std::to_string(errno));
 }
 
+void throw_io_error(const std::string& message);
+
 }  // namespace ash
 
 #endif  // ASH_ERRORS_H_

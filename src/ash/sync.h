@@ -23,7 +23,8 @@
 #define ASH_SYNC_H_
 
 #include <mutex>
-#include "io.h"
+#include "ash/awaitable.h"
+#include "ash/io.h"
 
 namespace ash {
 

@@ -20,22 +20,14 @@
 ///   under the License.
 
 #include <ash/io.h>
-#include <algorithm>
-#include <cerrno>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <utility>
+#include "ash/errors.h"
 
 namespace ash {
-
-namespace detail {
-
-void throw_io_error(const std::string& message) {
-  if (errno == EAGAIN || errno == EWOULDBLOCK) {
-    throw errors::try_again("Try again");
-  }
-  throw errors::io_error(message + std::string(": ") + std::to_string(errno));
-}
-
-}  // namespace detail
 
 channel::channel() noexcept : fd_(-1) {}
 
@@ -78,7 +70,7 @@ void channel::close() noexcept { reset(); }
 
 std::size_t channel::read(void* buf, std::size_t len) {
   auto num = ::read(fd_, buf, len);
-  if (num < 0) detail::throw_io_error("Error reading");
+  if (num < 0) throw_io_error("Error reading");
   return num;
 }
 
@@ -89,7 +81,7 @@ awaitable<std::size_t> channel::async_read(void* buf, std::size_t len) {
 
 std::size_t channel::write(const void* buf, std::size_t len) {
   auto num = ::write(fd_, buf, len);
-  if (num < 0) detail::throw_io_error("Error writing");
+  if (num < 0) throw_io_error("Error writing");
   return num;
 }
 
@@ -101,13 +93,13 @@ awaitable<std::size_t> channel::async_write(const void* buf, std::size_t len) {
 void channel::make_blocking() {
   if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
                  fcntl(fd_, F_SETFL, flags & ~O_NONBLOCK) < 0)
-    detail::throw_io_error("Error making channel descriptor blocking");
+    throw_io_error("Error making channel descriptor blocking");
 }
 
 void channel::make_non_blocking() {
   if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
                  fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0)
-    detail::throw_io_error("Error making channel descriptor non-blocking");
+    throw_io_error("Error making channel descriptor non-blocking");
 }
 
 channel channel::dup() const {
@@ -115,7 +107,7 @@ channel channel::dup() const {
     throw errors::invalid_state(
         "Trying to duplicate an empty channel descriptor");
   channel res(::dup(fd_));
-  if (!res) detail::throw_io_error("Error duplicating the channel descriptor");
+  if (!res) throw_io_error("Error duplicating the channel descriptor");
   return res;
 }
 
@@ -125,7 +117,7 @@ awaitable<void> channel::can_write() { return awaitable<void>(fd_, true); }
 
 void pipe(channel fds[2]) {
   int fd[2];
-  if (::pipe(fd)) detail::throw_io_error("Error creating pipe pair");
+  if (::pipe(fd)) throw_io_error("Error creating pipe pair");
   fds[0].reset(fd[0]);
   fds[1].reset(fd[1]);
 }
@@ -141,7 +133,7 @@ channel file(const std::string& path, open_mode mode) {
   };
   channel res(
       ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
-  if (!res) detail::throw_io_error("Error opening channel");
+  if (!res) throw_io_error("Error opening channel");
   return res;
 }
 
