@@ -20,7 +20,7 @@
 ///   under the License.
 
 #include "module2.h"
-#include <ash/io.h>
+#include <ash/channel.h>
 #include <ash/select.h>
 #include <chrono>
 #include <iostream>

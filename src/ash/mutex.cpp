@@ -22,6 +22,7 @@
 #include "ash/mutex.h"
 #include <utility>
 #include "ash/errors.h"
+#include "ash/pipe.h"
 #include "ash/select.h"
 
 namespace ash {

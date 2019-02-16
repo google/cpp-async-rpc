@@ -85,7 +85,11 @@ typename select_return_type<typename A::return_type>::type make_one_select_resul
     } catch (const errors::try_again&) {
     }
   }
-  return {};
+  if constexpr (std::is_same_v<typename A::return_type, void>) {
+    return false;
+  } else {
+    return std::nullopt;
+  }
 }
 
 template <typename... Args, std::size_t... ints>

@@ -1,5 +1,5 @@
 /// \file
-/// \brief select-friendly flag objects.
+/// \brief Channel descriptor wrapper.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,41 +19,17 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/flag.h"
-#include "ash/pipe.h"
+#include <ash/pipe.h>
+#include <unistd.h>
+#include "ash/errors.h"
 
 namespace ash {
 
-flag::flag() {
-  pipe(pipe_);
-  pipe_[0].make_non_blocking();
-  pipe_[1].make_non_blocking();
+void pipe(channel fds[2]) {
+  int fd[2];
+  if (::pipe(fd)) throw_io_error("Error creating pipe pair");
+  fds[0].reset(fd[0]);
+  fds[1].reset(fd[1]);
 }
-
-void flag::set() {
-  std::scoped_lock lock(mu_);
-  if (!set_) {
-    pipe_[1].write("*", 1);
-    set_ = true;
-  }
-}
-
-void flag::reset() {
-  std::scoped_lock lock(mu_);
-  if (set_) {
-    char c;
-    pipe_[0].read(&c, 1);
-    set_ = false;
-  }
-}
-
-bool flag::is_set() const {
-  std::scoped_lock lock(mu_);
-  return set_;
-}
-
-flag::operator bool() const { return is_set(); }
-
-awaitable<void> flag::wait_set() { return pipe_[0].can_read(); }
 
 }  // namespace ash

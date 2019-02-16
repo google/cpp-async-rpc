@@ -19,10 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <ash/io.h>
+#include <ash/channel.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <utility>
 #include "ash/errors.h"
@@ -114,27 +112,5 @@ channel channel::dup() const {
 awaitable<void> channel::can_read() { return awaitable<void>(fd_, false); }
 
 awaitable<void> channel::can_write() { return awaitable<void>(fd_, true); }
-
-void pipe(channel fds[2]) {
-  int fd[2];
-  if (::pipe(fd)) throw_io_error("Error creating pipe pair");
-  fds[0].reset(fd[0]);
-  fds[1].reset(fd[1]);
-}
-
-channel file(const std::string& path, open_mode mode) {
-  static constexpr int posix_modes[] = {
-      O_RDONLY,                       // READ
-      O_WRONLY | O_CREAT | O_TRUNC,   // WRITE
-      O_WRONLY | O_CREAT | O_APPEND,  // APPEND
-      O_RDWR,                         // READ_PLUS
-      O_RDWR | O_CREAT | O_TRUNC,     // WRITE_PLUS
-      O_RDWR | O_CREAT | O_APPEND,    // APPEND
-  };
-  channel res(
-      ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
-  if (!res) throw_io_error("Error opening channel");
-  return res;
-}
 
 }  // namespace ash

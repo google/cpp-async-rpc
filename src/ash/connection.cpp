@@ -21,6 +21,7 @@
 
 #include "ash/connection.h"
 #include <utility>
+#include "ash/file.h"
 #include "ash/select.h"
 
 namespace ash {

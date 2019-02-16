@@ -28,7 +28,6 @@
 #include <optional>
 #include <utility>
 #include "ash/flag.h"
-#include "ash/io.h"
 
 namespace ash {
 namespace detail {

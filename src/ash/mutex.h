@@ -23,7 +23,7 @@
 #define ASH_MUTEX_H_
 
 #include "ash/awaitable.h"
-#include "ash/io.h"
+#include "ash/channel.h"
 
 namespace ash {
 

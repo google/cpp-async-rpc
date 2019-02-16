@@ -1,5 +1,5 @@
 /// \file
-/// \brief select-friendly flag objects.
+/// \brief Pipe channel factory.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,41 +19,27 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/flag.h"
-#include "ash/pipe.h"
+#include <ash/file.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include "ash/errors.h"
 
 namespace ash {
 
-flag::flag() {
-  pipe(pipe_);
-  pipe_[0].make_non_blocking();
-  pipe_[1].make_non_blocking();
+channel file(const std::string& path, open_mode mode) {
+  static constexpr int posix_modes[] = {
+      O_RDONLY,                       // READ
+      O_WRONLY | O_CREAT | O_TRUNC,   // WRITE
+      O_WRONLY | O_CREAT | O_APPEND,  // APPEND
+      O_RDWR,                         // READ_PLUS
+      O_RDWR | O_CREAT | O_TRUNC,     // WRITE_PLUS
+      O_RDWR | O_CREAT | O_APPEND,    // APPEND
+  };
+  channel res(
+      ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
+  if (!res) throw_io_error("Error opening channel");
+  return res;
 }
-
-void flag::set() {
-  std::scoped_lock lock(mu_);
-  if (!set_) {
-    pipe_[1].write("*", 1);
-    set_ = true;
-  }
-}
-
-void flag::reset() {
-  std::scoped_lock lock(mu_);
-  if (set_) {
-    char c;
-    pipe_[0].read(&c, 1);
-    set_ = false;
-  }
-}
-
-bool flag::is_set() const {
-  std::scoped_lock lock(mu_);
-  return set_;
-}
-
-flag::operator bool() const { return is_set(); }
-
-awaitable<void> flag::wait_set() { return pipe_[0].can_read(); }
 
 }  // namespace ash

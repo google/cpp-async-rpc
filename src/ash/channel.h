@@ -19,23 +19,13 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_IO_H_
-#define ASH_IO_H_
+#ifndef ASH_CHANNEL_H_
+#define ASH_CHANNEL_H_
 
 #include <cstddef>
-#include <string>
 #include "ash/awaitable.h"
 
 namespace ash {
-
-enum class open_mode : int {
-  READ,
-  WRITE,
-  APPEND,
-  READ_PLUS,
-  WRITE_PLUS,
-  APPEND_PLUS,
-};
 
 class channel {
  public:
@@ -65,10 +55,6 @@ class channel {
   int fd_;
 };
 
-void pipe(channel fds[2]);
-
-channel file(const std::string& path, open_mode mode = open_mode::READ);
-
 }  // namespace ash
 
-#endif  // ASH_IO_H_
+#endif  // ASH_CHANNEL_H_
