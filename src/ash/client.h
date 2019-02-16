@@ -28,7 +28,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
@@ -38,6 +37,7 @@
 #include "ash/errors.h"
 #include "ash/interface.h"
 #include "ash/string_adapters.h"
+#include "ash/thread.h"
 #include "ash/traits/type_traits.h"
 #include "ash/type_hash.h"
 
@@ -214,7 +214,7 @@ class client_connection {
   bool stopping_;
   std::condition_variable start_stop_cond_;
   packet_connection& connection_;
-  std::thread receiver_;
+  ash::thread receiver_;
   pending_map_type pending_;
 };
 

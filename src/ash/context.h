@@ -48,6 +48,8 @@ class context {
 
   awaitable<void> wait_cancelled();
 
+  awaitable<void> wait_deadline();
+
   static context& current();
 
   static context with_deadline(time_point when);

@@ -21,6 +21,8 @@
 
 #include "ash/context.h"
 #include <algorithm>
+#include <utility>
+#include "ash/errors.h"
 
 namespace ash {
 
@@ -28,6 +30,7 @@ thread_local context* context::current_ = nullptr;
 
 context& context::current() {
   static context base_context{nullptr};
+  if (!current_) throw errors::invalid_state("No context set");
   return *current_;
 }
 
@@ -85,7 +88,15 @@ void context::cancel() {
 
 bool context::is_cancelled() { return cancelled_.is_set(); }
 
-awaitable<void> context::wait_cancelled() { return cancelled_.wait_set(); }
+awaitable<void> context::wait_cancelled() {
+  return cancelled_.wait_set().then(
+      std::move([]() { throw errors::cancelled("Context is cancelled"); }));
+}
+
+awaitable<void> context::wait_deadline() {
+  return ash::deadline(deadline_).then(std::move(
+      []() { throw errors::deadline_exceeded("Deadline exceeded"); }));
+}
 
 context context::with_deadline(time_point when) {
   return context(current_, when);

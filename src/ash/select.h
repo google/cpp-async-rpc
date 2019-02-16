@@ -32,6 +32,7 @@
 #include <type_traits>
 #include <utility>
 #include "ash/awaitable.h"
+#include "ash/context.h"
 #include "ash/errors.h"
 #include "ash/mpt.h"
 
@@ -105,8 +106,12 @@ std::tuple<typename select_return_type<typename Args::return_type>::type...> mak
 
 template <typename... Args>
 auto select(Args&&... args) {
-  constexpr std::size_t n = sizeof...(Args);
-  auto a = std::make_tuple(std::forward<Args>(args)...);
+  auto& current_context = context::current();
+
+  constexpr std::size_t n = sizeof...(Args) + 2;
+  auto a = std::make_tuple(std::forward<Args>(args)..., current_context.wait_cancelled(),
+                           current_context.wait_deadline());
+
   std::chrono::milliseconds elapsed = std::chrono::milliseconds::zero();
   auto last = std::chrono::steady_clock::now();
 
@@ -143,7 +148,7 @@ auto select(Args&&... args) {
     bool active =
         mpt::accumulate(false, res, [](bool so_far, const auto& val) { return so_far || val; });
     if (active) {
-      return res;
+      return mpt::range<0, n - 2>(std::move(res));
     }
 
     auto now = std::chrono::steady_clock::now();

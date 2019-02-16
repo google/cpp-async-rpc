@@ -26,6 +26,7 @@
 #include <type_traits>
 #include <utility>
 #include "ash/context.h"
+#include "ash/errors.h"
 
 namespace ash {
 
@@ -48,7 +49,11 @@ class thread : public std::thread {
         std::thread(([this, f(detail::decay_copy(std::forward<Function>(f)))](
                          std::decay_t<Args>&&... args) mutable {
                       auto new_context = context_.make_child();
-                      f(std::forward<std::decay_t<Args>>(args)...);
+                      try {
+                        f(std::forward<std::decay_t<Args>>(args)...);
+                      } catch (const errors::cancelled&) {
+                      } catch (const errors::deadline_exceeded&) {
+                      }
                     }),
                     std::forward<Args>(args)...);
   }

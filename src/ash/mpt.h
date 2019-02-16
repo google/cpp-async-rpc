@@ -440,7 +440,7 @@ constexpr decltype(auto) at(const std::tuple<T...>&& t) {
 }
 template <std::size_t i, typename... T>
 constexpr decltype(auto) at(std::tuple<T...>&& t) {
-  return std::get<i>(t);
+  return std::get<i>(std::move(t));
 }
 
 template <std::size_t i, typename... T>
@@ -559,7 +559,7 @@ constexpr auto subset(const std::tuple<T...>& t, index_sequence<idxs...>) {
 /// indices.
 template <typename... T, std::size_t... idxs>
 constexpr auto subset(std::tuple<T...>&& t, index_sequence<idxs...>) {
-  return std::forward_as_tuple(at<idxs>(t)...);
+  return std::make_tuple(std::move(at<idxs>(t))...);
 }
 /// Return a new tuple containing a subset of the fields as determined by the
 /// passed index sequence.

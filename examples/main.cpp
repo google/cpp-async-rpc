@@ -193,7 +193,6 @@ int main() {
   }
 
   {
-    auto& ctx = ash::context::current();
     std::cerr << ash::context::current().deadline_left() /
                      std::chrono::milliseconds(1)
               << std::endl;
@@ -204,10 +203,12 @@ int main() {
                        std::chrono::milliseconds(1)
                 << std::endl;
 
-      ctx.cancel();
-      auto [cancelled] = ash::select(ctx2.wait_cancelled());
-      if (cancelled) {
+      try {
+        ash::select();
+      } catch (const ash::errors::cancelled&) {
         std::cerr << "CANCELLED!" << std::endl;
+      } catch (const ash::errors::deadline_exceeded&) {
+        std::cerr << "DEADLINE!" << std::endl;
       }
     }
 
@@ -220,7 +221,7 @@ int main() {
     ash::future<std::unique_ptr<int>> fi;
     ash::promise<std::unique_ptr<int>> pi;
     fi = pi.get_future();
-    std::thread th1([&]() {
+    ash::thread th1([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       pi.set_value(std::make_unique<int>(33));
     });
@@ -254,8 +255,8 @@ int main() {
     } while (true);
   };
 
-  std::thread th1(tl);
-  std::thread th2(tl);
+  ash::thread th1(tl);
+  ash::thread th2(tl);
 
   auto [put] = ash::select(q.async_put(std::make_unique<int>(32)));
   std::cerr << "DID " << put << " DID" << std::endl;
@@ -287,7 +288,7 @@ int main() {
 
   ash::char_dev_connection cdc("/dev/tty");
 
-  std::thread t1([&cdc] {
+  ash::thread t1([&cdc] {
     std::this_thread::sleep_for(std::chrono::seconds(10));
     cdc.disconnect();
   });
