@@ -27,8 +27,8 @@
 #include <mutex>
 #include <optional>
 #include <utility>
+#include "ash/flag.h"
 #include "ash/io.h"
-#include "ash/sync.h"
 
 namespace ash {
 namespace detail {

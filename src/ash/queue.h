@@ -26,8 +26,8 @@
 #include <utility>
 #include <vector>
 #include "ash/awaitable.h"
+#include "ash/flag.h"
 #include "ash/select.h"
-#include "ash/sync.h"
 
 namespace ash {
 

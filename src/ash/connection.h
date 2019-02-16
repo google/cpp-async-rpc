@@ -31,10 +31,10 @@
 #include <tuple>
 #include <utility>
 #include "ash/errors.h"
+#include "ash/flag.h"
 #include "ash/io.h"
 #include "ash/io_adapters.h"
 #include "ash/mpt.h"
-#include "ash/sync.h"
 
 namespace ash {
 

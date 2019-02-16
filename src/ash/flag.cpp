@@ -1,5 +1,5 @@
 /// \file
-/// \brief select-friendly synchronization objects.
+/// \brief select-friendly flag objects.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,42 +19,9 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/sync.h"
-#include <utility>
-#include "ash/errors.h"
-#include "ash/select.h"
+#include "ash/flag.h"
 
 namespace ash {
-
-mutex::mutex() {
-  pipe(pipe_);
-  pipe_[0].make_non_blocking();
-  pipe_[1].make_non_blocking();
-  pipe_[1].write("*", 1);
-}
-
-void mutex::lock() { select(async_lock()); }
-
-void mutex::maybe_lock() {
-  char c;
-  pipe_[0].read(&c, 1);
-}
-
-bool mutex::try_lock() {
-  try {
-    maybe_lock();
-    return true;
-  } catch (const errors::try_again&) {
-    return false;
-  }
-}
-
-void mutex::unlock() { pipe_[1].write("*", 1); }
-
-awaitable<void> mutex::can_lock() { return pipe_[0].can_read(); }
-awaitable<void> mutex::async_lock() {
-  return std::move(can_lock().then(std::move([this]() { maybe_lock(); })));
-}
 
 flag::flag() {
   pipe(pipe_);

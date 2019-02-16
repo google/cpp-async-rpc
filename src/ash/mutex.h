@@ -1,5 +1,5 @@
 /// \file
-/// \brief select-friendly synchronization objects.
+/// \brief select-friendly mutex objects.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,10 +19,9 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SYNC_H_
-#define ASH_SYNC_H_
+#ifndef ASH_MUTEX_H_
+#define ASH_MUTEX_H_
 
-#include <mutex>
 #include "ash/awaitable.h"
 #include "ash/io.h"
 
@@ -43,22 +42,6 @@ class mutex {
   channel pipe_[2];
 };
 
-class flag {
- public:
-  flag();
-
-  void set();
-  void reset();
-  bool is_set() const;
-  explicit operator bool() const;
-  awaitable<void> wait_set();
-
- private:
-  mutable std::mutex mu_;
-  bool set_ = false;
-  channel pipe_[2];
-};
-
 }  // namespace ash
 
-#endif  // ASH_SYNC_H_
+#endif  // ASH_MUTEX_H_

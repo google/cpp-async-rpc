@@ -27,7 +27,7 @@
 #include <mutex>
 #include "ash/awaitable.h"
 #include "ash/container/flat_set.h"
-#include "ash/sync.h"
+#include "ash/flag.h"
 
 namespace ash {
 
