@@ -29,8 +29,8 @@ namespace ash {
 thread_local context* context::current_ = nullptr;
 
 context& context::current() {
-  static context base_context{nullptr};
-  if (!current_) throw errors::invalid_state("No context set");
+  static context base_context{nullptr, time_point::max(), false};
+  if (!current_) return base_context;
   return *current_;
 }
 
