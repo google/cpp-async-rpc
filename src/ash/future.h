@@ -27,6 +27,7 @@
 #include <mutex>
 #include <optional>
 #include <utility>
+#include "ash/errors.h"
 #include "ash/flag.h"
 
 namespace ash {
@@ -119,6 +120,9 @@ class future {
  public:
   using value_type = T;
 
+  future(future<T>&&) = default;
+  future<T>& operator=(future<T>&&) = default;
+
   future()
       : state_(nullptr,
                [](detail::future_state<T>* s) { s->release_reader(); }) {}
@@ -152,6 +156,9 @@ template <typename T>
 class promise {
  public:
   using value_type = T;
+
+  promise(promise<T>&&) = default;
+  promise<T>& operator=(promise<T>&&) = default;
 
   promise()
       : state_(new detail::future_state<T>(),

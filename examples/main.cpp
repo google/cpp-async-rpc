@@ -27,6 +27,7 @@
 #include <string>
 #include <thread>
 #include "ash.h"
+#include "ash/address_resolver.h"
 #include "ash/client.h"
 #include "ash/connection.h"
 #include "ash/context.h"
@@ -181,6 +182,15 @@ struct bad_connection {
 };
 
 int main() {
+  {
+    auto& ar = ash::address_resolver::get();
+    auto ai = ar.resolve("www.google.com", 80).get();
+    std::cerr << ai.size() << std::endl;
+    for (auto* p : ai) {
+      std::cerr << ash::address_info::to_string(p) << std::endl;
+    }
+    return 0;
+  }
   {
     ash::thread t1([]() {
       std::cerr << "CI " << &ash::context::current() << std::endl;
