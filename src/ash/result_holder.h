@@ -38,6 +38,10 @@ class result_holder {
   result_holder() noexcept = default;
   result_holder(result_holder<value_type>&&) noexcept = default;
   result_holder& operator=(result_holder<value_type>&&) noexcept = default;
+  explicit result_holder(std::exception_ptr exception)
+      : exception_(exception) {}
+  template <typename U>
+  explicit result_holder(U&& u) : value_(std::move(u)) {}
 
   template <typename U>
   void set_value(U&& u) {
@@ -146,6 +150,8 @@ class result_holder<void> {
   result_holder() noexcept = default;
   result_holder(result_holder<value_type>&&) noexcept = default;
   result_holder& operator=(result_holder<value_type>&&) noexcept = default;
+  explicit result_holder(std::exception_ptr exception)
+      : exception_(exception) {}
 
   void set_value() { value_ = true; }
 
@@ -170,6 +176,14 @@ class result_holder<void> {
   void value() const&& { maybe_throw(); }
 
   void value() && { maybe_throw(); }
+
+  constexpr void value_or() const& {
+    if (*this) **this;
+  }
+
+  constexpr void value_or() && {
+    if (*this) **this;
+  }
 
   constexpr bool has_value() const noexcept { return value_ || exception_; }
 
