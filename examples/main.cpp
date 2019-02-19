@@ -183,6 +183,12 @@ struct bad_connection {
 
 int main() {
   {
+    ash::promise<void> p;
+    auto f = p.get_future();
+    p.set_value();
+    f.get();
+  }
+  {
     auto& ar = ash::address_resolver::get();
     auto ai = ar.resolve("www.google.com", 80).get();
     std::cerr << ai.size() << std::endl;

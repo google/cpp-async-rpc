@@ -29,12 +29,14 @@
 #include <utility>
 #include "ash/errors.h"
 #include "ash/flag.h"
+#include "ash/result_holder.h"
+#include "ash/select.h"
 
 namespace ash {
 namespace detail {
 
 template <typename T>
-class future_state {
+class future_state : protected result_holder<T> {
  public:
   using value_type = T;
   using releaser = void (*)(future_state<T>*);
@@ -66,25 +68,21 @@ class future_state {
   template <typename U>
   void set_value(U&& u) {
     std::scoped_lock lock(mu_);
-    result_ = std::forward<U>(u);
+    result_holder<value_type>::set_value(std::forward<U>(u));
     set_.set();
   }
 
-  void set_exception(std::exception_ptr exc) {
+  void set_exception(std::exception_ptr exception) {
     std::scoped_lock lock(mu_);
-    exception_ = exc;
+    result_holder<value_type>::set_exception(exception);
     set_.set();
   }
 
   value_type maybe_get() {
     std::scoped_lock lock(mu_);
-    if (result_) {
+    if (*this) {
       set_.reset();
-      return std::move(*result_);
-    }
-    if (exception_) {
-      set_.reset();
-      std::rethrow_exception(exception_);
+      return std::move(**this);
     }
     throw errors::try_again("Future not ready yet");
   }
@@ -106,8 +104,72 @@ class future_state {
   bool has_writer_ = true;
   bool has_reader_ = true;
   flag set_;
-  std::optional<T> result_;
-  std::exception_ptr exception_;
+};
+
+template <>
+class future_state<void> : protected result_holder<void> {
+ public:
+  using value_type = void;
+  using releaser = void (*)(future_state<void>*);
+
+  void release_reader() {
+    bool has_writer;
+    {
+      std::scoped_lock lock(mu_);
+      has_reader_ = false;
+      has_writer = has_writer_;
+    }
+    if (!has_writer) {
+      delete this;
+    }
+  }
+
+  void release_writer() {
+    bool has_reader;
+    {
+      std::scoped_lock lock(mu_);
+      has_writer_ = false;
+      has_reader = has_reader_;
+    }
+    if (!has_reader) {
+      delete this;
+    }
+  }
+
+  void set_value() {
+    std::scoped_lock lock(mu_);
+    result_holder<value_type>::set_value();
+    set_.set();
+  }
+
+  void set_exception(std::exception_ptr exception) {
+    std::scoped_lock lock(mu_);
+    result_holder<value_type>::set_exception(exception);
+    set_.set();
+  }
+
+  void maybe_get() {
+    std::scoped_lock lock(mu_);
+    if (*this) {
+      set_.reset();
+      return;
+    }
+    throw errors::try_again("Future not ready yet");
+  }
+
+  awaitable<void> can_get() { return set_.wait_set(); }
+
+  awaitable<void> async_get() {
+    return std::move(can_get().then(std::move([this]() { maybe_get(); })));
+  }
+
+  void get() { select(async_get()); }
+
+ private:
+  std::mutex mu_;
+  bool has_writer_ = true;
+  bool has_reader_ = true;
+  flag set_;
 };
 
 }  // namespace detail
@@ -120,12 +182,13 @@ class future {
  public:
   using value_type = T;
 
-  future(future<T>&&) = default;
-  future<T>& operator=(future<T>&&) = default;
+  future(future<value_type>&&) = default;
+  future<value_type>& operator=(future<value_type>&&) = default;
 
   future()
-      : state_(nullptr,
-               [](detail::future_state<T>* s) { s->release_reader(); }) {}
+      : state_(nullptr, [](detail::future_state<value_type>* s) {
+          s->release_reader();
+        }) {}
 
   value_type maybe_get() { return state()->maybe_get(); }
 
@@ -136,20 +199,23 @@ class future {
   value_type get() { return state()->get(); }
 
  private:
-  friend class promise<T>;
+  friend class promise<value_type>;
 
-  auto& state() {
+  using pointer_type =
+      std::unique_ptr<detail::future_state<value_type>,
+                      typename detail::future_state<value_type>::releaser>;
+
+  pointer_type& state() {
     if (!state_) throw errors::invalid_state("Empty future");
     return state_;
   }
 
-  explicit future(detail::future_state<T>* state)
-      : state_(state, [](detail::future_state<T>* s) { s->release_reader(); }) {
-  }
+  explicit future(detail::future_state<value_type>* state)
+      : state_(state, [](detail::future_state<value_type>* s) {
+          s->release_reader();
+        }) {}
 
-  std::unique_ptr<detail::future_state<T>,
-                  typename detail::future_state<T>::releaser>
-      state_;
+  pointer_type state_;
 };  // namespace ash
 
 template <typename T>
@@ -157,12 +223,14 @@ class promise {
  public:
   using value_type = T;
 
-  promise(promise<T>&&) = default;
-  promise<T>& operator=(promise<T>&&) = default;
+  promise(promise<value_type>&&) = default;
+  promise<value_type>& operator=(promise<value_type>&&) = default;
 
   promise()
-      : state_(new detail::future_state<T>(),
-               [](detail::future_state<T>* state) { state->release_writer(); }),
+      : state_(new detail::future_state<value_type>(),
+               [](detail::future_state<value_type>* state) {
+                 state->release_writer();
+               }),
         future_(state_.get()) {}
 
   ~promise() {
@@ -172,7 +240,7 @@ class promise {
     }
   }
 
-  future<T> get_future() { return std::move(future_); }
+  future<value_type> get_future() { return std::move(future_); }
 
   template <typename U>
   void set_value(U&& u) {
@@ -182,16 +250,61 @@ class promise {
   void set_exception(std::exception_ptr exc) { state()->set_exception(exc); }
 
  private:
-  auto state() {
+  using pointer_type =
+      std::unique_ptr<detail::future_state<value_type>,
+                      typename detail::future_state<value_type>::releaser>;
+
+  pointer_type state() {
     if (!state_) throw errors::invalid_state("Promise already set");
     return std::move(state_);
   }
 
-  std::unique_ptr<detail::future_state<T>,
-                  typename detail::future_state<T>::releaser>
-      state_;
-  future<T> future_;
+  pointer_type state_;
+  future<value_type> future_;
 };
+
+template <>
+class promise<void> {
+ public:
+  using value_type = void;
+
+  promise(promise<value_type>&&) = default;
+  promise<value_type>& operator=(promise<value_type>&&) = default;
+
+  promise()
+      : state_(new detail::future_state<value_type>(),
+               [](detail::future_state<value_type>* state) {
+                 state->release_writer();
+               }),
+        future_(state_.get()) {}
+
+  ~promise() {
+    if (state_) {
+      state()->set_exception(
+          std::make_exception_ptr(errors::invalid_state("Broken promise")));
+    }
+  }
+
+  future<value_type> get_future() { return std::move(future_); }
+
+  void set_value() { state()->set_value(); }
+
+  void set_exception(std::exception_ptr exc) { state()->set_exception(exc); }
+
+ private:
+  using pointer_type =
+      std::unique_ptr<detail::future_state<value_type>,
+                      typename detail::future_state<value_type>::releaser>;
+
+  pointer_type state() {
+    if (!state_) throw errors::invalid_state("Promise already set");
+    return std::move(state_);
+  }
+
+  pointer_type state_;
+  future<value_type> future_;
+};
+
 }  // namespace ash
 
 #endif  // ASH_FUTURE_H_
