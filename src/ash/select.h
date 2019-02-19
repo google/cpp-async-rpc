@@ -27,7 +27,7 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <optional>
+#include <exception>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -35,23 +35,11 @@
 #include "ash/context.h"
 #include "ash/errors.h"
 #include "ash/mpt.h"
+#include "ash/result_holder.h"
 
 namespace ash {
 
 namespace detail {
-
-template <typename T>
-struct select_return_type {
-  using type = std::optional<T>;
-};
-
-template <>
-struct select_return_type<void> {
-  using type = bool;
-};
-
-template <typename T>
-using select_return_type_t = typename select_return_type<T>::type;
 
 template <typename... Args, std::size_t... ints>
 std::array<pollfd, sizeof...(Args)> make_select_pollfds(std::tuple<Args...>& awaitables,
@@ -64,9 +52,10 @@ std::array<pollfd, sizeof...(Args)> make_select_pollfds(std::tuple<Args...>& awa
 }
 
 template <typename A>
-typename select_return_type<typename A::return_type>::type make_one_select_result(
-    A& a, const pollfd& fd, bool was_timeout, std::chrono::milliseconds min_timeout,
-    bool min_timeout_is_polling) {
+result_holder<typename A::return_type> make_one_select_result(A& a, const pollfd& fd,
+                                                              bool was_timeout,
+                                                              std::chrono::milliseconds min_timeout,
+                                                              bool min_timeout_is_polling) {
   bool active;
   if (was_timeout) {
     active = (a.timeout() >= std::chrono::milliseconds::zero() &&
@@ -75,26 +64,27 @@ typename select_return_type<typename A::return_type>::type make_one_select_resul
     active = ((fd.revents & fd.events) != 0);
   }
 
+  result_holder<typename A::return_type> res;
+
   if (active) {
     try {
       if constexpr (std::is_same_v<typename A::return_type, void>) {
         a.get_react_fn()();
-        return true;
+        res.set_value();
       } else {
-        return {std::move(a.get_react_fn()())};
+        res.set_value(std::move(a.get_react_fn()()));
       }
     } catch (const errors::try_again&) {
+    } catch (...) {
+      res.set_exception(std::current_exception());
     }
   }
-  if constexpr (std::is_same_v<typename A::return_type, void>) {
-    return false;
-  } else {
-    return std::nullopt;
-  }
+
+  return res;
 }
 
 template <typename... Args, std::size_t... ints>
-std::tuple<typename select_return_type<typename Args::return_type>::type...> make_select_result(
+std::tuple<result_holder<typename Args::return_type>...> make_select_result(
     std::tuple<Args...>& awaitables, const std::array<pollfd, sizeof...(Args)>& pollfds,
     bool was_timeout, std::chrono::milliseconds min_timeout, bool min_timeout_is_polling,
     mpt::index_sequence<ints...>) {
@@ -148,6 +138,9 @@ auto select(Args&&... args) {
     bool active =
         mpt::accumulate(false, res, [](bool so_far, const auto& val) { return so_far || val; });
     if (active) {
+      auto [cancelled, deadline_exceeded] = mpt::range<n - 2, n>(res);
+      if (cancelled) *cancelled;
+      if (deadline_exceeded) *deadline_exceeded;
       return mpt::range<0, n - 2>(std::move(res));
     }
 

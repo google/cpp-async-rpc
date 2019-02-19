@@ -29,6 +29,6 @@ void run_module2() {
   ash::channel in(0);
   auto [read, timeout] =
       ash::select(in.can_read(), ash::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << read << timeout << std::endl;
+  std::cerr << !!read << !!timeout << std::endl;
   in.release();
 }

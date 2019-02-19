@@ -275,7 +275,7 @@ int main() {
   ash::thread th2(tl);
 
   auto [put] = ash::select(q.async_put(std::make_unique<int>(32)));
-  std::cerr << "DID " << put << " DID" << std::endl;
+  std::cerr << "DID " << !!put << " DID" << std::endl;
 
   th1.join();
   th2.join();
@@ -285,7 +285,7 @@ int main() {
   ash::channel in(0);
   auto [read, timeout] =
       ash::select(in.can_read(), ash::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << read << timeout << std::endl;
+  std::cerr << !!read << !!timeout << std::endl;
   in.release();
 
   f<decltype(ash::mpt::as_tuple(ash::mpt::value_pack<33, 'c'>{}))>();

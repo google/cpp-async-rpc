@@ -52,52 +52,52 @@ class result_holder {
 
   constexpr bool has_value() const noexcept { return value_ || exception_; }
 
-  constexpr const value_type* operator->() const {
+  const value_type* operator->() const {
     maybe_throw();
     return &(*value_);
   }
 
-  constexpr value_type* operator->() {
+  value_type* operator->() {
     maybe_throw();
     return &(*value_);
   }
 
-  constexpr const value_type& operator*() const& {
+  const value_type& operator*() const& {
     maybe_throw();
     return *value_;
   }
 
-  constexpr value_type& operator*() & {
+  value_type& operator*() & {
     maybe_throw();
     return *value_;
   }
 
-  constexpr const value_type&& operator*() const&& {
+  const value_type&& operator*() const&& {
     maybe_throw();
     return std::move(*value_);
   }
 
-  constexpr value_type&& operator*() && {
+  value_type&& operator*() && {
     maybe_throw();
     return std::move(*value_);
   }
 
-  constexpr const value_type& value() const& {
+  const value_type& value() const& {
     maybe_throw();
     return *value_;
   }
 
-  constexpr value_type& value() & {
+  value_type& value() & {
     maybe_throw();
     return *value_;
   }
 
-  constexpr const value_type&& value() const&& {
+  const value_type&& value() const&& {
     maybe_throw();
     return std::move(*value_);
   }
 
-  constexpr value_type&& value() && {
+  value_type&& value() && {
     maybe_throw();
     return std::move(*value_);
   }
@@ -154,6 +154,22 @@ class result_holder<void> {
   constexpr explicit operator bool() const noexcept {
     return value_ || exception_;
   }
+
+  void operator*() const& { maybe_throw(); }
+
+  void operator*() & { maybe_throw(); }
+
+  void operator*() const&& { maybe_throw(); }
+
+  void operator*() && { maybe_throw(); }
+
+  void value() const& { maybe_throw(); }
+
+  void value() & { maybe_throw(); }
+
+  void value() const&& { maybe_throw(); }
+
+  void value() && { maybe_throw(); }
 
   constexpr bool has_value() const noexcept { return value_ || exception_; }
 
