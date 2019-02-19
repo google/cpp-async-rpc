@@ -214,8 +214,8 @@ class client_connection {
   bool stopping_;
   std::condition_variable start_stop_cond_;
   packet_connection& connection_;
-  ash::thread receiver_;
   pending_map_type pending_;
+  ash::thread receiver_;
 };
 
 }  // namespace ash

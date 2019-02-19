@@ -195,7 +195,6 @@ int main() {
     for (auto* p : ai) {
       std::cerr << ash::address_info::to_string(p) << std::endl;
     }
-    return 0;
   }
   {
     ash::thread t1([]() {

@@ -31,9 +31,9 @@ address_resolver::address_resolver()
         while (true) {
           auto [req] = select(requests_.async_get());
           if (req) {
-            struct addrinfo hints = {req->passive ? AI_PASSIVE : 0, AF_UNSPEC,
-                                     req->datagram ? SOCK_DGRAM : SOCK_STREAM,
-                                     0};
+            struct addrinfo hints = {
+                AI_ADDRCONFIG | (req->passive ? AI_PASSIVE : 0), AF_UNSPEC,
+                req->datagram ? SOCK_DGRAM : SOCK_STREAM, 0};
             struct addrinfo* result;
 
             int res = getaddrinfo(req->host.c_str(), req->service.c_str(),
