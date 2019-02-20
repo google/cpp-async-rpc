@@ -83,13 +83,38 @@ result_holder<typename A::return_type> make_one_select_result(A& a, const pollfd
   return res;
 }
 
+template <typename T>
+struct select_input_helper;
+
+template <typename T>
+struct select_input_helper<awaitable<T>> {
+  using result_type = result_holder<T>;
+  static constexpr bool has_static_size = true;
+  static constexpr std::size_t size(const awaitable<T>&) { return 1; }
+  static result_type make_result(awaitable<T>& a, const pollfd* fd, bool was_timeout,
+                                 std::chrono::milliseconds min_timeout,
+                                 bool min_timeout_is_polling) {
+    return make_one_select_result(a, *fd, was_timeout, min_timeout, min_timeout_is_polling);
+  }
+};
+
 template <typename... Args, std::size_t... ints>
-std::tuple<result_holder<typename Args::return_type>...> make_select_result(
-    std::tuple<Args...>& awaitables, const std::array<pollfd, sizeof...(Args)>& pollfds,
-    bool was_timeout, std::chrono::milliseconds min_timeout, bool min_timeout_is_polling,
+constexpr std::size_t pollfds_index(const std::tuple<Args...>& awaitables,
+                                    mpt::index_sequence<ints...>) {
+  return (0 + ... +
+          select_input_helper<mpt::element_type_t<ints, std::tuple<Args...>>>::size(
+              mpt::at<ints>(awaitables)));
+}
+
+template <typename... Args, std::size_t... ints>
+std::tuple<typename select_input_helper<Args>::result_type...> make_select_result(
+    std::tuple<Args...>& awaitables, const pollfd* pollfds, bool was_timeout,
+    std::chrono::milliseconds min_timeout, bool min_timeout_is_polling,
     mpt::index_sequence<ints...>) {
-  return {make_one_select_result(mpt::at<ints>(awaitables), pollfds[ints], was_timeout, min_timeout,
-                                 min_timeout_is_polling)...};
+  return {select_input_helper<Args>::make_result(
+      mpt::at<ints>(awaitables),
+      pollfds + pollfds_index(awaitables, mpt::make_index_sequence<ints>{}), was_timeout,
+      min_timeout, min_timeout_is_polling)...};
 }
 
 }  // namespace detail
@@ -132,8 +157,8 @@ auto select(Args&&... args) {
     int pres = poll(fds.data(), n, min_timeout / std::chrono::milliseconds(1));
     if (pres < 0) throw_io_error("Error in select");
 
-    auto res(detail::make_select_result(a, fds, pres == 0, min_timeout, min_timeout_is_polling,
-                                        mpt::make_index_sequence<n>{}));
+    auto res(detail::make_select_result(a, fds.data(), pres == 0, min_timeout,
+                                        min_timeout_is_polling, mpt::make_index_sequence<n>{}));
 
     bool active =
         mpt::accumulate(false, res, [](bool so_far, const auto& val) { return so_far || val; });
