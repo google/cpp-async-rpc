@@ -190,7 +190,7 @@ int main() {
   }
   {
     auto& ar = ash::address_resolver::get();
-    auto ai = ar.resolve("www.google.com", 80).get();
+    auto ai = ar.resolve("", "http", true).get();
     std::cerr << ai.size() << std::endl;
     for (auto* p : ai) {
       std::cerr << ash::address_info::to_string(p) << std::endl;

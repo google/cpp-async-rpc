@@ -36,14 +36,17 @@ address_resolver::address_resolver()
                 req->datagram ? SOCK_DGRAM : SOCK_STREAM, 0};
             struct addrinfo* result;
 
-            int res = getaddrinfo(req->host.c_str(), req->service.c_str(),
-                                  &hints, &result);
+            int res = getaddrinfo(
+                req->host.empty() ? nullptr : req->host.c_str(),
+                req->service.empty() ? nullptr : req->service.c_str(), &hints,
+                &result);
             if (res) {
               req->promise.set_exception(std::make_exception_ptr(
                   errors::io_error("Can't resolve name")));
-            }
 
-            req->promise.set_value(address_info(result));
+            } else {
+              req->promise.set_value(address_info(result));
+            }
           }
         }
       }) {}
