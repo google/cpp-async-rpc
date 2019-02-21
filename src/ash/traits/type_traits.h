@@ -93,8 +93,8 @@ struct writable_value_type<std::tuple<U...>> {
 /// `const`-qualified) but the serialization format is compatible to the one for
 /// the original type `T`.
 template <typename T>
-using writable_value_type = detail::writable_value_type<
-    typename std::remove_cv<std::remove_reference_t<T>>::type>;
+using writable_value_type =
+    detail::writable_value_type<std::remove_cv_t<std::remove_reference_t<T>>>;
 
 template <typename T>
 using writable_value_type_t = typename writable_value_type<T>::type;

@@ -182,14 +182,33 @@ struct bad_connection {
 };
 
 int main() {
-  /*
   {
     ash::promise<void> p1, p2;
     auto f1 = p1.get_future();
     auto f2 = p2.get_future();
-    ash::select(std::vector{f1.can_get(), f2.can_get()});
+    p2.set_value();
+    std::vector<ash::awaitable<void>> conds;
+    conds.push_back(f1.can_get());
+    conds.push_back(f2.can_get());
+    auto [got_fut, timeout] = ash::select(
+        std::move(conds), ash::timeout(std::chrono::milliseconds(2000)));
+
+    std::cerr << !!timeout << ',' << !!got_fut[0] << ',' << !!got_fut[1]
+              << std::endl;
   }
-  */
+  {
+    ash::promise<void> p1, p2;
+    auto f1 = p1.get_future();
+    auto f2 = p2.get_future();
+    std::vector<ash::awaitable<void>> conds;
+    conds.push_back(f1.can_get());
+    conds.push_back(f2.can_get());
+    auto [got_fut, timeout] = ash::select(
+        std::move(conds), ash::timeout(std::chrono::milliseconds(2000)));
+
+    std::cerr << !!timeout << ',' << !!got_fut[0] << ',' << !!got_fut[1]
+              << std::endl;
+  }
   {
     ash::promise<void> p;
     auto f = p.get_future();

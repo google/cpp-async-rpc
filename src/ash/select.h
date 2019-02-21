@@ -42,16 +42,6 @@ namespace ash {
 
 namespace detail {
 
-template <typename... Args, std::size_t... ints>
-std::array<pollfd, sizeof...(Args)> make_select_pollfds(std::tuple<Args...>& awaitables,
-                                                        mpt::index_sequence<ints...>) {
-  return {pollfd{mpt::at<ints>(awaitables).get_fd(),
-                 static_cast<short> /* NOLINT(runtime/int) */ (mpt::at<ints>(awaitables).for_write()
-                                                                   ? (POLLOUT | POLLERR)
-                                                                   : (POLLIN | POLLHUP)),
-                 0}...};
-}
-
 template <typename A>
 result_holder<typename A::return_type> make_one_select_result(A& a, const pollfd& fd,
                                                               bool was_timeout,
@@ -85,6 +75,14 @@ result_holder<typename A::return_type> make_one_select_result(A& a, const pollfd
 }
 
 template <typename T>
+constexpr pollfd make_pollfd(const T& awaitable) {
+  return {awaitable.get_fd(),
+          static_cast<short> /* NOLINT(runtime/int) */ (awaitable.for_write() ? (POLLOUT | POLLERR)
+                                                                              : (POLLIN | POLLHUP)),
+          0};
+}
+
+template <typename T>
 struct select_input_helper;
 
 template <typename T>
@@ -96,6 +94,19 @@ struct select_input_helper<awaitable<T>> {
                                  std::chrono::milliseconds min_timeout,
                                  bool min_timeout_is_polling) {
     return make_one_select_result(a, *fd, was_timeout, min_timeout, min_timeout_is_polling);
+  }
+  static void fill_fds(const awaitable<T>& a, pollfd* fds) { *fds = make_pollfd(a); }
+  static auto timeout_info(const awaitable<T>& a, std::chrono::milliseconds elapsed) {
+    auto timeout = a.timeout();
+    bool is_polling = a.for_polling();
+
+    if (timeout >= std::chrono::milliseconds::zero()) {
+      if (is_polling) {
+        timeout = std::max(timeout - elapsed, std::chrono::milliseconds::zero());
+      }
+    }
+
+    return std::pair(timeout, is_polling);
   }
 };
 
@@ -115,25 +126,112 @@ struct select_input_helper<std::vector<awaitable<T>>> {
     }
     return res;
   }
+  static void fill_fds(const std::vector<awaitable<T>>& v, pollfd* fds) {
+    for (const auto& a : v) {
+      *fds++ = make_pollfd(a);
+    }
+  }
+  static auto timeout_info(const std::vector<awaitable<T>>& v, std::chrono::milliseconds elapsed) {
+    auto min_timeout = std::chrono::milliseconds(-1);
+    bool min_timeout_is_polling = false;
+
+    for (const auto& a : v) {
+      auto timeout = a.timeout();
+      bool is_polling = a.for_polling();
+
+      if (timeout >= std::chrono::milliseconds::zero()) {
+        if (is_polling) {
+          timeout = std::max(timeout - elapsed, std::chrono::milliseconds::zero());
+        }
+        if (min_timeout < std::chrono::milliseconds::zero() || timeout < min_timeout) {
+          min_timeout = timeout;
+          min_timeout_is_polling = is_polling;
+        }
+      }
+    }
+
+    return std::pair(min_timeout, min_timeout_is_polling);
+  }
 };
 
+template <typename T>
+using select_input = select_input_helper<std::remove_cv_t<std::remove_reference_t<T>>>;
+
+template <typename T>
+struct select_output_helper;
+
+template <typename T>
+struct select_output_helper<result_holder<T>> {
+  using result_type = result_holder<T>;
+  static bool is_active(const result_type& r) { return r.has_value(); }
+};
+
+template <typename T>
+struct select_output_helper<std::vector<result_holder<T>>> {
+  using result_type = std::vector<result_holder<T>>;
+  static bool is_active(const result_type& v) {
+    for (const auto& r : v) {
+      if (r) return true;
+    }
+    return false;
+  }
+};
+
+template <typename T>
+using select_output = select_output_helper<std::remove_cv_t<std::remove_reference_t<T>>>;
+
 template <typename... Args, std::size_t... ints>
-constexpr std::size_t pollfds_index(const std::tuple<Args...>& awaitables,
-                                    mpt::index_sequence<ints...>) {
+constexpr std::size_t pollfds_index_helper(const std::tuple<Args...>& awaitables,
+                                           mpt::index_sequence<ints...>) {
   return (0 + ... +
           select_input_helper<mpt::element_type_t<ints, std::tuple<Args...>>>::size(
               mpt::at<ints>(awaitables)));
 }
 
+template <std::size_t idx, typename... Args>
+constexpr std::size_t pollfds_index(const std::tuple<Args...>& awaitables) {
+  return pollfds_index_helper(awaitables, mpt::make_index_sequence<idx>{});
+}
+
+template <typename... Args>
+constexpr bool select_inputs_have_static_size(const std::tuple<Args...>& awaitables) {
+  return (... && select_input<Args>::has_static_size);
+}
+
+template <typename... Args>
+constexpr std::size_t select_inputs_static_size(const std::tuple<Args...>& awaitables) {
+  return (0 + ... + select_input<Args>::static_size);
+}
 template <typename... Args, std::size_t... ints>
-std::tuple<typename select_input_helper<Args>::result_type...> make_select_result(
+std::tuple<typename select_input<Args>::result_type...> make_select_result(
     std::tuple<Args...>& awaitables, const pollfd* pollfds, bool was_timeout,
     std::chrono::milliseconds min_timeout, bool min_timeout_is_polling,
     mpt::index_sequence<ints...>) {
-  return {select_input_helper<Args>::make_result(
-      mpt::at<ints>(awaitables),
-      pollfds + pollfds_index(awaitables, mpt::make_index_sequence<ints>{}), was_timeout,
-      min_timeout, min_timeout_is_polling)...};
+  return {select_input<Args>::make_result(mpt::at<ints>(awaitables),
+                                          pollfds + pollfds_index<ints>(awaitables), was_timeout,
+                                          min_timeout, min_timeout_is_polling)...};
+}
+
+template <typename... Args, std::size_t... ints>
+void make_select_pollfds_helper(const std::tuple<Args...>& awaitables, pollfd* fds,
+                                mpt::index_sequence<ints...>) {
+  (..., select_input<mpt::element_type_t<ints, std::tuple<Args...>>>::fill_fds(
+            mpt::at<ints>(awaitables), fds + pollfds_index<ints>(awaitables)));
+}
+
+template <typename... Args>
+auto make_select_pollfds(const std::tuple<Args...>& awaitables) {
+  if constexpr (select_inputs_have_static_size(awaitables)) {
+    constexpr std::size_t size = pollfds_index<sizeof...(Args)>(awaitables);
+    std::array<pollfd, size> res;
+    make_select_pollfds_helper(awaitables, res.data(), mpt::make_index_sequence<sizeof...(Args)>{});
+    return res;
+  } else {
+    std::size_t size = pollfds_index<sizeof...(Args)>(awaitables);
+    std::vector<pollfd> res(size);
+    make_select_pollfds_helper(awaitables, res.data(), mpt::make_index_sequence<sizeof...(Args)>{});
+    return res;
+  }
 }
 
 }  // namespace detail
@@ -154,14 +252,9 @@ auto select(Args&&... args) {
     auto [min_timeout, min_timeout_is_polling] = mpt::accumulate(
         std::pair(std::chrono::milliseconds(-1), false), a, [elapsed](auto prev, const auto& a) {
           auto& [min_timeout, min_timeout_is_polling] = prev;
-
-          auto timeout = a.timeout();
-          bool is_polling = a.for_polling();
+          auto [timeout, is_polling] = detail::select_input<decltype(a)>::timeout_info(a, elapsed);
 
           if (timeout >= std::chrono::milliseconds::zero()) {
-            if (is_polling) {
-              timeout = std::max(timeout - elapsed, std::chrono::milliseconds::zero());
-            }
             if (min_timeout < std::chrono::milliseconds::zero() || timeout < min_timeout) {
               min_timeout = timeout;
               min_timeout_is_polling = is_polling;
@@ -171,7 +264,7 @@ auto select(Args&&... args) {
           return std::pair(min_timeout, min_timeout_is_polling);
         });
 
-    auto fds(detail::make_select_pollfds(a, mpt::make_index_sequence<n>{}));
+    auto fds(detail::make_select_pollfds(a));
 
     int pres = poll(fds.data(), n, min_timeout / std::chrono::milliseconds(1));
     if (pres < 0) throw_io_error("Error in select");
@@ -179,8 +272,9 @@ auto select(Args&&... args) {
     auto res(detail::make_select_result(a, fds.data(), pres == 0, min_timeout,
                                         min_timeout_is_polling, mpt::make_index_sequence<n>{}));
 
-    bool active =
-        mpt::accumulate(false, res, [](bool so_far, const auto& val) { return so_far || val; });
+    bool active = mpt::accumulate(false, res, [](bool so_far, const auto& val) {
+      return so_far || detail::select_output<decltype(val)>::is_active(val);
+    });
     if (active) {
       auto [cancelled, deadline_exceeded] = mpt::range<n - 2, n>(res);
       if (cancelled) *cancelled;
