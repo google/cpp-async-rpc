@@ -184,7 +184,7 @@ template <typename... Args, std::size_t... ints>
 constexpr std::size_t pollfds_index_helper(const std::tuple<Args...>& awaitables,
                                            mpt::index_sequence<ints...>) {
   return (0 + ... +
-          select_input_helper<mpt::element_type_t<ints, std::tuple<Args...>>>::size(
+          select_input<mpt::element_type_t<ints, std::tuple<Args...>>>::size(
               mpt::at<ints>(awaitables)));
 }
 
