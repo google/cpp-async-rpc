@@ -182,6 +182,14 @@ struct bad_connection {
 };
 
 int main() {
+  /*
+  {
+    ash::promise<void> p1, p2;
+    auto f1 = p1.get_future();
+    auto f2 = p2.get_future();
+    ash::select(std::vector{f1.can_get(), f2.can_get()});
+  }
+  */
   {
     ash::promise<void> p;
     auto f = p.get_future();

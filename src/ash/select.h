@@ -31,6 +31,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 #include "ash/awaitable.h"
 #include "ash/context.h"
 #include "ash/errors.h"
@@ -95,6 +96,24 @@ struct select_input_helper<awaitable<T>> {
                                  std::chrono::milliseconds min_timeout,
                                  bool min_timeout_is_polling) {
     return make_one_select_result(a, *fd, was_timeout, min_timeout, min_timeout_is_polling);
+  }
+};
+
+template <typename T>
+struct select_input_helper<std::vector<awaitable<T>>> {
+  using result_type = std::vector<result_holder<T>>;
+  static constexpr bool has_static_size = false;
+  static constexpr std::size_t size(const std::vector<awaitable<T>>& v) { return v.size(); }
+  static result_type make_result(std::vector<awaitable<T>>& v, const pollfd* fd, bool was_timeout,
+                                 std::chrono::milliseconds min_timeout,
+                                 bool min_timeout_is_polling) {
+    result_type res;
+    res.reserve(v.size());
+    for (auto& a : v) {
+      res.push_back(
+          make_one_select_result(a, *fd++, was_timeout, min_timeout, min_timeout_is_polling));
+    }
+    return res;
   }
 };
 
