@@ -24,24 +24,52 @@
 
 namespace ash {
 
-address_info::address_info(struct addrinfo* result)
-    : result_(result, &free_result) {
-  struct addrinfo* p = result_.get();
-  while (p) {
-    push_back(p);
-    p = p->ai_next;
-  }
+void swap(address_info::iterator& a, address_info::iterator& b) noexcept {
+  a.swap(b);
 }
+
+void swap(address_info::const_iterator& a,
+          address_info::const_iterator& b) noexcept {
+  a.swap(b);
+}
+
+bool address_info::empty() const noexcept { return begin() == end(); }
+address_info::size_type address_info::size() const noexcept {
+  return std::distance(begin(), end());
+}
+
+address_info::iterator address_info::begin() noexcept {
+  return iterator(result_.get());
+}
+address_info::const_iterator address_info::begin() const noexcept {
+  return const_iterator(result_.get());
+}
+address_info::const_iterator address_info::cbegin() const noexcept {
+  return const_iterator(result_.get());
+}
+
+address_info::iterator address_info::end() noexcept {
+  return iterator(nullptr);
+}
+address_info::const_iterator address_info::end() const noexcept {
+  return const_iterator(nullptr);
+}
+address_info::const_iterator address_info::cend() const noexcept {
+  return const_iterator(nullptr);
+}
+
+address_info::address_info(struct addrinfo* result)
+    : result_(result, &free_result) {}
 
 void address_info::free_result(struct addrinfo* result) {
   freeaddrinfo(result);
 }
 
-std::string address_info::to_string(const struct addrinfo* addr) {
+std::string address_info::to_string(const struct addrinfo& addr) {
   char hostbuf[65];
   char portbuf[6];
   int res =
-      getnameinfo(addr->ai_addr, addr->ai_addrlen, hostbuf, sizeof(hostbuf),
+      getnameinfo(addr.ai_addr, addr.ai_addrlen, hostbuf, sizeof(hostbuf),
                   portbuf, sizeof(portbuf), NI_NUMERICHOST | NI_NUMERICSERV);
   if (res) throw errors::io_error("Can't print address as string");
   std::string host(hostbuf);
