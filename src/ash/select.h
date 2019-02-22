@@ -241,8 +241,9 @@ auto select(Args&&... args) {
   auto& current_context = context::current();
 
   constexpr std::size_t n = sizeof...(Args) + 2;
-  auto a = std::make_tuple(std::forward<Args>(args)..., current_context.wait_cancelled(),
-                           current_context.wait_deadline());
+  auto a = std::tuple<Args..., awaitable<void>, awaitable<void>>(std::forward<Args>(args)...,
+                                                                 current_context.wait_cancelled(),
+                                                                 current_context.wait_deadline());
 
   std::chrono::milliseconds elapsed = std::chrono::milliseconds::zero();
   auto last = std::chrono::steady_clock::now();
