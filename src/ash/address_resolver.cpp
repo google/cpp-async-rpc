@@ -58,25 +58,25 @@ address_resolver::~address_resolver() {
   resolver_thread_.join();
 }
 
-ash::future<address_list> address_resolver::async_resolve(const request& req) {
+ash::future<address_list> address_resolver::async_resolve(const endpoint& req) {
   auto req_pair = std::pair(req, promise<address_list>{});
   auto fut = req_pair.second.get_future();
   requests_.put(std::move(req_pair));
   return fut;
 }
 
-address_list address_resolver::resolve(const request& req) {
+address_list address_resolver::resolve(const endpoint& req) {
   return async_resolve(req).get();
 }
 
-ash::future<address_list> address_resolver::async_resolve(request&& req) {
+ash::future<address_list> address_resolver::async_resolve(endpoint&& req) {
   auto req_pair = std::pair(std::move(req), promise<address_list>{});
   auto fut = req_pair.second.get_future();
   requests_.put(std::move(req_pair));
   return fut;
 }
 
-address_list address_resolver::resolve(request&& req) {
+address_list address_resolver::resolve(endpoint&& req) {
   return async_resolve(std::move(req)).get();
 }
 }  // namespace ash

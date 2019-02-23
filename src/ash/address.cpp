@@ -24,43 +24,43 @@
 
 namespace ash {
 
-address_spec& address_spec::name(const std::string& new_name) {
+endpoint& endpoint::name(const std::string& new_name) {
   name_ = new_name;
   return *this;
 }
-address_spec& address_spec::service(const std::string& new_service) {
+endpoint& endpoint::service(const std::string& new_service) {
   service_ = new_service;
   return *this;
 }
-address_spec& address_spec::port(int new_port) {
+endpoint& endpoint::port(int new_port) {
   service_ = std::to_string(new_port);
   return *this;
 }
-address_spec& address_spec::passive() {
+endpoint& endpoint::passive() {
   passive_ = true;
   return *this;
 }
-address_spec& address_spec::active() {
+endpoint& endpoint::active() {
   passive_ = false;
   return *this;
 }
-address_spec& address_spec::stream() {
+endpoint& endpoint::stream() {
   sock_type_ = SOCK_STREAM;
   return *this;
 }
-address_spec& address_spec::datagram() {
+endpoint& endpoint::datagram() {
   sock_type_ = SOCK_DGRAM;
   return *this;
 }
-address_spec& address_spec::ipv4() {
+endpoint& endpoint::ipv4() {
   family_ = AF_INET;
   return *this;
 }
-address_spec& address_spec::ipv6() {
+endpoint& endpoint::ipv6() {
   family_ = AF_INET6;
   return *this;
 }
-address_spec& address_spec::ip() {
+endpoint& endpoint::ip() {
   family_ = AF_UNSPEC;
   return *this;
 }

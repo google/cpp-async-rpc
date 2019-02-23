@@ -219,7 +219,7 @@ int main() {
     auto ctx = ash::context::with_timeout(std::chrono::milliseconds(20));
     auto& ar = ash::address_resolver::get();
     auto ai =
-        ar.resolve(ash::address_spec().name("www.kernel.org").service("https"));
+        ar.resolve(ash::endpoint().name("www.kernel.org").service("https"));
     std::cerr << ai.size() << std::endl;
     for (auto& p : ai) {
       std::cerr << p.as_string() << std::endl;

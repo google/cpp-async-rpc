@@ -38,15 +38,14 @@ namespace ash {
 
 class address_resolver : public singleton<address_resolver> {
  public:
-  using request = address_spec;
-  ash::future<address_list> async_resolve(const request& req);
-  address_list resolve(const request& req);
-  ash::future<address_list> async_resolve(request&& req);
-  address_list resolve(request&& req);
+  ash::future<address_list> async_resolve(const endpoint& req);
+  address_list resolve(const endpoint& req);
+  ash::future<address_list> async_resolve(endpoint&& req);
+  address_list resolve(endpoint&& req);
 
  private:
   friend class singleton<address_resolver>;
-  using queue_type = queue<std::pair<request, promise<address_list>>>;
+  using queue_type = queue<std::pair<endpoint, promise<address_list>>>;
 
   static constexpr queue_type::size_type queue_size = 16;
 

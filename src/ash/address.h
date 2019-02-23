@@ -34,18 +34,18 @@
 
 namespace ash {
 
-class address_spec {
+class endpoint {
  public:
-  address_spec& name(const std::string& new_name);
-  address_spec& service(const std::string& new_service);
-  address_spec& port(int new_port);
-  address_spec& passive();
-  address_spec& active();
-  address_spec& stream();
-  address_spec& datagram();
-  address_spec& ip();
-  address_spec& ipv4();
-  address_spec& ipv6();
+  endpoint& name(const std::string& new_name);
+  endpoint& service(const std::string& new_service);
+  endpoint& port(int new_port);
+  endpoint& passive();
+  endpoint& active();
+  endpoint& stream();
+  endpoint& datagram();
+  endpoint& ip();
+  endpoint& ipv4();
+  endpoint& ipv6();
 
  private:
   friend class address_resolver;
