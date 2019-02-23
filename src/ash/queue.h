@@ -22,9 +22,10 @@
 #ifndef ASH_QUEUE_H_
 #define ASH_QUEUE_H_
 
+#include <limits>
 #include <mutex>
+#include <queue>
 #include <utility>
-#include <vector>
 #include "ash/awaitable.h"
 #include "ash/flag.h"
 #include "ash/select.h"
@@ -37,37 +38,37 @@ class queue {
   using size_type = typename std::vector<T>::size_type;
   using value_type = T;
 
-  explicit queue(size_type size) : data_(size) { update_flags(); }
+  explicit queue(size_type size = std::numeric_limits<size_type>::max())
+      : max_size_(size) {
+    update_flags();
+  }
   size_type size() const {
     std::scoped_lock lock(mu_);
-    return size_;
+    return data_.size();
   }
-  size_type max_size() const { return data_.size(); }
-  size_type capacity() const { return data_.size(); }
+  size_type max_size() const { return max_size_; }
+  size_type capacity() const { return max_size_; }
   bool empty() const {
     std::scoped_lock lock(mu_);
-    return size_ == 0;
+    return data_.empty() == 0;
   }
   bool full() const {
     std::scoped_lock lock(mu_);
-    return size_ == data_.size();
+    return data_.size() == max_size_;
   }
   template <typename U>
   void maybe_put(U&& u) {
     std::scoped_lock lock(mu_);
-    if (size_ == data_.size()) throw errors::try_again("Queue is full");
-    data_[head_++] = std::forward<U>(u);
-    head_ %= data_.size();
-    size_++;
+    if (data_.size() == max_size_) throw errors::try_again("Queue is full");
+    data_.push(std::forward<U>(u));
     update_flags();
   }
   value_type maybe_get() {
     std::scoped_lock lock(mu_);
     value_type result;
-    if (size_ == 0) throw errors::try_again("Queue is empty");
-    result = std::move(data_[tail_++]);
-    tail_ %= data_.size();
-    size_--;
+    if (data_.size() == 0) throw errors::try_again("Queue is empty");
+    result = std::move(data_.front());
+    data_.pop();
     update_flags();
     return result;
   }
@@ -95,12 +96,12 @@ class queue {
 
  private:
   void update_flags() {
-    if (size_ == 0) {
+    if (data_.size() == 0) {
       can_get_.reset();
     } else {
       can_get_.set();
     }
-    if (size_ == data_.size()) {
+    if (data_.size() == max_size_) {
       can_put_.reset();
     } else {
       can_put_.set();
@@ -108,8 +109,8 @@ class queue {
   }
 
   mutable std::mutex mu_;
-  std::size_t head_ = 0, tail_ = 0, size_ = 0;
-  std::vector<T> data_;
+  size_type max_size_ = 0;
+  std::queue<T> data_;
   flag can_get_, can_put_;
 };
 
