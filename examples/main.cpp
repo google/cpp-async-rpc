@@ -217,7 +217,10 @@ int main() {
   }
   {
     auto& ar = ash::address_resolver::get();
-    auto ai = ar.resolve("", "http", true).get();
+    auto ai = ar.resolve(ash::address_resolver::request()
+                             .name("www.kernel.org")
+                             .service("https"))
+                  .get();
     std::cerr << ai.size() << std::endl;
     for (auto& p : ai) {
       std::cerr << ash::address_info::to_string(p) << std::endl;

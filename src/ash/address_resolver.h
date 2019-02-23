@@ -22,8 +22,11 @@
 #ifndef ASH_ADDRESS_RESOLVER_H_
 #define ASH_ADDRESS_RESOLVER_H_
 
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <string>
-#include <tuple>
+#include <utility>
 #include "ash/address_info.h"
 #include "ash/future.h"
 #include "ash/queue.h"
@@ -34,31 +37,41 @@ namespace ash {
 
 class address_resolver : public singleton<address_resolver> {
  public:
-  ash::future<address_info> resolve(const std::string& host, int port,
-                                    bool passive = false,
-                                    bool datagram = false);
-  ash::future<address_info> resolve(const std::string& host,
-                                    const std::string& service,
-                                    bool passive = false,
-                                    bool datagram = false);
+  class request {
+   public:
+    request& name(const std::string& new_name);
+    request& service(const std::string& new_service);
+    request& port(int new_port);
+    request& passive();
+    request& active();
+    request& stream();
+    request& datagram();
+    request& ip();
+    request& ipv4();
+    request& ipv6();
+
+   private:
+    friend class address_resolver;
+
+    std::string name_;
+    std::string service_;
+    bool passive_ = false;
+    int family_ = AF_UNSPEC;
+    int sock_type_ = SOCK_STREAM;
+  };
+
+  ash::future<address_info> resolve(const request& req);
 
  private:
   friend class singleton<address_resolver>;
+  using queue_type = queue<std::pair<request, promise<address_info>>>;
 
-  struct request {
-    std::string host;
-    std::string service;
-    bool passive;
-    bool datagram;
-    ash::promise<address_info> promise;
-  };
-
-  static constexpr queue<request>::size_type queue_size = 16;
+  static constexpr queue_type::size_type queue_size = 16;
 
   address_resolver();
   ~address_resolver();
 
-  queue<request> requests_;
+  queue_type requests_;
   ash::thread resolver_thread_;
 };
 

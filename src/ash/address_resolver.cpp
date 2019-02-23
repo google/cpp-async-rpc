@@ -29,23 +29,25 @@ namespace ash {
 address_resolver::address_resolver()
     : requests_(queue_size), resolver_thread_([this]() {
         while (true) {
-          auto [req] = select(requests_.async_get());
-          if (req) {
+          auto [req_pair] = select(requests_.async_get());
+          if (req_pair) {
+            auto& [req, promise] = *req_pair;
+
             struct addrinfo hints = {
-                AI_ADDRCONFIG | (req->passive ? AI_PASSIVE : 0), AF_UNSPEC,
-                req->datagram ? SOCK_DGRAM : SOCK_STREAM, 0};
+                AI_ADDRCONFIG | (req.passive_ ? AI_PASSIVE : 0), req.family_,
+                req.sock_type_, 0};
             struct addrinfo* result;
 
             int res = getaddrinfo(
-                req->host.empty() ? nullptr : req->host.c_str(),
-                req->service.empty() ? nullptr : req->service.c_str(), &hints,
+                req.name_.empty() ? nullptr : req.name_.c_str(),
+                req.service_.empty() ? nullptr : req.service_.c_str(), &hints,
                 &result);
             if (res) {
-              req->promise.set_exception(std::make_exception_ptr(
+              promise.set_exception(std::make_exception_ptr(
                   errors::io_error("Can't resolve name")));
 
             } else {
-              req->promise.set_value(address_info(result));
+              promise.set_value(address_info(result));
             }
           }
         }
@@ -56,22 +58,54 @@ address_resolver::~address_resolver() {
   resolver_thread_.join();
 }
 
-ash::future<address_info> address_resolver::resolve(const std::string& host,
-                                                    int port, bool passive,
-                                                    bool datagram) {
-  request req{host, std::to_string(port), passive, datagram};
-  auto fut = req.promise.get_future();
-  requests_.put(std::move(req));
+ash::future<address_info> address_resolver::resolve(const request& req) {
+  auto req_pair = std::pair(req, promise<address_info>{});
+  auto fut = req_pair.second.get_future();
+  requests_.put(std::move(req_pair));
   return fut;
 }
-ash::future<address_info> address_resolver::resolve(const std::string& host,
-                                                    const std::string& service,
-                                                    bool passive,
-                                                    bool datagram) {
-  request req{host, service, passive, datagram};
-  auto fut = req.promise.get_future();
-  requests_.put(std::move(req));
-  return fut;
+
+address_resolver::request& address_resolver::request::name(
+    const std::string& new_name) {
+  name_ = new_name;
+  return *this;
+}
+address_resolver::request& address_resolver::request::service(
+    const std::string& new_service) {
+  service_ = new_service;
+  return *this;
+}
+address_resolver::request& address_resolver::request::port(int new_port) {
+  service_ = std::to_string(new_port);
+  return *this;
+}
+address_resolver::request& address_resolver::request::passive() {
+  passive_ = true;
+  return *this;
+}
+address_resolver::request& address_resolver::request::active() {
+  passive_ = false;
+  return *this;
+}
+address_resolver::request& address_resolver::request::stream() {
+  sock_type_ = SOCK_STREAM;
+  return *this;
+}
+address_resolver::request& address_resolver::request::datagram() {
+  sock_type_ = SOCK_DGRAM;
+  return *this;
+}
+address_resolver::request& address_resolver::request::ipv4() {
+  family_ = AF_INET;
+  return *this;
+}
+address_resolver::request& address_resolver::request::ipv6() {
+  family_ = AF_INET6;
+  return *this;
+}
+address_resolver::request& address_resolver::request::ip() {
+  family_ = AF_UNSPEC;
+  return *this;
 }
 
 }  // namespace ash

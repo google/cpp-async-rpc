@@ -65,7 +65,7 @@ class queue {
     std::scoped_lock lock(mu_);
     value_type result;
     if (size_ == 0) throw errors::try_again("Queue is empty");
-    std::swap(data_[tail_++], result);
+    result = std::move(data_[tail_++]);
     tail_ %= data_.size();
     size_--;
     update_flags();
