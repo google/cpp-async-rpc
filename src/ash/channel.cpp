@@ -68,7 +68,7 @@ void channel::close() noexcept { reset(); }
 
 std::size_t channel::read(void* buf, std::size_t len) {
   auto num = ::read(fd_, buf, len);
-  if (num < 0) throw_io_error("Error reading", num);
+  if (num < 0) throw_io_error("Error reading");
   return num;
 }
 
@@ -79,7 +79,7 @@ awaitable<std::size_t> channel::async_read(void* buf, std::size_t len) {
 
 std::size_t channel::write(const void* buf, std::size_t len) {
   auto num = ::write(fd_, buf, len);
-  if (num < 0) throw_io_error("Error writing", num);
+  if (num < 0) throw_io_error("Error writing");
   return num;
 }
 
@@ -90,14 +90,14 @@ awaitable<std::size_t> channel::async_write(const void* buf, std::size_t len) {
 
 void channel::make_blocking() {
   if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
-                 (flags = fcntl(fd_, F_SETFL, flags & ~O_NONBLOCK)) < 0)
-    throw_io_error("Error making channel descriptor blocking", flags);
+                 fcntl(fd_, F_SETFL, flags & ~O_NONBLOCK) < 0)
+    throw_io_error("Error making channel descriptor blocking");
 }
 
 void channel::make_non_blocking() {
   if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
-                 (flags = fcntl(fd_, F_SETFL, flags | O_NONBLOCK)) < 0)
-    throw_io_error("Error making channel descriptor non-blocking", flags);
+                 fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0)
+    throw_io_error("Error making channel descriptor non-blocking");
 }
 
 channel channel::dup() const {
@@ -105,8 +105,7 @@ channel channel::dup() const {
     throw errors::invalid_state(
         "Trying to duplicate an empty channel descriptor");
   channel res(::dup(fd_));
-  if (!res)
-    throw_io_error("Error duplicating the channel descriptor", res.get());
+  if (!res) throw_io_error("Error duplicating the channel descriptor");
   return res;
 }
 

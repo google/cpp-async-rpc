@@ -268,7 +268,7 @@ auto select(Args&&... args) {
     auto fds(detail::make_select_pollfds(a));
 
     int pres = poll(fds.data(), n, min_timeout / std::chrono::milliseconds(1));
-    if (pres < 0) throw_io_error("Error in select", pres);
+    if (pres < 0) throw_io_error("Error in select");
 
     auto res(detail::make_select_result(a, fds.data(), pres == 0, min_timeout,
                                         min_timeout_is_polling, mpt::make_index_sequence<n>{}));

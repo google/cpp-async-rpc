@@ -38,7 +38,7 @@ channel file(const std::string& path, open_mode mode) {
   };
   channel res(
       ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
-  if (!res) throw_io_error("Error opening file", res.get());
+  if (!res) throw_io_error("Error opening file");
   return res;
 }
 
