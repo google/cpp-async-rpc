@@ -29,9 +29,13 @@ namespace ash {
 thread_local context* context::current_ = nullptr;
 
 context& context::current() {
-  static context base_context{nullptr, time_point::max(), false};
-  if (!current_) return base_context;
+  if (!current_) return top();
   return *current_;
+}
+
+context& context::top() {
+  static context base_context{nullptr, time_point::max(), false};
+  return base_context;
 }
 
 context::context(context* parent, time_point deadline, bool set_current)

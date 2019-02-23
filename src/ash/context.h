@@ -31,6 +31,9 @@
 
 namespace ash {
 
+template <bool daemon>
+class base_thread;
+
 class context {
  public:
   using time_point = std::chrono::system_clock::time_point;
@@ -52,6 +55,8 @@ class context {
 
   static context& current();
 
+  static context& top();
+
   static context with_deadline(time_point when);
 
   static context with_timeout(duration timeout);
@@ -66,7 +71,8 @@ class context {
   void remove_child(context* child);
   context make_child();
 
-  friend class thread;
+  template <bool daemon>
+  friend class base_thread;
 
   std::mutex mu_;
   std::condition_variable child_detached_;

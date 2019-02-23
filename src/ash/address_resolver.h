@@ -39,7 +39,10 @@ namespace ash {
 class address_resolver : public singleton<address_resolver> {
  public:
   using request = address_spec;
-  ash::future<address_list> resolve(const request& req);
+  ash::future<address_list> async_resolve(const request& req);
+  address_list resolve(const request& req);
+  ash::future<address_list> async_resolve(request&& req);
+  address_list resolve(request&& req);
 
  private:
   friend class singleton<address_resolver>;
@@ -51,7 +54,7 @@ class address_resolver : public singleton<address_resolver> {
   ~address_resolver();
 
   queue_type requests_;
-  ash::thread resolver_thread_;
+  ash::daemon_thread resolver_thread_;
 };
 
 }  // namespace ash

@@ -21,8 +21,4 @@
 
 #include "ash/thread.h"
 
-namespace ash {
-
-context& thread::get_context() { return context_; }
-
-}  // namespace ash
+namespace ash {}  // namespace ash

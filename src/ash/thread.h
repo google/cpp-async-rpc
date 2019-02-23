@@ -37,14 +37,16 @@ std::decay_t<T> decay_copy(T&& v) {
 }
 }  // namespace detail
 
-class thread : public std::thread {
+template <bool daemon>
+class base_thread : public std::thread {
  public:
   using std::thread::thread;
 
   template <class Function, class... Args>
-  explicit thread(Function&& f, Args&&... args)
+  explicit base_thread(Function&& f, Args&&... args)
       : std::thread(),
-        context_(&context::current(), context::time_point::max(), false) {
+        context_(daemon ? &context::top() : &context::current(),
+                 context::time_point::max(), false) {
     static_cast<std::thread&>(*this) =
         std::thread(([this, f(detail::decay_copy(std::forward<Function>(f)))](
                          std::decay_t<Args>&&... args) mutable {
@@ -58,13 +60,16 @@ class thread : public std::thread {
                     std::forward<Args>(args)...);
   }
 
-  context& get_context();
+  context& get_context() { return context_; }
 
   void detach() = delete;
 
  private:
   context context_;
 };
+
+using thread = base_thread<false>;
+using daemon_thread = base_thread<true>;
 
 }  // namespace ash
 
