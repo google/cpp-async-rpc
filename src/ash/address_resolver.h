@@ -27,7 +27,8 @@
 #include <sys/types.h>
 #include <string>
 #include <utility>
-#include "ash/address_info.h"
+
+#include "address.h"
 #include "ash/future.h"
 #include "ash/queue.h"
 #include "ash/singleton.h"
@@ -37,34 +38,12 @@ namespace ash {
 
 class address_resolver : public singleton<address_resolver> {
  public:
-  class request {
-   public:
-    request& name(const std::string& new_name);
-    request& service(const std::string& new_service);
-    request& port(int new_port);
-    request& passive();
-    request& active();
-    request& stream();
-    request& datagram();
-    request& ip();
-    request& ipv4();
-    request& ipv6();
-
-   private:
-    friend class address_resolver;
-
-    std::string name_;
-    std::string service_;
-    bool passive_ = false;
-    int family_ = AF_UNSPEC;
-    int sock_type_ = SOCK_STREAM;
-  };
-
-  ash::future<address_info> resolve(const request& req);
+  using request = address_spec;
+  ash::future<address_list> resolve(const request& req);
 
  private:
   friend class singleton<address_resolver>;
-  using queue_type = queue<std::pair<request, promise<address_info>>>;
+  using queue_type = queue<std::pair<request, promise<address_list>>>;
 
   static constexpr queue_type::size_type queue_size = 16;
 

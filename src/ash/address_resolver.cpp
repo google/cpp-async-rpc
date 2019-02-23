@@ -47,7 +47,7 @@ address_resolver::address_resolver()
                   errors::io_error("Can't resolve name")));
 
             } else {
-              promise.set_value(address_info(result));
+              promise.set_value(address_list(result));
             }
           }
         }
@@ -58,54 +58,11 @@ address_resolver::~address_resolver() {
   resolver_thread_.join();
 }
 
-ash::future<address_info> address_resolver::resolve(const request& req) {
-  auto req_pair = std::pair(req, promise<address_info>{});
+ash::future<address_list> address_resolver::resolve(const request& req) {
+  auto req_pair = std::pair(req, promise<address_list>{});
   auto fut = req_pair.second.get_future();
   requests_.put(std::move(req_pair));
   return fut;
-}
-
-address_resolver::request& address_resolver::request::name(
-    const std::string& new_name) {
-  name_ = new_name;
-  return *this;
-}
-address_resolver::request& address_resolver::request::service(
-    const std::string& new_service) {
-  service_ = new_service;
-  return *this;
-}
-address_resolver::request& address_resolver::request::port(int new_port) {
-  service_ = std::to_string(new_port);
-  return *this;
-}
-address_resolver::request& address_resolver::request::passive() {
-  passive_ = true;
-  return *this;
-}
-address_resolver::request& address_resolver::request::active() {
-  passive_ = false;
-  return *this;
-}
-address_resolver::request& address_resolver::request::stream() {
-  sock_type_ = SOCK_STREAM;
-  return *this;
-}
-address_resolver::request& address_resolver::request::datagram() {
-  sock_type_ = SOCK_DGRAM;
-  return *this;
-}
-address_resolver::request& address_resolver::request::ipv4() {
-  family_ = AF_INET;
-  return *this;
-}
-address_resolver::request& address_resolver::request::ipv6() {
-  family_ = AF_INET6;
-  return *this;
-}
-address_resolver::request& address_resolver::request::ip() {
-  family_ = AF_UNSPEC;
-  return *this;
 }
 
 }  // namespace ash
