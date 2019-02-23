@@ -115,11 +115,17 @@ const char* error_factory::register_error_class(const char* error_class_name) {
 }
 
 template <typename ET>
+void throw_with_code(const std::string& message, int code) {
+  throw ET(message + std::string(": ") + std::to_string(code));
+}
+
+template <typename ET>
 void throw_with_errno(const std::string& message) {
-  throw ET(message + std::string(": ") + std::to_string(errno));
+  throw_with_code<ET>(message, errno);
 }
 
 void throw_io_error(const std::string& message);
+void throw_io_error(const std::string& message, int code);
 
 }  // namespace ash
 

@@ -27,7 +27,7 @@ namespace ash {
 
 void pipe(channel fds[2]) {
   int fd[2];
-  if (::pipe(fd)) throw_io_error("Error creating pipe pair");
+  if (int err = ::pipe(fd)) throw_io_error("Error creating pipe pair", err);
   fds[0].reset(fd[0]);
   fds[1].reset(fd[1]);
 }

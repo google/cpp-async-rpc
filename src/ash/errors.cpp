@@ -40,11 +40,15 @@ void error_factory::throw_error(const char* error_class_name,
   it->second(what);
 }
 
-void throw_io_error(const std::string& message) {
-  if (errno == EAGAIN || errno == EWOULDBLOCK) {
+void throw_io_error(const std::string& message, int code) {
+  if (code == EAGAIN || code == EWOULDBLOCK) {
     throw errors::try_again("Try again");
   }
   throw errors::io_error(message + std::string(": ") + std::to_string(errno));
+}
+
+void throw_io_error(const std::string& message) {
+  throw_io_error(message, errno);
 }
 
 }  // namespace ash
