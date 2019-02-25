@@ -42,6 +42,7 @@
 #include "ash/queue.h"
 #include "ash/select.h"
 #include "ash/serializable.h"
+#include "ash/socket.h"
 #include "ash/string_adapters.h"
 #include "ash/thread.h"
 #include "ash/type_hash.h"
@@ -216,13 +217,15 @@ int main() {
     f.get();
   }
   {
-    auto ctx = ash::context::with_timeout(std::chrono::milliseconds(20));
     auto& ar = ash::address_resolver::get();
     auto ai =
         ar.resolve(ash::endpoint().name("www.kernel.org").service("https"));
     std::cerr << ai.size() << std::endl;
     for (auto& p : ai) {
       std::cerr << p.as_string() << std::endl;
+      auto s = ash::socket(p.family(), p.socket_type(), p.protocol());
+      s.make_non_blocking();
+      s.connect(p.address_data(), p.address_size());
     }
   }
   {

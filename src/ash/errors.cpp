@@ -41,6 +41,10 @@ void error_factory::throw_error(const char* error_class_name,
 }
 
 void throw_io_error(const std::string& message, int code) {
+  if (code == EINPROGRESS) {
+    // This is just an ongoing non-blocking connection. Nothing to see here.
+    return;
+  }
   if (code == EAGAIN || code == EWOULDBLOCK) {
     throw errors::try_again("Try again");
   }

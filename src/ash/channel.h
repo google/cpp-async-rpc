@@ -22,6 +22,8 @@
 #ifndef ASH_CHANNEL_H_
 #define ASH_CHANNEL_H_
 
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <cstddef>
 #include "ash/awaitable.h"
 
@@ -50,6 +52,11 @@ class channel {
   awaitable<void> can_write();
   awaitable<std::size_t> async_read(void* buf, std::size_t len);
   awaitable<std::size_t> async_write(const void* buf, std::size_t len);
+
+  // Socket methods.
+  void shutdown(bool read, bool write);
+  awaitable<void> async_connect(const struct sockaddr* addr, socklen_t addrlen);
+  void connect(const struct sockaddr* addr, socklen_t addrlen);
 
  private:
   int fd_;

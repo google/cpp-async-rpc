@@ -1,5 +1,5 @@
 /// \file
-/// \brief File channel factory.
+/// \brief Socket channel factory.
 ///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
@@ -19,26 +19,15 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <ash/file.h>
-#include <fcntl.h>
-#include <sys/stat.h>
+#include <ash/socket.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include "ash/errors.h"
 
 namespace ash {
-
-channel file(const std::string& path, open_mode mode) {
-  static constexpr int posix_modes[] = {
-      O_RDONLY,                       // READ
-      O_WRONLY | O_CREAT | O_TRUNC,   // WRITE
-      O_WRONLY | O_CREAT | O_APPEND,  // APPEND
-      O_RDWR,                         // READ_PLUS
-      O_RDWR | O_CREAT | O_TRUNC,     // WRITE_PLUS
-      O_RDWR | O_CREAT | O_APPEND,    // APPEND
-  };
-  channel res(
-      ::open(path.c_str(), posix_modes[static_cast<std::size_t>(mode)]));
-  if (!res) throw_io_error("Error opening file");
+channel socket(int family, int type, int protocol) {
+  channel res(::socket(family, type, protocol));
+  if (!res) throw_io_error("Error creating socket");
   return res;
 }
 

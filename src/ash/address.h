@@ -152,6 +152,11 @@ class address : private addrinfo {
   friend class address_list::iterator;
   friend class address_list::const_iterator;
 };
+
+static_assert(
+    sizeof(address) == sizeof(struct addrinfo),
+    "ash::address has to remain data-compatible with struct addrinfo");
+
 }  // namespace ash
 
 namespace std {

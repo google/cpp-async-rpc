@@ -20,6 +20,7 @@
 ///   under the License.
 
 #include <ash/channel.h>
+#include <ash/select.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <utility>
@@ -101,9 +102,6 @@ void channel::make_non_blocking() {
 }
 
 channel channel::dup() const {
-  if (!*this)
-    throw errors::invalid_state(
-        "Trying to duplicate an empty channel descriptor");
   channel res(::dup(fd_));
   if (!res) throw_io_error("Error duplicating the channel descriptor");
   return res;
@@ -112,5 +110,35 @@ channel channel::dup() const {
 awaitable<void> channel::can_read() { return awaitable<void>(fd_, false); }
 
 awaitable<void> channel::can_write() { return awaitable<void>(fd_, true); }
+
+void channel::shutdown(bool read, bool write) {
+  int how;
+  if (read && write) {
+    how = SHUT_RDWR;
+  } else if (read) {
+    how = SHUT_RD;
+  } else if (write) {
+    how = SHUT_WR;
+  } else {
+    return;
+  }
+  if (::shutdown(fd_, how)) throw_io_error("Error in socket shutdown");
+}
+
+awaitable<void> channel::async_connect(const struct sockaddr* addr,
+                                       socklen_t addrlen) {
+  if (::connect(fd_, addr, addrlen))
+    throw_io_error("Error when connecting socket");
+  return can_write().then(std::move([this]() {
+    int err;
+    socklen_t err_size = sizeof(err);
+    ::getsockopt(fd_, SOL_SOCKET, SO_ERROR, &err, &err_size);
+    if (err) throw_io_error("Connection error", err);
+  }));
+}
+
+void channel::connect(const struct sockaddr* addr, socklen_t addrlen) {
+  select(async_connect(addr, addrlen));
+}
 
 }  // namespace ash
