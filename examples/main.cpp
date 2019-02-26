@@ -218,14 +218,26 @@ int main() {
   }
   {
     auto& ar = ash::address_resolver::get();
-    auto ai =
+    auto al =
         ar.resolve(ash::endpoint().name("www.kernel.org").service("https"));
-    std::cerr << ai.size() << std::endl;
-    for (auto& p : ai) {
-      std::cerr << p.as_string() << std::endl;
-      auto s = ash::socket(p.family(), p.socket_type(), p.protocol());
-      s.make_non_blocking();
-      s.connect(p.address_data(), p.address_size());
+    std::cerr << al.size() << std::endl;
+    for (auto& a : al) {
+      std::cerr << a.as_string() << std::endl;
+      auto s = ash::socket(a);
+      s.make_non_blocking().connect(a);
+    }
+  }
+  {
+    auto& ar = ash::address_resolver::get();
+    auto al = ar.resolve(ash::endpoint().passive().port(9999));
+    std::cerr << al.size() << std::endl;
+    for (auto& a : al) {
+      std::cerr << a.as_string() << std::endl;
+      auto s = ash::socket(a);
+      s.make_non_blocking().reuse_addr().bind(a).listen(10);
+      ash::address peer;
+      auto c = s.accept(peer);
+      std::cerr << peer.as_string() << std::endl;
     }
   }
   {

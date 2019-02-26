@@ -89,16 +89,13 @@ awaitable<std::size_t> channel::async_write(const void* buf, std::size_t len) {
       std::move([this, buf, len]() { return write(buf, len); }));
 }
 
-void channel::make_blocking() {
-  if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
-                 fcntl(fd_, F_SETFL, flags & ~O_NONBLOCK) < 0)
-    throw_io_error("Error making channel descriptor blocking");
-}
-
-void channel::make_non_blocking() {
-  if (int flags; (flags = fcntl(fd_, F_GETFL)) < 0 ||
-                 fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0)
+channel& channel::make_non_blocking(bool non_blocking) {
+  if (int flags;
+      (flags = fcntl(fd_, F_GETFL)) < 0 ||
+      fcntl(fd_, F_SETFL,
+            non_blocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK)) < 0)
     throw_io_error("Error making channel descriptor non-blocking");
+  return *this;
 }
 
 channel channel::dup() const {
@@ -111,7 +108,7 @@ awaitable<void> channel::can_read() { return awaitable<void>(fd_, false); }
 
 awaitable<void> channel::can_write() { return awaitable<void>(fd_, true); }
 
-void channel::shutdown(bool read, bool write) {
+channel& channel::shutdown(bool read, bool write) {
   int how;
   if (read && write) {
     how = SHUT_RDWR;
@@ -120,14 +117,14 @@ void channel::shutdown(bool read, bool write) {
   } else if (write) {
     how = SHUT_WR;
   } else {
-    return;
+    return *this;
   }
   if (::shutdown(fd_, how)) throw_io_error("Error in socket shutdown");
+  return *this;
 }
 
-awaitable<void> channel::async_connect(const struct sockaddr* addr,
-                                       socklen_t addrlen) {
-  if (::connect(fd_, addr, addrlen))
+awaitable<void> channel::async_connect(const address& addr) {
+  if (::connect(fd_, addr.address_data(), addr.address_size()))
     throw_io_error("Error when connecting socket");
   return can_write().then(std::move([this]() {
     int err;
@@ -137,8 +134,76 @@ awaitable<void> channel::async_connect(const struct sockaddr* addr,
   }));
 }
 
-void channel::connect(const struct sockaddr* addr, socklen_t addrlen) {
-  select(async_connect(addr, addrlen));
+channel& channel::connect(const address& addr) {
+  select(async_connect(addr));
+  return *this;
 }
 
+channel& channel::bind(const address& addr) {
+  if (::bind(fd_, addr.address_data(), addr.address_size()))
+    throw_io_error("Error when binding socket");
+  return *this;
+}
+
+channel& channel::listen(int backlog) {
+  if (::listen(fd_, backlog))
+    throw_io_error("Error when putting socket into listen state");
+  return *this;
+}
+
+awaitable<channel> channel::async_accept() {
+  return can_read().then(std::move([this]() {
+    channel c(::accept(fd_, nullptr, nullptr));
+    if (!c) throw_io_error("Accept error");
+    return c;
+  }));
+}
+
+channel channel::accept() {
+  auto [c] = select(async_accept());
+  return std::move(*c);
+}
+
+awaitable<channel> channel::async_accept(address& addr) {
+  return can_read().then(std::move([this, &addr]() {
+    channel c(::accept(fd_, addr.address_data(), &addr.address_size()));
+    if (!c) throw_io_error("Accept error");
+    return c;
+  }));
+}
+
+channel channel::accept(address& addr) {
+  auto [c] = select(async_accept(addr));
+  return std::move(*c);
+}
+
+channel& channel::keep_alive(bool keep_alive) {
+  int value = keep_alive;
+  if (::setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(value)))
+    throw_io_error("Error setting keep_alive");
+  return *this;
+}
+
+channel& channel::reuse_addr(bool reuse) {
+  int value = reuse;
+  if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value)))
+    throw_io_error("Error setting reuse_addr");
+  return *this;
+}
+
+channel& channel::reuse_port(bool reuse) {
+  int value = reuse;
+  if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEPORT, &value, sizeof(value)))
+    throw_io_error("Error setting reuse_port");
+  return *this;
+}
+
+channel& channel::linger(bool do_linger, std::chrono::seconds linger_time) {
+  struct linger value {
+    do_linger, static_cast<int>(linger_time / std::chrono::seconds(1))
+  };
+  if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEPORT, &value, sizeof(value)))
+    throw_io_error("Error setting linger");
+  return *this;
+}
 }  // namespace ash

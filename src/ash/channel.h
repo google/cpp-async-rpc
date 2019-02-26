@@ -24,7 +24,9 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <chrono>
 #include <cstddef>
+#include "ash/address.h"
 #include "ash/awaitable.h"
 
 namespace ash {
@@ -45,8 +47,7 @@ class channel {
   void close() noexcept;
   std::size_t read(void* buf, std::size_t len);
   std::size_t write(const void* buf, std::size_t len);
-  void make_blocking();
-  void make_non_blocking();
+  channel& make_non_blocking(bool non_blocking = true);
   channel dup() const;
   awaitable<void> can_read();
   awaitable<void> can_write();
@@ -54,9 +55,20 @@ class channel {
   awaitable<std::size_t> async_write(const void* buf, std::size_t len);
 
   // Socket methods.
-  void shutdown(bool read, bool write);
-  awaitable<void> async_connect(const struct sockaddr* addr, socklen_t addrlen);
-  void connect(const struct sockaddr* addr, socklen_t addrlen);
+  channel& shutdown(bool read, bool write);
+  awaitable<void> async_connect(const address& addr);
+  channel& connect(const address& addr);
+  channel& bind(const address& addr);
+  channel& listen(int backlog);
+  awaitable<channel> async_accept();
+  channel accept();
+  awaitable<channel> async_accept(address& addr);
+  channel accept(address& addr);
+  channel& keep_alive(bool keep_alive = true);
+  channel& reuse_addr(bool reuse = true);
+  channel& reuse_port(bool reuse = true);
+  channel& linger(bool do_linger = true,
+                  std::chrono::seconds linger_time = std::chrono::seconds(10));
 
  private:
   int fd_;

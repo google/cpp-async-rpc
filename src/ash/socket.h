@@ -22,12 +22,13 @@
 #ifndef ASH_SOCKET_H_
 #define ASH_SOCKET_H_
 
+#include "ash/address.h"
 #include "ash/channel.h"
 
 namespace ash {
 
 channel socket(int family, int type, int protocol);
-
+channel socket(const address& addr);
 }  // namespace ash
 
 #endif  // ASH_SOCKET_H_

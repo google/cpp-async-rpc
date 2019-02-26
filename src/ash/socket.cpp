@@ -31,4 +31,9 @@ channel socket(int family, int type, int protocol) {
   return res;
 }
 
+channel socket(const address& addr) {
+  channel res(::socket(addr.family(), addr.socket_type(), addr.protocol()));
+  if (!res) throw_io_error("Error creating socket");
+  return res;
+}
 }  // namespace ash

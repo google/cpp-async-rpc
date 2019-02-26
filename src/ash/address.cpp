@@ -20,6 +20,8 @@
 ///   under the License.
 
 #include "address.h"
+#include <cassert>
+#include <cstring>
 #include "ash/errors.h"
 
 namespace ash {
@@ -65,10 +67,60 @@ endpoint& endpoint::ip() {
   return *this;
 }
 
+address::address()
+    : addrinfo{
+          0,
+          0,
+          0,
+          0,
+          sizeof(struct sockaddr_storage),
+          reinterpret_cast<struct sockaddr*>(new struct sockaddr_storage()),
+          nullptr,
+          this} {}
+
+address::address(const address& other)
+    : addrinfo{
+          other.ai_flags,
+          other.ai_family,
+          other.ai_socktype,
+          other.ai_protocol,
+          other.ai_addrlen,
+          reinterpret_cast<struct sockaddr*>(new struct sockaddr_storage()),
+          nullptr,
+          this} {
+  memcpy(ai_addr, other.ai_addr, ai_addrlen);
+}
+
+address::address(address&& other)
+    : addrinfo{other.ai_flags,
+               other.ai_family,
+               other.ai_socktype,
+               other.ai_protocol,
+               0,
+               nullptr,
+               nullptr,
+               this} {
+  assert(other.ai_next == &other);
+  std::swap(ai_addr, other.ai_addr);
+  std::swap(ai_addrlen, other.ai_addrlen);
+}
+
+address::~address() {
+  assert(ai_next == this);
+  delete ai_addr;
+}
+
+int& address::family() { return ai_family; }
 int address::family() const { return ai_family; }
+int& address::socket_type() { return ai_socktype; }
 int address::socket_type() const { return ai_socktype; }
+int& address::protocol() { return ai_protocol; }
 int address::protocol() const { return ai_protocol; }
+struct sockaddr* address::address_data() {
+  return ai_addr;
+}
 const struct sockaddr* address::address_data() const { return ai_addr; }
+socklen_t& address::address_size() { return ai_addrlen; }
 socklen_t address::address_size() const { return ai_addrlen; }
 
 void swap(address_list::iterator& a, address_list::iterator& b) noexcept {

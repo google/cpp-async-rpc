@@ -140,10 +140,20 @@ void swap(address_list::const_iterator& a,
 
 class address : private addrinfo {
  public:
+  address();
+  address(const address& other);
+  address(address&& other);
+  ~address();
+
+  int& family();
   int family() const;
+  int& socket_type();
   int socket_type() const;
+  int& protocol();
   int protocol() const;
+  struct sockaddr* address_data();
   const struct sockaddr* address_data() const;
+  socklen_t& address_size();
   socklen_t address_size() const;
   std::string as_string() const;
 
