@@ -34,8 +34,8 @@ address_resolver::address_resolver()
             auto& [req, promise] = *req_pair;
 
             struct addrinfo hints = {
-                AI_ADDRCONFIG | (req.passive_ ? AI_PASSIVE : 0), req.family_,
-                req.sock_type_, 0};
+                AI_ADDRCONFIG | AI_V4MAPPED | (req.passive_ ? AI_PASSIVE : 0),
+                req.family_, req.sock_type_, 0};
             struct addrinfo* result;
 
             int res = getaddrinfo(

@@ -33,6 +33,10 @@ namespace ash {
 
 class channel {
  public:
+  static constexpr int default_backlog = 10;
+  static constexpr std::chrono::seconds default_linger_time =
+      std::chrono::seconds(10);
+
   channel() noexcept;
   explicit channel(int fd) noexcept;
   channel(channel&& fd) noexcept;
@@ -55,11 +59,13 @@ class channel {
   awaitable<std::size_t> async_write(const void* buf, std::size_t len);
 
   // Socket methods.
+  address own_addr() const;
+  address peer_addr() const;
   channel& shutdown(bool read, bool write);
   awaitable<void> async_connect(const address& addr);
   channel& connect(const address& addr);
   channel& bind(const address& addr);
-  channel& listen(int backlog);
+  channel& listen(int backlog = default_backlog);
   awaitable<channel> async_accept();
   channel accept();
   awaitable<channel> async_accept(address& addr);
@@ -68,7 +74,7 @@ class channel {
   channel& reuse_addr(bool reuse = true);
   channel& reuse_port(bool reuse = true);
   channel& linger(bool do_linger = true,
-                  std::chrono::seconds linger_time = std::chrono::seconds(10));
+                  std::chrono::seconds linger_time = default_linger_time);
 
  private:
   int fd_;

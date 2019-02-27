@@ -22,6 +22,7 @@
 #ifndef ASH_SOCKET_H_
 #define ASH_SOCKET_H_
 
+#include <vector>
 #include "ash/address.h"
 #include "ash/channel.h"
 
@@ -29,6 +30,23 @@ namespace ash {
 
 channel socket(int family, int type, int protocol);
 channel socket(const address& addr);
+
+channel dial(endpoint name, bool non_blocking = true);
+
+class listener {
+ public:
+  explicit listener(endpoint name, bool reuse_addr = true,
+                    bool non_blocking = true,
+                    int backlog = channel::default_backlog);
+
+  channel accept();
+
+ private:
+  bool non_blocking_;
+  std::vector<channel> listening_, pending_;
+  std::vector<awaitable<channel>> acceptors_;
+};
+
 }  // namespace ash
 
 #endif  // ASH_SOCKET_H_

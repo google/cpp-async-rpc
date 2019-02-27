@@ -217,27 +217,15 @@ int main() {
     f.get();
   }
   {
-    auto& ar = ash::address_resolver::get();
-    auto al =
-        ar.resolve(ash::endpoint().name("www.kernel.org").service("https"));
-    std::cerr << al.size() << std::endl;
-    for (auto& a : al) {
-      std::cerr << a.as_string() << std::endl;
-      auto s = ash::socket(a);
-      s.make_non_blocking().connect(a);
-    }
+    auto ctx = ash::context::with_timeout(std::chrono::milliseconds(100));
+    auto s = dial(ash::endpoint().name("www.google.com").service("https"));
   }
   {
-    auto& ar = ash::address_resolver::get();
-    auto al = ar.resolve(ash::endpoint().passive().port(9999));
-    std::cerr << al.size() << std::endl;
-    for (auto& a : al) {
-      std::cerr << a.as_string() << std::endl;
-      auto s = ash::socket(a);
-      s.make_non_blocking().reuse_addr().bind(a).listen(10);
-      ash::address peer;
-      auto c = s.accept(peer);
-      std::cerr << peer.as_string() << std::endl;
+    ash::listener l(ash::endpoint().port(13133));
+    for (int i = 0; i < 4; i++) {
+      auto s = l.accept();
+      std::cerr << "Got connection from " << s.peer_addr().as_string()
+                << " into " << s.own_addr().as_string() << std::endl;
     }
   }
   {

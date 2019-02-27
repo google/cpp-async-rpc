@@ -22,6 +22,7 @@
 #include <ash/channel.h>
 #include <ash/select.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <utility>
 #include "ash/errors.h"
@@ -140,6 +141,11 @@ channel& channel::connect(const address& addr) {
 }
 
 channel& channel::bind(const address& addr) {
+  if (addr.address_data()->sa_family == AF_INET6) {
+    int ipv6_v6only = true;
+    if (::setsockopt(fd_, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_v6only, sizeof(int)))
+      throw_io_error("Error when setting socket to bind only on ipv6");
+  }
   if (::bind(fd_, addr.address_data(), addr.address_size()))
     throw_io_error("Error when binding socket");
   return *this;
@@ -206,4 +212,39 @@ channel& channel::linger(bool do_linger, std::chrono::seconds linger_time) {
     throw_io_error("Error setting linger");
   return *this;
 }
+
+address channel::own_addr() const {
+  address res;
+  if (::getsockname(fd_, res.address_data(), &res.address_size()))
+    throw_io_error("Can't get socket name");
+  socklen_t buf_size;
+  buf_size = sizeof(int);
+  if (::getsockopt(fd_, SOL_SOCKET, SO_DOMAIN, &res.family(), &buf_size))
+    throw_io_error("Can't get socket domain");
+  buf_size = sizeof(int);
+  if (::getsockopt(fd_, SOL_SOCKET, SO_TYPE, &res.socket_type(), &buf_size))
+    throw_io_error("Can't get socket type");
+  buf_size = sizeof(int);
+  if (::getsockopt(fd_, SOL_SOCKET, SO_PROTOCOL, &res.protocol(), &buf_size))
+    throw_io_error("Can't get socket protocol");
+  return res;
+}
+
+address channel::peer_addr() const {
+  address res;
+  if (::getpeername(fd_, res.address_data(), &res.address_size()))
+    throw_io_error("Can't get socket name");
+  socklen_t buf_size;
+  buf_size = sizeof(int);
+  if (::getsockopt(fd_, SOL_SOCKET, SO_DOMAIN, &res.family(), &buf_size))
+    throw_io_error("Can't get socket domain");
+  buf_size = sizeof(int);
+  if (::getsockopt(fd_, SOL_SOCKET, SO_TYPE, &res.socket_type(), &buf_size))
+    throw_io_error("Can't get socket type");
+  buf_size = sizeof(int);
+  if (::getsockopt(fd_, SOL_SOCKET, SO_PROTOCOL, &res.protocol(), &buf_size))
+    throw_io_error("Can't get socket protocol");
+  return res;
+}
+
 }  // namespace ash

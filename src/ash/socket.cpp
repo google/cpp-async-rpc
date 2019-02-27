@@ -19,10 +19,15 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <ash/socket.h>
+#include "ash/socket.h"
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <iostream>
+#include <utility>
+#include "ash/address_resolver.h"
+#include "ash/context.h"
 #include "ash/errors.h"
+#include "ash/select.h"
 
 namespace ash {
 channel socket(int family, int type, int protocol) {
@@ -36,4 +41,67 @@ channel socket(const address& addr) {
   if (!res) throw_io_error("Error creating socket");
   return res;
 }
+
+channel dial(endpoint name, bool non_blocking) {
+  auto addr_list = address_resolver::get().resolve(std::move(name.active()));
+
+  if (addr_list.empty())
+    throw errors::invalid_argument("Can't connect with empty address_list");
+
+  auto deadline_left = context::current().deadline_left();
+  auto per_target_timeout = deadline_left / addr_list.size();
+
+  auto it = addr_list.begin();
+  do {
+    auto ctx = context::with_timeout(per_target_timeout);
+    try {
+      auto s = socket(*it);
+      s.make_non_blocking(non_blocking);
+      s.connect(*it);
+      return s;
+    } catch (const errors::base_error&) {
+      if (++it == addr_list.end()) throw;
+    }
+  } while (true);
+}
+
+listener::listener(endpoint name, bool reuse_addr, bool non_blocking,
+                   int backlog)
+    : non_blocking_(non_blocking) {
+  auto addr_list = address_resolver::get().resolve(std::move(name.passive()));
+  for (const auto& addr : addr_list) {
+    std::cerr << "XXXX" << addr.as_string() << std::endl;
+    auto s = socket(addr);
+    s.make_non_blocking(non_blocking_)
+        .reuse_addr(reuse_addr)
+        .bind(addr)
+        .listen(backlog);
+
+    listening_.push_back(std::move(s));
+  }
+  // Do this later so that the captured this pointers don't get invalidated by
+  // vector reallocations.
+  for (auto& s : listening_) {
+    acceptors_.push_back(s.async_accept());
+  }
+}
+
+channel listener::accept() {
+  do {
+    if (pending_.size()) {
+      auto res = std::move(pending_.back());
+      pending_.pop_back();
+      return res;
+    }
+    auto [res] = select(acceptors_);
+    for (auto& r : res) {
+      if (r) {
+        auto s = std::move(r).value();
+        s.make_non_blocking(non_blocking_);
+        pending_.push_back(std::move(s));
+      }
+    }
+  } while (true);
+}
+
 }  // namespace ash
