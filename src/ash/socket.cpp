@@ -22,7 +22,6 @@
 #include "ash/socket.h"
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <iostream>
 #include <utility>
 #include "ash/address_resolver.h"
 #include "ash/context.h"
@@ -70,7 +69,6 @@ listener::listener(endpoint name, bool reuse_addr, bool non_blocking,
     : non_blocking_(non_blocking) {
   auto addr_list = address_resolver::get().resolve(std::move(name.passive()));
   for (const auto& addr : addr_list) {
-    std::cerr << "XXXX" << addr.as_string() << std::endl;
     auto s = socket(addr);
     s.make_non_blocking(non_blocking_)
         .reuse_addr(reuse_addr)
