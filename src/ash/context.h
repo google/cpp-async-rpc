@@ -31,9 +31,6 @@
 
 namespace ash {
 
-template <bool daemon>
-class base_thread;
-
 class context {
  public:
   using time_point = std::chrono::system_clock::time_point;
