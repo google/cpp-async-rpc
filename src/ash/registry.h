@@ -23,12 +23,11 @@
 #define ASH_REGISTRY_H_
 
 #include <cstdint>
-#include <cstring>
 #include <map>
 #include <memory>
 #include <set>
+#include <string_view>
 #include <vector>
-#include "ash/const_char_ptr_compare.h"
 #include "ash/container/flat_map.h"
 #include "ash/container/flat_set.h"
 #include "ash/dynamic_base_class.h"
@@ -44,26 +43,27 @@ template <typename T>
 class dynamic_subclass_registry
     : public singleton<dynamic_subclass_registry<T>> {
  public:
-  void register_subclass(const char* class_name);
-  bool is_subclass(const char* class_name) {
+  void register_subclass(std::string_view class_name);
+  bool is_subclass(std::string_view class_name) {
     return dynamic_subclass_set_.count(class_name) == 1;
   }
 
  private:
-  ash::flat_set<const char*, const_char_ptr_compare> dynamic_subclass_set_;
+  ash::flat_set<std::string_view> dynamic_subclass_set_;
 };
 
 namespace detail {
 struct register_subclass {
   template <typename T>
-  void operator()(mpt::wrap_type<T>, const char* class_name) {
+  void operator()(mpt::wrap_type<T>, std::string_view class_name) {
     dynamic_subclass_registry<T>::get().register_subclass(class_name);
   }
 };
 }  // namespace detail
 
 template <typename T>
-void dynamic_subclass_registry<T>::register_subclass(const char* class_name) {
+void dynamic_subclass_registry<T>::register_subclass(
+    std::string_view class_name) {
   dynamic_subclass_set_.insert(class_name);
   mpt::for_each(typename T::dynamic_base_classes{}, detail::register_subclass{},
                 class_name);
@@ -78,7 +78,7 @@ class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
   };
 
   template <typename T>
-  void register_class(const char* class_name) {
+  void register_class(std::string_view class_name) {
     encoder_function_type f = [](S& s, const ::ash::dynamic_base_class& o) {
       return s(static_cast<const T&>(o));
     };
@@ -87,7 +87,7 @@ class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
       throw errors::invalid_state("Duplicate encoder function registered");
   }
 
-  info operator[](const char* class_name) const {
+  info operator[](std::string_view class_name) const {
     const auto it = encoder_info_map_.find(class_name);
     if (it == encoder_info_map_.end())
       throw errors::not_found("Encoder function not found");
@@ -95,14 +95,14 @@ class dynamic_encoder_registry : public singleton<dynamic_encoder_registry<S>> {
   }
 
  private:
-  ash::flat_map<const char*, info, const_char_ptr_compare> encoder_info_map_;
+  ash::flat_map<std::string_view, info> encoder_info_map_;
 };
 
 namespace detail {
 template <typename T>
 struct register_encoder {
   template <typename S>
-  void operator()(mpt::wrap_type<S>, const char* class_name) {
+  void operator()(mpt::wrap_type<S>, std::string_view class_name) {
     dynamic_encoder_registry<S>::get().template register_class<T>(class_name);
   }
 };
@@ -117,7 +117,7 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
   };
 
   template <typename T>
-  void register_class(const char* class_name) {
+  void register_class(std::string_view class_name) {
     decoder_function_type f = [](S& s, ::ash::dynamic_base_class& o) {
       return s(static_cast<T&>(o));
     };
@@ -126,7 +126,7 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
       throw errors::invalid_state("Duplicate decoder function registered");
   }
 
-  info operator[](const char* class_name) const {
+  info operator[](std::string_view class_name) const {
     const auto it = decoder_info_map_.find(class_name);
     if (it == decoder_info_map_.end())
       throw errors::not_found("Decoder function not found");
@@ -134,14 +134,14 @@ class dynamic_decoder_registry : public singleton<dynamic_decoder_registry<S>> {
   }
 
  private:
-  ash::flat_map<const char*, info, const_char_ptr_compare> decoder_info_map_;
+  ash::flat_map<std::string_view, info> decoder_info_map_;
 };
 
 namespace detail {
 template <typename T>
 struct register_decoder {
   template <typename S>
-  void operator()(mpt::wrap_type<S>, const char* class_name) {
+  void operator()(mpt::wrap_type<S>, std::string_view class_name) {
     dynamic_decoder_registry<S>::get().template register_class<T>(class_name);
   }
 };
@@ -156,7 +156,7 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
   };
 
   template <typename T, typename Encoders, typename Decoders>
-  const char* register_class(const char* class_name) {
+  std::string_view register_class(std::string_view class_name) {
     static_assert(is_dynamic<T>::value,
                   "Only classes inheriting from ash::dynamic_base_class can be "
                   "registered for polymorphism");
@@ -182,11 +182,10 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
     return class_name;
   }
 
-  info operator[](const char* class_name) const;
+  info operator[](std::string_view class_name) const;
 
  private:
-  ash::flat_map<const char*, info, const_char_ptr_compare>
-      factory_function_map_;
+  ash::flat_map<std::string_view, info> factory_function_map_;
 };
 
 using type_id = const void*;

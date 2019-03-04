@@ -23,7 +23,7 @@
 
 namespace ash {
 
-const char* dynamic_base_class::portable_class_name() const {
+std::string_view dynamic_base_class::portable_class_name() const {
   return portable_class_name_internal();
 }
 

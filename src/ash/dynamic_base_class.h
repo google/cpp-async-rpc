@@ -22,6 +22,7 @@
 #ifndef ASH_DYNAMIC_BASE_CLASS_H_
 #define ASH_DYNAMIC_BASE_CLASS_H_
 
+#include <string_view>
 #include <type_traits>
 #include "ash/mpt.h"
 
@@ -30,7 +31,7 @@ namespace ash {
 /// Base class for all run-time polymorphic serializable classes.
 class dynamic_base_class {
  public:
-  const char* portable_class_name() const;
+  std::string_view portable_class_name() const;
 
   using field_descriptors = mpt::pack<>;
   using dynamic_base_classes = mpt::pack<>;
@@ -40,7 +41,7 @@ class dynamic_base_class {
 
  private:
   /// Get the string that portably identifies the object's class.
-  virtual const char* portable_class_name_internal() const = 0;
+  virtual std::string_view portable_class_name_internal() const = 0;
 };
 
 /// Checker for whether a class `T` is dynamic.
@@ -53,7 +54,7 @@ inline constexpr bool is_dynamic_v = is_dynamic<T>::value;
 namespace detail {
 template <typename T>
 struct dynamic_class_descriptor {
-  static const char* class_name;
+  static std::string_view class_name;
 };
 }  // namespace detail
 

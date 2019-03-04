@@ -65,7 +65,7 @@ struct serializable_mixin<true, OwnType, Bases...>
     : serializable_mixin<false, OwnType, Bases...> {
  private:
   // Implement the virtual function that returns the name of our type.
-  const char* portable_class_name_internal() const override {
+  std::string_view portable_class_name_internal() const override {
     using Descriptor = ash::detail::dynamic_class_descriptor<OwnType>;
     if (Descriptor::class_name == nullptr)
       throw errors::invalid_state("Dynamic class had no name set");

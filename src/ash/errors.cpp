@@ -29,7 +29,7 @@ base_error::~base_error() {}
 
 }  // namespace errors
 
-void error_factory::throw_error(const char* error_class_name,
+void error_factory::throw_error(std::string_view error_class_name,
                                 const char* what) {
   auto it = error_function_map_.find(error_class_name);
   if (it == error_function_map_.end()) {

@@ -26,7 +26,7 @@ namespace ash {
 namespace registry {
 
 dynamic_object_factory::info dynamic_object_factory::operator[](
-    const char* class_name) const {
+    std::string_view class_name) const {
   const auto it = factory_function_map_.find(class_name);
   if (it == factory_function_map_.end())
     throw errors::not_found("Class factory function not found");
