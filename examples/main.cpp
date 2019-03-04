@@ -184,6 +184,34 @@ struct bad_connection {
 
 int main() {
   {
+    auto ctx = ash::context::with_cancel();
+
+    V v;
+    v.a = 33;
+    ctx.set(std::move(v));
+
+    for (auto it : ctx.data()) {
+      std::cerr << "ENTRY: " << it.first << std::endl;
+    }
+    std::cerr << "DONE" << std::endl;
+
+    std::cerr << "V2: " << static_cast<bool>(ctx.get<V2>()) << std::endl;
+    std::cerr << "V: " << static_cast<bool>(ctx.get<V>()) << ": "
+              << ctx.get<V>()->a << std::endl;
+
+    for (auto it : ctx.data()) {
+      std::cerr << "ENTRY: " << it.first << std::endl;
+    }
+    std::cerr << "DONE" << std::endl;
+
+    ctx.clear<V>();
+
+    for (auto it : ctx.data()) {
+      std::cerr << "ENTRY: " << it.first << std::endl;
+    }
+    std::cerr << "DONE" << std::endl;
+  }
+  {
     ash::promise<void> p1, p2;
     auto f1 = p1.get_future();
     auto f2 = p2.get_future();

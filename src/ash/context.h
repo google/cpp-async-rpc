@@ -24,9 +24,15 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 #include "ash/awaitable.h"
+#include "ash/container/flat_map.h"
 #include "ash/container/flat_set.h"
+#include "ash/dynamic_base_class.h"
 #include "ash/flag.h"
 
 namespace ash {
@@ -60,6 +66,26 @@ class context {
 
   static context with_cancel();
 
+  template <typename T>
+  std::shared_ptr<const T> get() const {
+    auto it = data_.find(portable_class_name<T>());
+    if (it != data_.end()) return std::static_pointer_cast<const T>(it->second);
+    return nullptr;
+  }
+
+  template <typename T>
+  void set(T&& t) {
+    data_[t.portable_class_name()] =
+        std::make_shared<const std::decay_t<T>>(std::forward<T>(t));
+  }
+
+  template <typename T>
+  void clear() {
+    data_.erase(portable_class_name<T>());
+  }
+
+  const auto& data() const { return data_; }
+
  private:
   explicit context(context* parent = current_,
                    time_point deadline = time_point::max(),
@@ -76,8 +102,10 @@ class context {
   bool set_current_;
   context* parent_;
   ash::flat_set<context*> children_;
-  time_point deadline_;
   flag cancelled_;
+  time_point deadline_;
+  ash::flat_map<std::string_view, std::shared_ptr<const dynamic_base_class>>
+      data_;
   static thread_local context* current_;
 };
 

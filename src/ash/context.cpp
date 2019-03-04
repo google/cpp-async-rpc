@@ -44,6 +44,7 @@ context::context(context* parent, time_point deadline, bool set_current)
     parent_->add_child(this);
 
     deadline_ = std::min(deadline_, parent_->deadline_);
+    data_ = parent_->data_;
   }
 
   if (set_current_) current_ = this;
