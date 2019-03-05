@@ -189,6 +189,8 @@ int main() {
     V v;
     v.a = 33;
     ctx.set(std::move(v));
+    ctx.set(std::move(V2()));
+    ctx.set(std::move(X()));
 
     for (auto it : ctx.data()) {
       std::cerr << "ENTRY: " << it.first << std::endl;
@@ -198,6 +200,22 @@ int main() {
     std::cerr << "V2: " << static_cast<bool>(ctx.get<V2>()) << std::endl;
     std::cerr << "V: " << static_cast<bool>(ctx.get<V>()) << ": "
               << ctx.get<V>()->a << std::endl;
+
+    for (auto it : ctx.data()) {
+      std::cerr << "ENTRY: " << it.first << std::endl;
+    }
+    std::cerr << "DONE" << std::endl;
+
+    std::ostringstream oss;
+    ash::ostream_output_stream osa(oss);
+    ash::native_binary_encoder nbe(osa);
+    nbe(ctx);
+    xxd(oss.str());
+
+    std::istringstream iss(oss.str());
+    ash::istream_input_stream isa(iss);
+    ash::native_binary_decoder nbd(isa);
+    nbd(ctx);
 
     for (auto it : ctx.data()) {
       std::cerr << "ENTRY: " << it.first << std::endl;

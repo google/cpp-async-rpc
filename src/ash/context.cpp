@@ -20,7 +20,6 @@
 ///   under the License.
 
 #include "ash/context.h"
-#include <algorithm>
 #include <utility>
 #include "ash/errors.h"
 
@@ -77,9 +76,9 @@ void context::remove_child(context* child) {
   child_detached_.notify_one();
 }
 
-context::time_point context::deadline() { return deadline_; }
+context::time_point context::deadline() const { return deadline_; }
 
-context::duration context::deadline_left() {
+context::duration context::deadline_left() const {
   return deadline_ - std::chrono::system_clock::now();
 }
 
@@ -91,7 +90,7 @@ void context::cancel() {
   }
 }
 
-bool context::is_cancelled() { return cancelled_.is_set(); }
+bool context::is_cancelled() const { return cancelled_.is_set(); }
 
 awaitable<void> context::wait_cancelled() {
   return cancelled_.wait_set().then(

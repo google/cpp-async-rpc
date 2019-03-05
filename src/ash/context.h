@@ -22,23 +22,55 @@
 #ifndef ASH_CONTEXT_H_
 #define ASH_CONTEXT_H_
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <vector>
 #include "ash/awaitable.h"
 #include "ash/container/flat_map.h"
 #include "ash/container/flat_set.h"
 #include "ash/dynamic_base_class.h"
 #include "ash/flag.h"
+#include "ash/serializable.h"
 
 namespace ash {
 
-class context {
+class context : public serializable<context> {
  public:
+  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+
+  template <typename E>
+  void save(E& e) const {
+    std::int64_t millis_left = deadline_left() / std::chrono::milliseconds(1);
+    e(millis_left);
+    std::vector<std::shared_ptr<const dynamic_base_class>> v;
+    v.reserve(data_.size());
+    for (auto it : data_) {
+      v.push_back(it.second);
+    }
+    e(v);
+  }
+
+  template <typename D>
+  void load(D& d) {
+    std::int64_t millis_left;
+    std::vector<std::shared_ptr<dynamic_base_class>> v;
+    d(millis_left);
+    d(v);
+    deadline_ = std::min(deadline_, std::chrono::system_clock::now() +
+                                        std::chrono::milliseconds(millis_left));
+    data_.clear();
+    for (auto ptr : v) {
+      data_[ptr->portable_class_name()] = std::move(ptr);
+    }
+  }
+
   using time_point = std::chrono::system_clock::time_point;
   using duration = std::chrono::system_clock::duration;
 
@@ -46,11 +78,11 @@ class context {
 
   void cancel();
 
-  bool is_cancelled();
+  bool is_cancelled() const;
 
-  time_point deadline();
+  time_point deadline() const;
 
-  duration deadline_left();
+  duration deadline_left() const;
 
   awaitable<void> wait_cancelled();
 

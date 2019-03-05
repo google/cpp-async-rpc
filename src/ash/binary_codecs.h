@@ -185,7 +185,7 @@ class binary_encoder {
   }
 
   void save_dynamic_object_reference(const ::ash::dynamic_base_class& o) {
-    std::string class_name(o.portable_class_name());
+    auto class_name = o.portable_class_name();
     auto it = class_info_map_.find(class_name);
     if (it == class_info_map_.end()) {
       // Not cached yet. Need to interrogate the registries for this class.
@@ -322,7 +322,7 @@ class binary_encoder {
   // Here we depend on portable_class_name() returning identical pointers for
   // speed.
   ash::flat_map<std::string_view, seen_class_info> class_info_map_;
-  ash::flat_map<void*, std::size_t> shared_object_map_ = {{nullptr, 0}};
+  ash::flat_map<const void*, std::size_t> shared_object_map_ = {{nullptr, 0}};
 
  protected:
   Adapter out_;
