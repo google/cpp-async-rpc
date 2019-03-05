@@ -103,6 +103,8 @@ class awaitable {
   const bool for_polling_ = false;
 };
 
+awaitable<void> never();
+
 template <typename Rep, typename Period>
 awaitable<void> timeout(const std::chrono::duration<Rep, Period>& duration) {
   return awaitable<void>(

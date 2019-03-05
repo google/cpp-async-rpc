@@ -22,10 +22,12 @@
 #ifndef ASH_BINARY_CODECS_H_
 #define ASH_BINARY_CODECS_H_
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -118,6 +120,29 @@ class binary_encoder {
     save_base_classes(o);
     save_fields(o);
     invoke_save(o);
+  }
+
+  // std::chrono::time_point.
+  template <typename Clock, typename Duration>
+  void operator()(const std::chrono::time_point<Clock, Duration>& t) {
+    (*this)(t.time_since_epoch());
+  }
+
+  // std::chrono::duration.
+  template <typename Rep, typename Period>
+  void operator()(const std::chrono::duration<Rep, Period>& d) {
+    std::int64_t ticks = d.count();
+    (*this)(ticks);
+  }
+
+  // std::optional.
+  template <typename T>
+  void operator()(const std::optional<T>& o) {
+    bool present(o);
+    (*this)(present);
+    if (present) {
+      (*this)(o.value());
+    }
   }
 
   // Unique pointers.
@@ -461,6 +486,35 @@ class binary_decoder {
     load_base_classes(o);
     load_fields(o);
     invoke_load(o);
+  }
+
+  // std::chrono::time_point.
+  template <typename Clock, typename Duration>
+  void operator()(std::chrono::time_point<Clock, Duration>& t) {
+    Duration d;
+    (*this)(d);
+    t = std::chrono::time_point<Clock, Duration>(d);
+  }
+
+  // std::chrono::duration.
+  template <typename Rep, typename Period>
+  void operator()(std::chrono::duration<Rep, Period>& d) {
+    std::int64_t ticks;
+    (*this)(ticks);
+    d = std::chrono::duration<Rep, Period>(ticks);
+  }
+
+  // std::optional.
+  template <typename T>
+  void operator()(std::optional<T>& o) {
+    bool present;
+    (*this)(present);
+    if (present) {
+      o.emplace();
+      (*this)(o.value());
+    } else {
+      o.reset();
+    }
   }
 
   // Unique pointers.

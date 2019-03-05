@@ -76,10 +76,16 @@ void context::remove_child(context* child) {
   child_detached_.notify_one();
 }
 
-context::time_point context::deadline() const { return deadline_; }
+std::optional<context::time_point> context::deadline() const {
+  return deadline_;
+}
 
-context::duration context::deadline_left() const {
-  return deadline_ - std::chrono::system_clock::now();
+std::optional<context::duration> context::deadline_left() const {
+  if (deadline_) {
+    return *deadline_ - std::chrono::system_clock::now();
+  } else {
+    return std::nullopt;
+  }
 }
 
 void context::cancel() {
@@ -98,8 +104,13 @@ awaitable<void> context::wait_cancelled() {
 }
 
 awaitable<void> context::wait_deadline() {
-  return ash::deadline(deadline_).then(std::move(
-      []() { throw errors::deadline_exceeded("Deadline exceeded"); }));
+  if (deadline_) {
+    return ash::deadline(*deadline_).then(std::move([]() {
+      throw errors::deadline_exceeded("Deadline exceeded");
+    }));
+  } else {
+    return ash::never();
+  }
 }
 
 context context::with_deadline(time_point when) {

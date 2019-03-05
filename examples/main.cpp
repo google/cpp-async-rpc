@@ -286,13 +286,13 @@ int main() {
   }
 
   {
-    std::cerr << ash::context::current().deadline_left() /
+    std::cerr << *ash::context::current().deadline_left() /
                      std::chrono::milliseconds(1)
               << std::endl;
 
     {
       auto ctx2 = ash::context::with_timeout(std::chrono::milliseconds(44));
-      std::cerr << ash::context::current().deadline_left() /
+      std::cerr << *ash::context::current().deadline_left() /
                        std::chrono::milliseconds(1)
                 << std::endl;
 
@@ -305,7 +305,7 @@ int main() {
       }
     }
 
-    std::cerr << ash::context::current().deadline_left() /
+    std::cerr << *ash::context::current().deadline_left() /
                      std::chrono::milliseconds(1)
               << std::endl;
   }

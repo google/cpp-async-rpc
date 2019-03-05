@@ -48,7 +48,8 @@ channel dial(endpoint name, bool non_blocking) {
     throw errors::invalid_argument("Can't connect with empty address_list");
 
   auto deadline_left = context::current().deadline_left();
-  auto per_target_timeout = deadline_left / addr_list.size();
+  auto per_target_timeout = deadline_left ? *deadline_left / addr_list.size()
+                                          : std::chrono::milliseconds::max();
 
   auto it = addr_list.begin();
   do {

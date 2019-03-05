@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -47,8 +48,7 @@ class context : public serializable<context> {
 
   template <typename E>
   void save(E& e) const {
-    std::int64_t millis_left = deadline_left() / std::chrono::milliseconds(1);
-    e(millis_left);
+    e(deadline_left());
     std::vector<std::shared_ptr<const dynamic_base_class>> v;
     v.reserve(data_.size());
     for (auto it : data_) {
@@ -59,12 +59,18 @@ class context : public serializable<context> {
 
   template <typename D>
   void load(D& d) {
-    std::int64_t millis_left;
+    std::optional<duration> deadline_remaining;
     std::vector<std::shared_ptr<dynamic_base_class>> v;
-    d(millis_left);
+    d(deadline_remaining);
     d(v);
-    deadline_ = std::min(deadline_, std::chrono::system_clock::now() +
-                                        std::chrono::milliseconds(millis_left));
+    if (deadline_remaining) {
+      if (deadline_) {
+        deadline_ = std::min(
+            *deadline_, std::chrono::system_clock::now() + *deadline_remaining);
+      } else {
+        deadline_ = std::chrono::system_clock::now() + *deadline_remaining;
+      }
+    }
     data_.clear();
     for (auto ptr : v) {
       data_[ptr->portable_class_name()] = std::move(ptr);
@@ -80,9 +86,9 @@ class context : public serializable<context> {
 
   bool is_cancelled() const;
 
-  time_point deadline() const;
+  std::optional<time_point> deadline() const;
 
-  duration deadline_left() const;
+  std::optional<duration> deadline_left() const;
 
   awaitable<void> wait_cancelled();
 
@@ -135,7 +141,7 @@ class context : public serializable<context> {
   context* parent_;
   ash::flat_set<context*> children_;
   flag cancelled_;
-  time_point deadline_;
+  std::optional<time_point> deadline_;
   ash::flat_map<std::string_view, std::shared_ptr<const dynamic_base_class>>
       data_;
   static thread_local context* current_;
