@@ -56,10 +56,10 @@ class context : public serializable<context> {
   template <typename D>
   void load(D& d) {
     std::optional<duration> deadline_remaining;
-    std::vector<std::shared_ptr<dynamic_base_class>> v;
+    std::vector<std::shared_ptr<dynamic_base_class>> new_data;
     bool cancelled;
     d(deadline_remaining);
-    d(v);
+    d(new_data);
     d(cancelled);
     if (deadline_remaining) {
       set_timeout(*deadline_remaining);
@@ -67,7 +67,7 @@ class context : public serializable<context> {
     {
       std::scoped_lock lock(mu_);
       data_.clear();
-      for (auto ptr : v) {
+      for (auto ptr : new_data) {
         data_[ptr->portable_class_name()] = ptr;
       }
     }
