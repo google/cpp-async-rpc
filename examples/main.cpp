@@ -52,7 +52,8 @@ ASH_INTERFACE(
     Reader, (),
     (
         // Get the value of a variable.
-        ((std::string), get, (((const std::string&), name)))
+        ((std::string), get, (((const std::string&), name),
+            ((std::optional<int>), extra)))
     )
 );
 
@@ -62,7 +63,8 @@ ASH_INTERFACE(
         // Set the value of a variable.
         ((void), set,
             (((const std::string&), name),
-            ((const std::string&), value))),
+            ((const std::string&), value),
+            ((std::optional<int>), extra))),
 
         // Reset the server.
         ((void), clear, ())
@@ -426,7 +428,7 @@ int main() {
       slpci3("/dev/tty");
   ash::client_connection<> conn(slpci3);
   auto obj = conn.get_proxy<Reader>("default");
-  std::cerr << "XX" << obj.get("variable") << "XX" << std::endl;
+  std::cerr << "XX" << obj.get("variable", 99) << "XX" << std::endl;
 
   std::uint64_t key[4] = {1, 2, 3, 4};
 

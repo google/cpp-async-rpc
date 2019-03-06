@@ -55,6 +55,9 @@ enum class type_family : std::uint8_t {
   SEQUENCE,
   SET,
   MAP,
+  OPTIONAL,
+  DURATION,
+  TIME_POINT,
   UNIQUE_PTR,
   SHARED_PTR,
   WEAK_PTR,
@@ -215,6 +218,14 @@ struct type_hash<
       detail::type_hash_add(base, detail::type_family::SET, false, 0),
       mpt::insert_type_into_t<T, Seen>,
       writable_value_type_t<typename T::value_type>>::value;
+};
+
+template <typename T, typename Seen, std::uint32_t base>
+struct type_hash<std::optional<T>, Seen, base,
+                 std::enable_if_t<!mpt::is_type_in_v<std::optional<T>, Seen>>> {
+  static constexpr std::uint32_t value = detail::compose_with_types<
+      detail::type_hash_add(base, detail::type_family::OPTIONAL, false, 0),
+      mpt::insert_type_into_t<std::optional<T>, Seen>, T>::value;
 };
 
 template <typename T, typename Seen, typename Deleter, std::uint32_t base>
