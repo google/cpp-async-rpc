@@ -56,21 +56,18 @@ class context : public serializable<context> {
   template <typename D>
   void load(D& d) {
     std::optional<duration> deadline_remaining;
-    std::vector<std::shared_ptr<dynamic_base_class>> new_data;
-    bool cancelled;
     d(deadline_remaining);
+
+    std::vector<std::shared_ptr<dynamic_base_class>> new_data;
     d(new_data);
+
+    bool cancelled;
     d(cancelled);
+
     if (deadline_remaining) {
       set_timeout(*deadline_remaining);
     }
-    {
-      std::scoped_lock lock(mu_);
-      data_.clear();
-      for (auto ptr : new_data) {
-        data_[ptr->portable_class_name()] = ptr;
-      }
-    }
+    set_data(std::move(new_data));
     if (cancelled) cancel();
   }
 
@@ -116,18 +113,28 @@ class context : public serializable<context> {
   void clear_all();
 
   template <typename T>
-  std::shared_ptr<const T> get() const {
+  const T& get() const {
     std::scoped_lock lock(mu_);
     auto it = data_.find(portable_class_name<T>());
-    if (it != data_.end()) return std::static_pointer_cast<const T>(it->second);
-    return nullptr;
+    if (it != data_.end()) {
+      return static_cast<const T&>(*it->second);
+    } else {
+      return default_instance<T>();
+    }
   }
-
-  std::vector<std::shared_ptr<const dynamic_base_class>> data() const;
 
  private:
   struct root {};
   explicit context(root);
+
+  std::vector<std::shared_ptr<const dynamic_base_class>> data() const;
+  void set_data(std::vector<std::shared_ptr<dynamic_base_class>>&& new_data);
+
+  template <typename T>
+  static const T& default_instance() {
+    static T instance;
+    return instance;
+  }
 
   template <typename T>
   void set_one(T&& t) {

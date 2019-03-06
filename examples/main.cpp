@@ -188,22 +188,16 @@ int main() {
 
     V v;
     v.a = 33;
-    ctx.set(std::move(v), std::move(V2()), std::move(X()));
+
+    V2 v2;
+    v2.a = 65;
+
+    ctx.set(std::move(v), std::move(v2));
     ctx.set_timeout(std::chrono::seconds(10));
 
-    for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
-    }
-    std::cerr << "DONE" << std::endl;
-
-    std::cerr << "V2: " << static_cast<bool>(ctx.get<V2>()) << std::endl;
-    std::cerr << "V: " << static_cast<bool>(ctx.get<V>()) << ": "
-              << ctx.get<V>()->a << std::endl;
-
-    for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
-    }
-    std::cerr << "DONE" << std::endl;
+    std::cerr << "V: " << ctx.get<V>().a << std::endl;
+    std::cerr << "V2: " << ctx.get<V2>().a << std::endl;
+    std::cerr << "X: " << ctx.get<X>().y << ", " << ctx.get<X>().z << std::endl;
 
     std::ostringstream oss;
     ash::ostream_output_stream osa(oss);
@@ -216,17 +210,15 @@ int main() {
     ash::native_binary_decoder nbd(isa);
     nbd(ctx);
 
-    for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
-    }
-    std::cerr << "DONE" << std::endl;
+    std::cerr << "V: " << ctx.get<V>().a << std::endl;
+    std::cerr << "V2: " << ctx.get<V2>().a << std::endl;
+    std::cerr << "X: " << ctx.get<X>().y << ", " << ctx.get<X>().z << std::endl;
 
     ctx.clear<V>();
 
-    for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
-    }
-    std::cerr << "DONE" << std::endl;
+    std::cerr << "V: " << ctx.get<V>().a << std::endl;
+    std::cerr << "V2: " << ctx.get<V2>().a << std::endl;
+    std::cerr << "X: " << ctx.get<X>().y << ", " << ctx.get<X>().z << std::endl;
   }
   {
     ash::promise<void> p1, p2;

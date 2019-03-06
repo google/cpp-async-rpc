@@ -150,4 +150,13 @@ std::vector<std::shared_ptr<const dynamic_base_class>> context::data() const {
   return res;
 }
 
+void context::set_data(
+    std::vector<std::shared_ptr<dynamic_base_class>>&& new_data) {
+  data_.clear();
+  for (auto it : new_data) {
+    data_[it->portable_class_name()] =
+        std::static_pointer_cast<const dynamic_base_class>(std::move(it));
+  }
+}
+
 }  // namespace ash
