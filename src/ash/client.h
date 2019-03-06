@@ -32,6 +32,7 @@
 #include "ash/binary_codecs.h"
 #include "ash/connection.h"
 #include "ash/container/flat_map.h"
+#include "ash/context.h"
 #include "ash/errors.h"
 #include "ash/flag.h"
 #include "ash/future.h"
@@ -81,6 +82,8 @@ class client_connection {
       encoder(method_hash);
       // Actual arguments.
       encoder(args_refs);
+      // Current context.
+      encoder(context::current());
 
       // Send the request, receive and deserialize the result.
       std::string response(connection_.send(std::move(request)));
