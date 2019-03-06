@@ -45,12 +45,11 @@ class base_thread : public std::thread {
   template <class Function, class... Args>
   explicit base_thread(Function&& f, Args&&... args)
       : std::thread(),
-        context_(daemon ? &context::top() : &context::current(),
-                 context::time_point::max(), false) {
+        context_(daemon ? context::top() : context::current(), false) {
     static_cast<std::thread&>(*this) =
         std::thread(([this, f(detail::decay_copy(std::forward<Function>(f)))](
                          std::decay_t<Args>&&... args) mutable {
-                      auto new_context = context_.make_child();
+                      context new_context(context_);
                       try {
                         f(std::forward<std::decay_t<Args>>(args)...);
                       } catch (const errors::cancelled&) {

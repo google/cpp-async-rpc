@@ -33,21 +33,23 @@ context& context::current() {
 }
 
 context& context::top() {
-  static context base_context{nullptr, time_point::max(), false};
+  static context base_context{root{}};
   return base_context;
 }
 
-context::context(context* parent, time_point deadline, bool set_current)
-    : set_current_(set_current), parent_(parent), deadline_(deadline) {
+context::context(context& parent, bool set_current)
+    : set_current_(set_current), parent_(&parent), deadline_(std::nullopt) {
   if (parent_) {
     parent_->add_child(this);
-
-    deadline_ = std::min(deadline_, parent_->deadline_);
+    deadline_ = parent_->deadline_;
     data_ = parent_->data_;
   }
 
   if (set_current_) current_ = this;
 }
+
+context::context(root)
+    : set_current_(false), parent_(nullptr), deadline_(std::nullopt) {}
 
 context::~context() {
   if (set_current_) current_ = parent_;
@@ -77,10 +79,12 @@ void context::remove_child(context* child) {
 }
 
 std::optional<context::time_point> context::deadline() const {
+  std::scoped_lock lock(mu_);
   return deadline_;
 }
 
 std::optional<context::duration> context::deadline_left() const {
+  std::scoped_lock lock(mu_);
   if (deadline_) {
     return *deadline_ - std::chrono::system_clock::now();
   } else {
@@ -96,14 +100,19 @@ void context::cancel() {
   }
 }
 
-bool context::is_cancelled() const { return cancelled_.is_set(); }
+bool context::is_cancelled() const {
+  std::scoped_lock lock(mu_);
+  return cancelled_.is_set();
+}
 
 awaitable<void> context::wait_cancelled() {
+  std::scoped_lock lock(mu_);
   return cancelled_.wait_set().then(
       std::move([]() { throw errors::cancelled("Context is cancelled"); }));
 }
 
 awaitable<void> context::wait_deadline() {
+  std::scoped_lock lock(mu_);
   if (deadline_) {
     return ash::deadline(*deadline_).then(std::move([]() {
       throw errors::deadline_exceeded("Deadline exceeded");
@@ -113,16 +122,32 @@ awaitable<void> context::wait_deadline() {
   }
 }
 
-context context::with_deadline(time_point when) {
-  return context(current_, when);
+void context::set_deadline(time_point when) {
+  std::scoped_lock lock(mu_);
+  if (!deadline_ || *deadline_ > when) {
+    deadline_ = when;
+  }
 }
 
-context context::with_timeout(duration timeout) {
-  return context(current_, std::chrono::system_clock::now() + timeout);
+void context::set_timeout(duration timeout) {
+  set_deadline(std::chrono::system_clock::now() + timeout);
 }
 
-context context::with_cancel() { return context(); }
+void context::clear_all() {
+  std::scoped_lock lock(mu_);
+  data_.clear();
+}
 
-context context::make_child() { return context(this); }
+std::vector<std::shared_ptr<const dynamic_base_class>> context::data() const {
+  std::vector<std::shared_ptr<const dynamic_base_class>> res;
+  res.reserve(data_.size());
+  {
+    std::scoped_lock lock(mu_);
+    for (auto it : data_) {
+      res.push_back(it.second);
+    }
+  }
+  return res;
+}
 
 }  // namespace ash

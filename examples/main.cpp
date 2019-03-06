@@ -184,16 +184,15 @@ struct bad_connection {
 
 int main() {
   {
-    auto ctx = ash::context::with_cancel();
+    ash::context ctx;
 
     V v;
     v.a = 33;
-    ctx.set(std::move(v));
-    ctx.set(std::move(V2()));
-    ctx.set(std::move(X()));
+    ctx.set(std::move(v), std::move(V2()), std::move(X()));
+    ctx.set_timeout(std::chrono::seconds(10));
 
     for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it.first << std::endl;
+      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
     }
     std::cerr << "DONE" << std::endl;
 
@@ -202,7 +201,7 @@ int main() {
               << ctx.get<V>()->a << std::endl;
 
     for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it.first << std::endl;
+      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
     }
     std::cerr << "DONE" << std::endl;
 
@@ -218,14 +217,14 @@ int main() {
     nbd(ctx);
 
     for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it.first << std::endl;
+      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
     }
     std::cerr << "DONE" << std::endl;
 
     ctx.clear<V>();
 
     for (auto it : ctx.data()) {
-      std::cerr << "ENTRY: " << it.first << std::endl;
+      std::cerr << "ENTRY: " << it->portable_class_name() << std::endl;
     }
     std::cerr << "DONE" << std::endl;
   }
@@ -263,7 +262,8 @@ int main() {
     f.get();
   }
   {
-    auto ctx = ash::context::with_timeout(std::chrono::milliseconds(100));
+    ash::context ctx;
+    ctx.set_timeout(std::chrono::milliseconds(100));
     auto s = dial(ash::endpoint().name("www.google.com").service("https"));
   }
   {
@@ -291,7 +291,8 @@ int main() {
               << std::endl;
 
     {
-      auto ctx2 = ash::context::with_timeout(std::chrono::milliseconds(44));
+      ash::context ctx2;
+      ctx2.set_timeout(std::chrono::milliseconds(44));
       std::cerr << *ash::context::current().deadline_left() /
                        std::chrono::milliseconds(1)
                 << std::endl;

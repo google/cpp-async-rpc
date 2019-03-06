@@ -49,36 +49,35 @@ class context : public serializable<context> {
   template <typename E>
   void save(E& e) const {
     e(deadline_left());
-    std::vector<std::shared_ptr<const dynamic_base_class>> v;
-    v.reserve(data_.size());
-    for (auto it : data_) {
-      v.push_back(it.second);
-    }
-    e(v);
+    e(data());
+    e(is_cancelled());
   }
 
   template <typename D>
   void load(D& d) {
     std::optional<duration> deadline_remaining;
     std::vector<std::shared_ptr<dynamic_base_class>> v;
+    bool cancelled;
     d(deadline_remaining);
     d(v);
+    d(cancelled);
     if (deadline_remaining) {
-      if (deadline_) {
-        deadline_ = std::min(
-            *deadline_, std::chrono::system_clock::now() + *deadline_remaining);
-      } else {
-        deadline_ = std::chrono::system_clock::now() + *deadline_remaining;
+      set_timeout(*deadline_remaining);
+    }
+    {
+      std::scoped_lock lock(mu_);
+      data_.clear();
+      for (auto ptr : v) {
+        data_[ptr->portable_class_name()] = ptr;
       }
     }
-    data_.clear();
-    for (auto ptr : v) {
-      data_[ptr->portable_class_name()] = std::move(ptr);
-    }
+    if (cancelled) cancel();
   }
 
   using time_point = std::chrono::system_clock::time_point;
   using duration = std::chrono::system_clock::duration;
+
+  explicit context(context& parent = current(), bool set_current = true);
 
   ~context();
 
@@ -98,44 +97,56 @@ class context : public serializable<context> {
 
   static context& top();
 
-  static context with_deadline(time_point when);
+  void set_deadline(time_point when);
 
-  static context with_timeout(duration timeout);
+  void set_timeout(duration timeout);
 
-  static context with_cancel();
+  template <typename... V>
+  void set(V&&... v) {
+    std::scoped_lock lock(mu_);
+    (..., set_one(std::forward<V>(v)));
+  }
+
+  template <typename... V>
+  void clear() {
+    std::scoped_lock lock(mu_);
+    (..., clear_one<V>());
+  }
+
+  void clear_all();
 
   template <typename T>
   std::shared_ptr<const T> get() const {
+    std::scoped_lock lock(mu_);
     auto it = data_.find(portable_class_name<T>());
     if (it != data_.end()) return std::static_pointer_cast<const T>(it->second);
     return nullptr;
   }
 
+  std::vector<std::shared_ptr<const dynamic_base_class>> data() const;
+
+ private:
+  struct root {};
+  explicit context(root);
+
   template <typename T>
-  void set(T&& t) {
+  void set_one(T&& t) {
     data_[t.portable_class_name()] =
         std::make_shared<const std::decay_t<T>>(std::forward<T>(t));
   }
 
   template <typename T>
-  void clear() {
+  void clear_one() {
     data_.erase(portable_class_name<T>());
   }
 
-  const auto& data() const { return data_; }
-
- private:
-  explicit context(context* parent = current_,
-                   time_point deadline = time_point::max(),
-                   bool set_current = true);
   void add_child(context* child);
   void remove_child(context* child);
-  context make_child();
 
   template <bool daemon>
   friend class base_thread;
 
-  std::mutex mu_;
+  mutable std::mutex mu_;
   std::condition_variable child_detached_;
   bool set_current_;
   context* parent_;
