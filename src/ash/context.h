@@ -132,7 +132,7 @@ class context : public serializable<context> {
 
   template <typename T>
   static const T& default_instance() {
-    static T instance;
+    static const T instance;
     return instance;
   }
 
