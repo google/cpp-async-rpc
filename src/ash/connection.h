@@ -35,6 +35,7 @@
 #include "ash/flag.h"
 #include "ash/io_adapters.h"
 #include "ash/mpt.h"
+#include "ash/socket.h"
 
 namespace ash {
 
@@ -201,6 +202,11 @@ class char_dev_connection : public channel_connection {
 
  protected:
   static channel open_path(const std::string& path);
+};
+
+class client_socket_connection : public channel_connection {
+ public:
+  explicit client_socket_connection(endpoint name);
 };
 
 }  // namespace ash

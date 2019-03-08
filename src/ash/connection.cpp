@@ -145,4 +145,7 @@ channel char_dev_connection::open_path(const std::string& path) {
   return file(path, open_mode::READ_PLUS);
 }
 
+client_socket_connection::client_socket_connection(endpoint name)
+    : channel_connection(dial(std::move(name))) {}
+
 }  // namespace ash

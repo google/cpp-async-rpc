@@ -423,9 +423,9 @@ int main() {
   */
 
   ash::packet_connection_impl<
-      ash::reconnectable_connection<ash::char_dev_connection>,
-      ash::serial_line_packet_protocol<>>
-      slpci3("/dev/tty");
+      ash::reconnectable_connection<ash::client_socket_connection>,
+      ash::protected_stream_packet_protocol<>>
+      slpci3(ash::endpoint().name("localhost").port(9999));
   ash::client_connection<> conn(slpci3);
   auto obj = conn.get_proxy<Reader>("default");
   {

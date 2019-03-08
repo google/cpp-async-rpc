@@ -50,8 +50,7 @@ template <typename Encoder = little_endian_binary_encoder,
 class client_connection {
  private:
   struct remote_object {
-    remote_object(client_connection<Encoder, Decoder>& connection,
-                  std::string_view name)
+    remote_object(client_connection& connection, std::string_view name)
         : connection_(connection), name_(name) {}
 
     template <auto mptr, typename... A>
@@ -105,7 +104,7 @@ class client_connection {
       }
     }
 
-    client_connection<Encoder, Decoder>& connection_;
+    client_connection& connection_;
     const std::string name_;
   };
 
