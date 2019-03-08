@@ -422,12 +422,8 @@ int main() {
   slpci2.disconnect();
   */
 
-  ash::packet_connection_impl<
-      ash::reconnectable_connection<ash::client_socket_connection>,
-      ash::protected_stream_packet_protocol<>>
-      slpci3(ash::endpoint().name("localhost").port(9999));
-  ash::client_connection<> conn(slpci3);
-  auto obj = conn.get_proxy<Reader>("default");
+  ash::client_connection<> conn(ash::endpoint().name("localhost").port(9999));
+  auto obj = conn.get_proxy<Reader>(33);
   {
     ash::context ctx;
     ctx.set_timeout(std::chrono::seconds(10));

@@ -37,6 +37,8 @@
 #include "ash/flag.h"
 #include "ash/future.h"
 #include "ash/interface.h"
+#include "ash/object_name.h"
+#include "ash/packet_protocols.h"
 #include "ash/select.h"
 #include "ash/string_adapters.h"
 #include "ash/thread.h"
@@ -45,8 +47,12 @@
 
 namespace ash {
 
-template <typename Encoder = little_endian_binary_encoder,
-          typename Decoder = little_endian_binary_decoder>
+template <typename Connection = client_socket_connection,
+          typename Encoder = little_endian_binary_encoder,
+          typename Decoder = little_endian_binary_decoder,
+          typename PacketProtocol =
+              protected_stream_packet_protocol<Encoder, Decoder>,
+          typename ObjectNameEncoder = Encoder>
 class client_connection {
  private:
   struct remote_object {
@@ -108,11 +114,16 @@ class client_connection {
     const std::string name_;
   };
 
+  using connection_type =
+      ash::packet_connection_impl<ash::reconnectable_connection<Connection>,
+                                  PacketProtocol>;
+
  public:
-  explicit client_connection(packet_connection& connection)
+  template <typename... Args>
+  explicit client_connection(Args&&... args)
       : sequence_(0),
-        connection_(connection),
-        receiver_(&client_connection<Encoder, Decoder>::receive, this) {}
+        connection_(std::forward<Args>(args)...),
+        receiver_(&client_connection::receive, this) {}
 
   ~client_connection() {
     receiver_.get_context().cancel();
@@ -120,9 +131,10 @@ class client_connection {
     receiver_.join();
   }
 
-  template <typename I>
-  auto get_proxy(std::string_view name) {
-    return I::make_proxy(remote_object(*this, name));
+  template <typename I, typename N>
+  auto get_proxy(N&& name) {
+    return I::make_proxy(remote_object(
+        *this, object_name<ObjectNameEncoder>(std::forward<N>(name))));
   }
 
  private:
@@ -212,7 +224,7 @@ class client_connection {
   std::mutex mu_;
   sequence_type sequence_;
   flag ready_;
-  packet_connection& connection_;
+  connection_type connection_;
   pending_map_type pending_;
   ash::thread receiver_;
 };
