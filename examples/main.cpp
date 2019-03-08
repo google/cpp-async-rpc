@@ -428,8 +428,12 @@ int main() {
       slpci3("/dev/tty");
   ash::client_connection<> conn(slpci3);
   auto obj = conn.get_proxy<Reader>("default");
-  std::cerr << "XX" << obj.get("variable", 99) << "XX" << std::endl;
-
+  {
+    ash::context ctx;
+    ctx.set_timeout(std::chrono::seconds(10));
+    ctx.set(X());
+    std::cerr << "XX" << obj.get("variable", 99) << "XX" << std::endl;
+  }
   std::uint64_t key[4] = {1, 2, 3, 4};
 
   std::string data =
