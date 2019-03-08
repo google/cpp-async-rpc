@@ -105,12 +105,12 @@ class context : public serializable<context> {
   }
 
   template <typename... V>
-  void clear() {
+  void reset() {
     std::scoped_lock lock(mu_);
-    (..., clear_one<V>());
+    (..., reset_one<V>());
   }
 
-  void clear_all();
+  void reset_all();
 
   template <typename T>
   const T& get() const {
@@ -143,7 +143,7 @@ class context : public serializable<context> {
   }
 
   template <typename T>
-  void clear_one() {
+  void reset_one() {
     data_.erase(portable_class_name<T>());
   }
 

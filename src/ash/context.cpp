@@ -133,7 +133,7 @@ void context::set_timeout(duration timeout) {
   set_deadline(std::chrono::system_clock::now() + timeout);
 }
 
-void context::clear_all() {
+void context::reset_all() {
   std::scoped_lock lock(mu_);
   data_.clear();
 }

@@ -216,7 +216,7 @@ int main() {
     std::cerr << "V2: " << ctx.get<V2>().a << std::endl;
     std::cerr << "X: " << ctx.get<X>().y << ", " << ctx.get<X>().z << std::endl;
 
-    ctx.clear<V>();
+    ctx.reset<V>();
 
     std::cerr << "V: " << ctx.get<V>().a << std::endl;
     std::cerr << "V2: " << ctx.get<V2>().a << std::endl;
