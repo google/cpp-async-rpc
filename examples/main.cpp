@@ -25,6 +25,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include "ash.h"
 #include "ash/address_resolver.h"
@@ -422,8 +423,9 @@ int main() {
   slpci2.disconnect();
   */
 
+  using namespace std::literals;
   ash::client_connection<> conn(ash::endpoint().name("localhost").port(9999));
-  auto obj = conn.get_proxy<Reader>(33);
+  auto obj = conn.get_proxy<Reader>("default"sv);
   {
     ash::context ctx;
     ctx.set_timeout(std::chrono::seconds(10));
