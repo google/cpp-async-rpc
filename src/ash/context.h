@@ -74,6 +74,7 @@ class context : public serializable<context> {
   using time_point = std::chrono::system_clock::time_point;
   using duration = std::chrono::system_clock::duration;
 
+  context(context&&) = default;
   explicit context(context& parent = current(), bool set_current = true);
 
   ~context();

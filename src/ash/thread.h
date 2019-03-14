@@ -22,6 +22,8 @@
 #ifndef ASH_THREAD_H_
 #define ASH_THREAD_H_
 
+#include <functional>
+#include <memory>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -42,29 +44,32 @@ class base_thread : public std::thread {
  public:
   using std::thread::thread;
 
-  template <class Function, class... Args>
+  template <typename Function, typename... Args,
+            typename = std::enable_if_t<
+                !std::is_same_v<std::decay_t<Function>, base_thread>>>
   explicit base_thread(Function&& f, Args&&... args)
       : std::thread(),
-        context_(daemon ? context::top() : context::current(), false) {
-    static_cast<std::thread&>(*this) =
-        std::thread(([this, f(detail::decay_copy(std::forward<Function>(f)))](
-                         std::decay_t<Args>&&... args) mutable {
-                      context new_context(context_);
-                      try {
-                        f(std::forward<std::decay_t<Args>>(args)...);
-                      } catch (const errors::cancelled&) {
-                      } catch (const errors::deadline_exceeded&) {
-                      }
-                    }),
-                    std::forward<Args>(args)...);
+        context_(std::make_unique<context>(
+            daemon ? context::top() : context::current(), false)) {
+    static_cast<std::thread&>(*this) = std::thread(
+        ([this, f(detail::decay_copy(std::forward<Function>(f)))](
+             std::decay_t<Args>&&... args) mutable {
+          context new_context(*context_);
+          try {
+            std::invoke(f, std::forward<std::decay_t<Args>>(args)...);
+          } catch (const errors::cancelled&) {
+          } catch (const errors::deadline_exceeded&) {
+          }
+        }),
+        std::forward<Args>(args)...);
   }
 
-  context& get_context() { return context_; }
+  context& get_context() { return *context_; }
 
   void detach() = delete;
 
  private:
-  context context_;
+  std::unique_ptr<context> context_;
 };
 
 using thread = base_thread<false>;

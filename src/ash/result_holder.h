@@ -36,8 +36,8 @@ class result_holder {
   using value_type = T;
 
   result_holder() noexcept = default;
-  result_holder(result_holder<value_type>&&) noexcept = default;
-  result_holder& operator=(result_holder<value_type>&&) noexcept = default;
+  result_holder(result_holder&&) = default;
+  result_holder& operator=(result_holder&&) = default;
   explicit result_holder(std::exception_ptr exception)
       : exception_(exception) {}
   template <typename U>
@@ -148,8 +148,8 @@ class result_holder<void> {
   using value_type = void;
 
   result_holder() noexcept = default;
-  result_holder(result_holder<value_type>&&) noexcept = default;
-  result_holder& operator=(result_holder<value_type>&&) noexcept = default;
+  result_holder(result_holder<value_type>&&) = default;
+  result_holder& operator=(result_holder<value_type>&&) = default;
   explicit result_holder(std::exception_ptr exception)
       : exception_(exception) {}
 

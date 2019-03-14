@@ -33,6 +33,7 @@
 #include "ash/connection.h"
 #include "ash/context.h"
 #include "ash/errors.h"
+#include "ash/executor.h"
 #include "ash/future.h"
 #include "ash/highway_hash.h"
 #include "ash/interface.h"
@@ -186,6 +187,29 @@ struct bad_connection {
 };
 
 int main() {
+  {
+    ash::synchronous_executor x;
+    for (int i = 0; i < 10; i++) {
+      x.run([]() {
+        std::cerr << "Hello "
+                  << "world "
+                  << "1" << std::endl;
+      });
+    }
+  }
+  {
+    ash::thread_pool x;
+    for (int i = 0; i < 10; i++) {
+      x.run([]() {
+        std::cerr << "Hello "
+                  << "world "
+                  << "2/" << ash::thread::hardware_concurrency() << " "
+                  << std::this_thread::get_id() << std::endl;
+      });
+    }
+
+    ash::select(ash::timeout(std::chrono::seconds(2)));
+  }
   {
     ash::context ctx;
 

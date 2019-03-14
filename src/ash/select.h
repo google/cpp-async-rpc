@@ -207,9 +207,9 @@ std::tuple<typename select_input<Args>::result_type...> make_select_result(
     std::tuple<Args...>& awaitables, const pollfd* pollfds, bool was_timeout,
     std::chrono::milliseconds min_timeout, bool min_timeout_is_polling,
     mpt::index_sequence<ints...>) {
-  return {select_input<Args>::make_result(mpt::at<ints>(awaitables),
-                                          pollfds + pollfds_index<ints>(awaitables), was_timeout,
-                                          min_timeout, min_timeout_is_polling)...};
+  return {std::move(select_input<Args>::make_result(
+      mpt::at<ints>(awaitables), pollfds + pollfds_index<ints>(awaitables), was_timeout,
+      min_timeout, min_timeout_is_polling))...};
 }
 
 template <typename... Args, std::size_t... ints>
