@@ -22,7 +22,6 @@
 #ifndef ASH_CLIENT_H_
 #define ASH_CLIENT_H_
 
-#include <mutex>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -37,6 +36,7 @@
 #include "ash/flag.h"
 #include "ash/future.h"
 #include "ash/interface.h"
+#include "ash/mutex.h"
 #include "ash/object_name.h"
 #include "ash/packet_protocols.h"
 #include "ash/select.h"
@@ -142,32 +142,30 @@ class client_connection {
   using sequence_type = std::uint32_t;
 
   std::string send(std::string request) {
-    std::scoped_lock lock(mu_);
-    auto req_id = sequence_++;
-    auto result = pending_[req_id].get_future();
+    {
+      std::scoped_lock lock(mu_);
+      auto req_id = sequence_++;
+      try {
+        auto result = pending_[req_id].get_future();
 
-    try {
-      request.reserve(request.size() + sizeof(req_id));
-      for (std::size_t i = 0; i < sizeof(req_id); i++) {
-        request.push_back((req_id >> (8 * i)) & 0xff);
-      }
-      connection_.connect();
-      connection_.send(std::move(request));
-      ready_.set();
-    } catch (...) {
-      // Disconnect the connection.
-      ready_.reset();
-      connection_.disconnect();
+        request.reserve(request.size() + sizeof(req_id));
+        for (std::size_t i = 0; i < sizeof(req_id); i++) {
+          request.push_back((req_id >> (8 * i)) & 0xff);
+        }
+        connection_.connect();
+        connection_.send(std::move(request));
+        ready_.set();
+      } catch (...) {
+        // Disconnect the connection.
+        ready_.reset();
+        connection_.disconnect();
 
-      // Cleanup the expected result slot and disconnect.
-      {
-        std::scoped_lock lock(mu_);
+        // Cleanup the expected result slot.
         pending_.erase(req_id);
+
+        throw;
       }
-
-      throw;
     }
-
     return result.get();
   }
 
@@ -221,7 +219,7 @@ class client_connection {
     }
   }
 
-  std::mutex mu_;
+  mutex mu_;
   sequence_type sequence_;
   flag ready_;
   connection_type connection_;
