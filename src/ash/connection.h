@@ -122,8 +122,8 @@ class reconnectable_connection : public connection {
  private:
   std::optional<Connection> connection_;
   std::shared_ptr<Connection> ptr_;
-  std::mutex mu_;
-  std::condition_variable done_;
+  std::recursive_mutex mu_;
+  std::condition_variable_any done_;
   std::function<void()> connection_factory_;
 };
 
