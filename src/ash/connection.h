@@ -81,7 +81,10 @@ class reconnectable_connection : public connection {
     if (!ptr_ || !ptr_->connected()) {
       connection_factory_();
       ptr_.reset(&*connection_, [this](Connection*) {
-        connection_.reset();
+        {
+          std::scoped_lock lock(mu_);
+          connection_.reset();
+        }
         done_.notify_all();
       });
     }
