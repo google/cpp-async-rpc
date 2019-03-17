@@ -447,15 +447,20 @@ int main() {
   slpci2.disconnect();
   */
 
-  using namespace std::literals;
-  ash::client_connection<> conn(ash::endpoint().name("localhost").port(9999));
-  auto obj = conn.get_proxy<Reader>("default"sv);
-  {
-    ash::context ctx;
-    ctx.set_timeout(std::chrono::seconds(10));
-    ctx.set(X());
-    std::cerr << "XX" << obj.get("variable", 99) << "XX" << std::endl;
+  try {
+    using namespace std::literals;
+    ash::client_connection<> conn(ash::endpoint().name("localhost").port(9999));
+    auto obj = conn.get_proxy<Reader>("default"sv);
+    {
+      ash::context ctx;
+      ctx.set_timeout(std::chrono::seconds(10));
+      ctx.set(X());
+      std::cerr << "XX" << obj.get("variable", 99) << "XX" << std::endl;
+    }
+  } catch (const std::runtime_error& e) {
+    std::cerr << "CAUGHT: " << e.what() << std::endl;
   }
+
   std::uint64_t key[4] = {1, 2, 3, 4};
 
   std::string data =
