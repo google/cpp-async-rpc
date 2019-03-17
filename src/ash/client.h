@@ -142,11 +142,12 @@ class client_connection {
   using sequence_type = std::uint32_t;
 
   std::string send(std::string request) {
+    future<std::string> result;
     {
       std::scoped_lock lock(mu_);
       auto req_id = sequence_++;
       try {
-        auto result = pending_[req_id].get_future();
+        result = pending_[req_id].get_future();
 
         request.reserve(request.size() + sizeof(req_id));
         for (std::size_t i = 0; i < sizeof(req_id); i++) {
