@@ -77,36 +77,44 @@ class client_connection {
       std::string request;
       string_output_stream request_os(request);
       Encoder encoder(request_os);
-      // Name of the remote object.
-      encoder(name_);
-      // Method name.
-      using method_descriptor = method_descriptor<mptr>;
-      encoder(method_descriptor::name());
-      // Method signature hash.
-      constexpr auto method_hash = traits::type_hash<method_type>::value;
-      encoder(method_hash);
-      // Actual arguments.
-      encoder(args_refs);
-      // Current context.
-      encoder(context::current());
 
-      // Send the request, receive and deserialize the result.
-      std::string response(connection_.send(std::move(request)));
-      string_input_stream response_is(response);
-      Decoder decoder(response_is);
-      bool got_exception;
-      decoder(got_exception);
-      if (got_exception) {
-        std::string exception_type, exception_message;
-        decoder(exception_type);
-        decoder(exception_message);
-        ash::error_factory::get().throw_error(exception_type.c_str(),
-                                              exception_message.c_str());
-      }
-      if constexpr (!std::is_same_v<return_type, void>) {
-        return_type result;
-        decoder(result);
-        return result;
+      // Get the placeholder for the request.
+      auto [req_id, response_future] = connection_.start_request(encoder);
+      try {
+        // Name of the remote object.
+        encoder(name_);
+        // Method name.
+        using method_descriptor = method_descriptor<mptr>;
+        encoder(method_descriptor::name());
+        // Method signature hash.
+        constexpr auto method_hash = traits::type_hash<method_type>::value;
+        encoder(method_hash);
+        // Actual arguments.
+        encoder(args_refs);
+        // Current context.
+        encoder(context::current());
+
+        // Send the request.
+        connection_.send(std::move(request));
+        string_input_stream response_is(response_future.get());
+        Decoder decoder(response_is);
+        bool got_exception;
+        decoder(got_exception);
+        if (got_exception) {
+          std::string exception_type, exception_message;
+          decoder(exception_type);
+          decoder(exception_message);
+          ash::error_factory::get().throw_error(exception_type.c_str(),
+                                                exception_message.c_str());
+        }
+        if constexpr (!std::is_same_v<return_type, void>) {
+          return_type result;
+          decoder(result);
+          return result;
+        }
+      } catch (...) {
+        connection_.cancel_request(req_id);
+        throw;
       }
     }
 
@@ -141,18 +149,41 @@ class client_connection {
   using pending_map_type = flat_map<std::uint32_t, promise<std::string>>;
   using sequence_type = std::uint32_t;
 
-  std::string send(std::string request) {
-    future<std::string> result;
-    {
-      std::scoped_lock lock(mu_);
-      auto req_id = sequence_++;
-      try {
-        result = pending_[req_id].get_future();
+  std::pair<sequence_type, future<std::string>> start_request(Encoder& e) {
+    std::scoped_lock lock(pending_mu_);
+    auto req_id = sequence_++;
+    auto result = pending_[req_id].get_future();
+    e(req_id);
+    return {req_id, std::move(result)};
+  }
 
-        request.reserve(request.size() + sizeof(req_id));
-        for (std::size_t i = 0; i < sizeof(req_id); i++) {
-          request.push_back((req_id >> (8 * i)) & 0xff);
-        }
+  void cancel_request(sequence_type req_id) {
+    std::scoped_lock lock(pending_mu_);
+    pending_.erase(req_id);
+  }
+
+  void set_response(sequence_type req_id, std::string response) {
+    std::scoped_lock lock(pending_mu_);
+    auto it = pending_.find(req_id);
+    if (it != pending_.end()) {
+      it->second.set_value(std::move(response));
+      pending_.erase(it);
+    }
+  }
+
+  void broadcast_exception(std::exception_ptr exc) {
+    std::scoped_lock lock(pending_mu_);
+    // Report the exception for all pending requests and unqueue them.
+    for (auto& p : pending_) {
+      p.second.set_exception(exc);
+    }
+    pending_.clear();
+  }
+
+  void send(std::string request) {
+    {
+      std::scoped_lock lock(sending_mu_);
+      try {
         connection_.connect();
         connection_.send(std::move(request));
         ready_.set();
@@ -160,19 +191,12 @@ class client_connection {
         // Disconnect the connection.
         ready_.reset();
         connection_.disconnect();
-
-        // Cleanup the expected result slot.
-        pending_.erase(req_id);
-
         throw;
       }
     }
-    return result.get();
   }
 
   void receive() {
-    auto exc = std::current_exception();
-
     while (true) {
       // Wait until we actually need to receive something.
       select(ready_.wait_set());
@@ -181,52 +205,39 @@ class client_connection {
         while (true) {
           // Read the next packet.
           auto response = connection_.receive();
-          sequence_type req_id = 0;
-          if (response.size() >= sizeof(req_id)) {
-            // Find the req_id.
-            const std::uint8_t* ptr = reinterpret_cast<const std::uint8_t*>(
-                response.data() + response.size() - sizeof(req_id));
-            for (std::size_t i = 0; i < sizeof(req_id); i++) {
-              req_id <<= 8;
-              req_id |= static_cast<sequence_type>(*ptr++);
-            }
-            response.resize(response.size() - sizeof(req_id));
 
-            {
-              std::scoped_lock lock(mu_);
-              auto it = pending_.find(req_id);
-              if (it != pending_.end()) {
-                it->second.set_value(std::move(response));
-                pending_.erase(it);
-              }
-            }
-          }
+          // Decode the request id.
+          string_input_stream response_is(response);
+          Decoder decoder(response_is);
+          sequence_type req_id;
+          decoder(req_id);
+          response.erase(0, response_is.pos());
+
+          set_response(req_id, response);
         }
       } catch (...) {
-        // Broadcast the exception to all the pending requests.
-        auto exc = std::current_exception();
-        std::unique_lock lock(mu_);
+        // Prevent sending more requests while we disconnect.
+        std::scoped_lock lock(sending_mu_);
 
         // Disconnect the connection.
         ready_.reset();
         connection_.disconnect();
 
-        // Report the exception for all pending requests and unqueue them.
-        for (auto& p : pending_) {
-          p.second.set_exception(exc);
-        }
-        pending_.clear();
+        // Broadcast the exception to all the pending requests.
+        auto exc = std::current_exception();
+        broadcast_exception(exc);
       }
     }
   }
 
-  mutex mu_;
+  mutex pending_mu_, sending_mu_;
   sequence_type sequence_;
   flag ready_;
   connection_type connection_;
   pending_map_type pending_;
-  ash::thread receiver_;
+  ash::daemon_thread receiver_;
 };
+
 }  // namespace ash
 
 #endif  // ASH_CLIENT_H_
