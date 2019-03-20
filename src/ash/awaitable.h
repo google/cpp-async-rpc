@@ -104,6 +104,7 @@ class awaitable {
 };
 
 awaitable<void> never();
+awaitable<void> always();
 
 template <typename Rep, typename Period>
 awaitable<void> timeout(const std::chrono::duration<Rep, Period>& duration) {

@@ -24,5 +24,6 @@
 namespace ash {
 
 awaitable<void> never() { return awaitable<void>(-1); }
+awaitable<void> always() { return timeout(std::chrono::milliseconds::zero()); }
 
 }  // namespace ash
