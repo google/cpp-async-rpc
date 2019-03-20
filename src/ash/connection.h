@@ -157,16 +157,6 @@ class packet_connection_impl : public packet_connection {
 };
 
 class channel_connection : public connection {
- protected:
-  class channel_lock {
-   public:
-    explicit channel_lock(channel_connection& conn);
-    ~channel_lock();
-
-   private:
-    channel_connection& conn_;
-  };
-
  public:
   explicit channel_connection(channel&& ch);
   ~channel_connection() override;
@@ -179,13 +169,11 @@ class channel_connection : public connection {
   char getc() override;
 
  protected:
-  void check_connected();
-
+  usage_lock<channel_connection, errors::io_error> locked_{
+      "Connection is closed"};
   std::mutex mu_;
-  std::condition_variable idle_;
   channel channel_;
   flag closing_;
-  int lock_count_ = 0;
 };  // namespace ash
 
 class char_dev_connection : public channel_connection {

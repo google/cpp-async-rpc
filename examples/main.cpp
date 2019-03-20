@@ -411,7 +411,7 @@ int main() {
     cdc.write(buf.data(), buf.size());
     cdc.read(&buf[0], 3);
     std::cerr << buf << std::endl;
-  } catch (const ash::errors::shutting_down& sd) {
+  } catch (const ash::errors::base_error& sd) {
     std::cerr << "CAUGHT! " << sd.portable_error_class_name() << ": "
               << sd.what() << std::endl;
   }

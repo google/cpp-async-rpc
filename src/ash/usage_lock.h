@@ -37,7 +37,7 @@ class usage_lock {
       : message_(exception_message) {}
 
   void arm(T* ptr) {
-    std::scoped_lock lock(mu_);
+    std::scoped_lock arm_drop_lock(arm_drop_mu_);
     ptr_.reset(ptr, [this](T*) {
       {
         std::scoped_lock lock(mu_);
@@ -45,12 +45,14 @@ class usage_lock {
       }
       done_cond_.notify_all();
     });
+    std::scoped_lock lock(mu_);
     done_ = false;
   }
 
   void drop() {
-    std::unique_lock lock(mu_);
+    std::scoped_lock arm_drop_lock(arm_drop_mu_);
     ptr_.reset();
+    std::unique_lock lock(mu_);
     done_cond_.wait(lock, [this]() { return done_; });
   }
 
@@ -67,7 +69,7 @@ class usage_lock {
  private:
   const char* const message_;
   std::shared_ptr<T> ptr_;
-  std::mutex mu_;
+  std::mutex mu_, arm_drop_mu_;
   std::condition_variable done_cond_;
   bool done_ = true;
 };
