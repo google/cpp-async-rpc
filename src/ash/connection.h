@@ -36,6 +36,7 @@
 #include "ash/io_adapters.h"
 #include "ash/mpt.h"
 #include "ash/socket.h"
+#include "ash/usage_lock.h"
 
 namespace ash {
 
@@ -56,13 +57,6 @@ class connection : public input_stream, public output_stream {
 
 template <typename Connection>
 class reconnectable_connection : public connection {
- private:
-  std::shared_ptr<Connection> get() {
-    auto res = ptr_;
-    if (!res) throw errors::io_error("Connection is closed");
-    return res;
-  }
-
  public:
   template <typename... Args>
   explicit reconnectable_connection(Args&&... args)
@@ -70,7 +64,9 @@ class reconnectable_connection : public connection {
             [args_tuple = std::make_tuple(std::forward<Args>(args)...),
              this]() {
               return std::apply(
-                  [this](const auto&... args) { connection_.emplace(args...); },
+                  [this](const auto&... args) {
+                    connection_storage_.emplace(args...);
+                  },
                   args_tuple);
             }) {}
 
@@ -78,52 +74,43 @@ class reconnectable_connection : public connection {
 
   void connect() override {
     std::scoped_lock lock(mu_);
-    if (!ptr_ || !ptr_->connected()) {
+    auto ptr = connection_.get_or_null();
+    if (!ptr || !ptr->connected()) {
+      connection_.drop();
       connection_factory_();
-      ptr_.reset(&*connection_, [this](Connection*) {
-        {
-          std::scoped_lock lock(mu_);
-          connection_.reset();
-        }
-        done_.notify_all();
-      });
+      connection_.arm(&*connection_storage_);
     }
   }
 
   void disconnect() override {
-    std::unique_lock lock(mu_);
-
-    if (ptr_) {
-      ptr_->disconnect();
-      ptr_.reset();
-      done_.wait(lock, [this]() { return !connection_; });
-    }
+    std::scoped_lock lock(mu_);
+    connection_.drop();
+    connection_storage_.reset();
   }
 
   bool connected() override {
-    auto ptr = ptr_;
+    auto ptr = connection_.get_or_null();
     return ptr && ptr->connected();
   }
 
   void write(const char* data, std::size_t size) override {
-    get()->write(data, size);
+    connection_.get()->write(data, size);
   }
 
-  void putc(char c) override { get()->putc(c); }
+  void putc(char c) override { connection_.get()->putc(c); }
 
-  void flush() override { get()->flush(); }
+  void flush() override { connection_.get()->flush(); }
 
   std::size_t read(char* data, std::size_t size) override {
-    return get()->read(data, size);
+    return connection_.get()->read(data, size);
   }
 
-  char getc() override { return get()->getc(); }
+  char getc() override { return connection_.get()->getc(); }
 
  private:
-  std::optional<Connection> connection_;
-  std::shared_ptr<Connection> ptr_;
-  std::recursive_mutex mu_;
-  std::condition_variable_any done_;
+  std::optional<Connection> connection_storage_;
+  usage_lock<Connection, errors::io_error> connection_{"Connection is closed"};
+  std::mutex mu_;
   std::function<void()> connection_factory_;
 };
 
