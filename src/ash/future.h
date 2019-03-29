@@ -81,16 +81,6 @@ class future_state : public future_state_base {
     throw errors::try_again("Future not ready yet");
   }
 
-  awaitable<value_type> async_get() {
-    return std::move(
-        can_get().then(std::move([this]() { return std::move(maybe_get()); })));
-  }
-
-  value_type get() {
-    auto [res] = select(async_get());
-    return std::move(*res);
-  }
-
  private:
   result_holder<T> result_;
 };
@@ -121,12 +111,6 @@ class future_state<void> : public future_state_base {
     throw errors::try_again("Future not ready yet");
   }
 
-  awaitable<void> async_get() {
-    return std::move(can_get().then(std::move([this]() { maybe_get(); })));
-  }
-
-  void get() { select(async_get()); }
-
  private:
   result_holder<void> result_;
 };
@@ -152,9 +136,15 @@ class future {
 
   awaitable<void> can_get() { return state()->can_get(); }
 
-  awaitable<value_type> async_get() { return state()->async_get(); }
+  awaitable<value_type> async_get() {
+    return std::move(
+        can_get().then(std::move([this]() { return std::move(maybe_get()); })));
+  }
 
-  value_type get() { return state()->get(); }
+  value_type get() {
+    auto [res] = select(async_get());
+    return std::move(*res);
+  }
 
  private:
   friend class promise<value_type>;
@@ -173,7 +163,48 @@ class future {
                [](detail::future_state_base* s) { s->release_reader(); }) {}
 
   pointer_type state_;
-};  // namespace ash
+};
+
+template <>
+class future<void> {
+ public:
+  using value_type = void;
+
+  future(future<value_type>&&) = default;
+  future<value_type>& operator=(future<value_type>&&) = default;
+
+  future()
+      : state_(nullptr,
+               [](detail::future_state_base* s) { s->release_reader(); }) {}
+
+  value_type maybe_get() { state()->maybe_get(); }
+
+  awaitable<void> can_get() { return state()->can_get(); }
+
+  awaitable<value_type> async_get() {
+    return std::move(can_get().then(std::move([this]() { maybe_get(); })));
+  }
+
+  value_type get() { select(async_get()); }
+
+ private:
+  friend class promise<value_type>;
+
+  using pointer_type =
+      std::unique_ptr<detail::future_state<value_type>,
+                      typename detail::future_state<value_type>::releaser>;
+
+  pointer_type& state() {
+    if (!state_) throw errors::invalid_state("Empty future");
+    return state_;
+  }
+
+  explicit future(detail::future_state<value_type>* state)
+      : state_(state,
+               [](detail::future_state_base* s) { s->release_reader(); }) {}
+
+  pointer_type state_;
+};
 
 template <typename T>
 class promise {
