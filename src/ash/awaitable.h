@@ -34,8 +34,10 @@ class awaitable {
  public:
   using return_type = R;
 
+ private:
   using react_fn_type = fu2::unique_function<return_type()>;
 
+ public:
   explicit awaitable(int fd, bool for_write = false)
       : fd_(fd), for_write_(for_write) {}
 

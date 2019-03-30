@@ -31,6 +31,7 @@
 #include "ash/flag.h"
 #include "ash/result_holder.h"
 #include "ash/select.h"
+#include "function2/function2.hpp"
 
 namespace ash {
 namespace detail {
@@ -125,16 +126,27 @@ class future {
  public:
   using value_type = T;
 
+ private:
+  using pointer_type =
+      std::unique_ptr<detail::future_state_base,
+                      typename detail::future_state_base::releaser>;
+  using get_fn_type =
+      fu2::unique_function<value_type(detail::future_state_base&)>;
+
+ public:
   future(future<value_type>&&) = default;
   future<value_type>& operator=(future<value_type>&&) = default;
 
   future()
       : state_(nullptr,
-               [](detail::future_state_base* s) { s->release_reader(); }) {}
+               [](detail::future_state_base* s) { s->release_reader(); }),
+        get_fn_(std::move([this](detail::future_state_base& s) {
+          return static_cast<detail::future_state<value_type>&>(s).maybe_get();
+        })) {}
 
-  value_type maybe_get() { return state()->maybe_get(); }
+  value_type maybe_get() { return get_fn_(state()); }
 
-  awaitable<void> can_get() { return state()->can_get(); }
+  awaitable<void> can_get() { return state().can_get(); }
 
   awaitable<value_type> async_get() {
     return std::move(
@@ -149,20 +161,20 @@ class future {
  private:
   friend class promise<value_type>;
 
-  using pointer_type =
-      std::unique_ptr<detail::future_state<value_type>,
-                      typename detail::future_state<value_type>::releaser>;
-
-  pointer_type& state() {
+  detail::future_state_base& state() {
     if (!state_) throw errors::invalid_state("Empty future");
-    return state_;
+    return *state_;
   }
 
-  explicit future(detail::future_state<value_type>* state)
-      : state_(state,
-               [](detail::future_state_base* s) { s->release_reader(); }) {}
+  explicit future(detail::future_state<value_type>* new_state)
+      : state_(new_state,
+               [](detail::future_state_base* s) { s->release_reader(); }),
+        get_fn_(std::move([this](detail::future_state_base& s) {
+          return static_cast<detail::future_state<value_type>&>(s).maybe_get();
+        })) {}
 
   pointer_type state_;
+  get_fn_type get_fn_;
 };
 
 template <>
@@ -170,16 +182,27 @@ class future<void> {
  public:
   using value_type = void;
 
+ private:
+  using pointer_type =
+      std::unique_ptr<detail::future_state_base,
+                      typename detail::future_state_base::releaser>;
+  using get_fn_type =
+      fu2::unique_function<value_type(detail::future_state_base&)>;
+
+ public:
   future(future<value_type>&&) = default;
   future<value_type>& operator=(future<value_type>&&) = default;
 
   future()
       : state_(nullptr,
-               [](detail::future_state_base* s) { s->release_reader(); }) {}
+               [](detail::future_state_base* s) { s->release_reader(); }),
+        get_fn_(std::move([this](detail::future_state_base& s) {
+          static_cast<detail::future_state<value_type>&>(s).maybe_get();
+        })) {}
 
-  value_type maybe_get() { state()->maybe_get(); }
+  value_type maybe_get() { get_fn_(state()); }
 
-  awaitable<void> can_get() { return state()->can_get(); }
+  awaitable<void> can_get() { return state().can_get(); }
 
   awaitable<value_type> async_get() {
     return std::move(can_get().then(std::move([this]() { maybe_get(); })));
@@ -190,20 +213,20 @@ class future<void> {
  private:
   friend class promise<value_type>;
 
-  using pointer_type =
-      std::unique_ptr<detail::future_state<value_type>,
-                      typename detail::future_state<value_type>::releaser>;
-
-  pointer_type& state() {
+  detail::future_state_base& state() {
     if (!state_) throw errors::invalid_state("Empty future");
-    return state_;
+    return *state_;
   }
 
-  explicit future(detail::future_state<value_type>* state)
-      : state_(state,
-               [](detail::future_state_base* s) { s->release_reader(); }) {}
+  explicit future(detail::future_state<value_type>* new_state)
+      : state_(new_state,
+               [](detail::future_state_base* s) { s->release_reader(); }),
+        get_fn_(std::move([this](detail::future_state_base& s) {
+          static_cast<detail::future_state<value_type>&>(s).maybe_get();
+        })) {}
 
   pointer_type state_;
+  get_fn_type get_fn_;
 };
 
 template <typename T>
