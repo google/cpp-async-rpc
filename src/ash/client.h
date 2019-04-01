@@ -60,8 +60,8 @@ class client_connection {
         : connection_(connection), name_(name) {}
 
     template <auto mptr, typename... A>
-    typename traits::member_function_pointer_traits<mptr>::return_type call(
-        A&&... args) {
+    future<typename traits::member_function_pointer_traits<mptr>::return_type>
+    async_call(A&&... args) {
       using return_type =
           typename traits::member_function_pointer_traits<mptr>::return_type;
       using method_type =
@@ -96,26 +96,35 @@ class client_connection {
 
         // Send the request.
         connection_.send(std::move(request));
-        string_input_stream response_is(response_future.get());
-        Decoder decoder(response_is);
-        bool got_exception;
-        decoder(got_exception);
-        if (got_exception) {
-          std::string exception_type, exception_message;
-          decoder(exception_type);
-          decoder(exception_message);
-          ash::error_factory::get().throw_error(exception_type.c_str(),
-                                                exception_message.c_str());
-        }
-        if constexpr (!std::is_same_v<return_type, void>) {
-          return_type result;
-          decoder(result);
-          return result;
-        }
+
+        return response_future.then([](std::string response) {
+          string_input_stream response_is(response);
+          Decoder decoder(response_is);
+          bool got_exception;
+          decoder(got_exception);
+          if (got_exception) {
+            std::string exception_type, exception_message;
+            decoder(exception_type);
+            decoder(exception_message);
+            ash::error_factory::get().throw_error(exception_type.c_str(),
+                                                  exception_message.c_str());
+          }
+          if constexpr (!std::is_same_v<return_type, void>) {
+            return_type result;
+            decoder(result);
+            return result;
+          }
+        });
       } catch (...) {
         connection_.cancel_request(req_id);
         throw;
       }
+    }
+
+    template <auto mptr, typename... A>
+    typename traits::member_function_pointer_traits<mptr>::return_type call(
+        A&&... args) {
+      return async_call<mptr>(std::forward<A>(args)...).get();
     }
 
     client_connection& connection_;
