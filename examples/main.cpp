@@ -188,6 +188,22 @@ struct bad_connection {
 
 int main() {
   {
+    ash::promise<void> p1;
+    auto f1 =
+        p1.get_future().then([]() { std::cerr << "Was done!" << std::endl; });
+    p1.set_value();
+    f1.get();
+  }
+  {
+    ash::promise<int> p1;
+    auto f1 = p1.get_future().then([](int i) {
+      std::cerr << "Was done!" << std::endl;
+      return i + 1;
+    });
+    p1.set_value(3);
+    std::cerr << "GOT: " << f1.get() << std::endl;
+  }
+  {
     ash::synchronous_executor x;
     for (int i = 0; i < 10; i++) {
       x.run([]() {

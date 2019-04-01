@@ -60,23 +60,23 @@ class awaitable {
         if constexpr (std::is_same_v<new_return_type, void>) {
           outer();
         } else {
-          return std::move(outer());
+          return outer();
         }
       };
-      return std::move(awaitable<new_return_type>(std::move(*this),
-                                                  std::move(new_react_fn)));
+      return awaitable<new_return_type>(std::move(*this),
+                                        std::move(new_react_fn));
     } else {
       using new_return_type = std::invoke_result_t<ORF, return_type>;
       auto new_react_fn = [outer(std::move(react_fn)),
                            inner(std::move(react_fn_))]() mutable {
         if constexpr (std::is_same_v<new_return_type, void>) {
-          outer(std::move(inner()));
+          outer(inner());
         } else {
-          return std::move(outer(std::move(inner())));
+          return outer(inner());
         }
       };
-      return std::move(awaitable<new_return_type>(std::move(*this),
-                                                  std::move(new_react_fn)));
+      return awaitable<new_return_type>(std::move(*this),
+                                        std::move(new_react_fn));
     }
   }
 

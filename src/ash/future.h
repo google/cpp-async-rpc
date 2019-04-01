@@ -26,6 +26,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include "ash/errors.h"
 #include "ash/flag.h"
@@ -158,8 +159,24 @@ class future {
     return std::move(*res);
   }
 
+  template <typename OGF>
+  auto then(OGF&& get_fn) {
+    using new_value_type = std::invoke_result_t<OGF, value_type>;
+    auto new_get_fn = [outer(std::move(get_fn)), inner(std::move(get_fn_))](
+                          detail::future_state_base& state) mutable {
+      if constexpr (std::is_same_v<new_value_type, void>) {
+        outer(inner(state));
+      } else {
+        return outer(inner(state));
+      }
+    };
+    return future<new_value_type>(std::move(state_), std::move(new_get_fn));
+  }
+
  private:
   friend class promise<value_type>;
+  template <typename U>
+  friend class future;
 
   detail::future_state_base& state() {
     if (!state_) throw errors::invalid_state("Empty future");
@@ -172,6 +189,9 @@ class future {
         get_fn_(std::move([this](detail::future_state_base& s) {
           return static_cast<detail::future_state<value_type>&>(s).maybe_get();
         })) {}
+
+  future(pointer_type new_state, get_fn_type new_get_fn)
+      : state_(std::move(new_state)), get_fn_(std::move(new_get_fn)) {}
 
   pointer_type state_;
   get_fn_type get_fn_;
@@ -210,8 +230,25 @@ class future<void> {
 
   value_type get() { select(async_get()); }
 
+  template <typename OGF>
+  auto then(OGF&& get_fn) {
+    using new_value_type = std::invoke_result_t<OGF>;
+    auto new_get_fn = [outer(std::move(get_fn)), inner(std::move(get_fn_))](
+                          detail::future_state_base& state) mutable {
+      inner(state);
+      if constexpr (std::is_same_v<new_value_type, void>) {
+        outer();
+      } else {
+        return outer();
+      }
+    };
+    return future<new_value_type>(std::move(state_), std::move(new_get_fn));
+  }
+
  private:
   friend class promise<value_type>;
+  template <typename U>
+  friend class future;
 
   detail::future_state_base& state() {
     if (!state_) throw errors::invalid_state("Empty future");
@@ -224,6 +261,9 @@ class future<void> {
         get_fn_(std::move([this](detail::future_state_base& s) {
           static_cast<detail::future_state<value_type>&>(s).maybe_get();
         })) {}
+
+  future(pointer_type new_state, get_fn_type new_get_fn)
+      : state_(std::move(new_state)), get_fn_(std::move(new_get_fn)) {}
 
   pointer_type state_;
   get_fn_type get_fn_;
