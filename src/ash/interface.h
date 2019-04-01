@@ -56,6 +56,18 @@ struct interface : virtual Extends... {
   virtual ~interface() {}
 };
 
+template <typename OwnInterface, typename... Extends>
+struct async_interface : virtual Extends::async... {
+  using own_interface = OwnInterface;
+
+  template <typename O>
+  static auto make_proxy(O obj) {
+    return typename own_interface::async::template proxy<O>(std::move(obj));
+  }
+
+  virtual ~async_interface() {}
+};
+
 #define ASH_INTERFACE_EXTENDS_ONE(...) ASH_EXPAND_1 __VA_ARGS__
 #define ASH_INTERFACE_EXTENDS_SEP() ,
 #define ASH_INTERFACE_EXTENDS(...) \
@@ -68,12 +80,26 @@ struct interface : virtual Extends... {
   ASH_FOREACH(ASH_INTERFACE_PROXY_EXTENDS_ONE, \
               ASH_INTERFACE_PROXY_EXTENDS_SEP, __VA_ARGS__)
 
+#define ASH_INTERFACE_ASYNC_PROXY_EXTENDS_ONE(...) \
+  virtual ASH_EXPAND_1 __VA_ARGS__::async::proxy<O>
+#define ASH_INTERFACE_ASYNC_PROXY_EXTENDS_SEP() ,
+#define ASH_INTERFACE_ASYNC_PROXY_EXTENDS(...)       \
+  ASH_FOREACH(ASH_INTERFACE_ASYNC_PROXY_EXTENDS_ONE, \
+              ASH_INTERFACE_ASYNC_PROXY_EXTENDS_SEP, __VA_ARGS__)
+
 #define ASH_INTERFACE_PROXY_CTOR_ONE(...) \
   ASH_EXPAND_1 __VA_ARGS__::proxy<O>(obj)
 #define ASH_INTERFACE_PROXY_CTOR_SEP() ,
 #define ASH_INTERFACE_PROXY_CTOR(...)                                     \
   ASH_FOREACH(ASH_INTERFACE_PROXY_CTOR_ONE, ASH_INTERFACE_PROXY_CTOR_SEP, \
               __VA_ARGS__)
+
+#define ASH_INTERFACE_ASYNC_PROXY_CTOR_ONE(...) \
+  ASH_EXPAND_1 __VA_ARGS__::async::proxy<O>(obj)
+#define ASH_INTERFACE_ASYNC_PROXY_CTOR_SEP() ,
+#define ASH_INTERFACE_ASYNC_PROXY_CTOR(...)       \
+  ASH_FOREACH(ASH_INTERFACE_ASYNC_PROXY_CTOR_ONE, \
+              ASH_INTERFACE_ASYNC_PROXY_CTOR_SEP, __VA_ARGS__)
 
 #define ASH_INTERFACE_DECL_ARG(TYPE, NAME) ASH_EXPAND_1 TYPE NAME
 #define ASH_INTERFACE_DECL_ARGS_ONE(...) ASH_INTERFACE_DECL_ARG __VA_ARGS__
@@ -87,6 +113,15 @@ struct interface : virtual Extends... {
 #define ASH_INTERFACE_DECLS_SEP()
 #define ASH_INTERFACE_DECLS(...) \
   ASH_FOREACH(ASH_INTERFACE_DECLS_ONE, ASH_INTERFACE_DECLS_SEP, __VA_ARGS__)
+
+#define ASH_INTERFACE_ASYNC_DECL(RETURN, METHOD, ARGS) \
+  virtual ::ash::future<ASH_EXPAND_1 RETURN> METHOD(   \
+      ASH_INTERFACE_DECL_ARGS ARGS) = 0;
+#define ASH_INTERFACE_ASYNC_DECLS_ONE(...) ASH_INTERFACE_ASYNC_DECL __VA_ARGS__
+#define ASH_INTERFACE_ASYNC_DECLS_SEP()
+#define ASH_INTERFACE_ASYNC_DECLS(...)                                      \
+  ASH_FOREACH(ASH_INTERFACE_ASYNC_DECLS_ONE, ASH_INTERFACE_ASYNC_DECLS_SEP, \
+              __VA_ARGS__)
 
 #define ASH_INTERFACE_PROXY_IMPL_ARG(TYPE, NAME) ASH_EXPAND_1 TYPE NAME
 #define ASH_INTERFACE_PROXY_IMPL_ARGS_ONE(...) \
@@ -116,6 +151,19 @@ struct interface : virtual Extends... {
   ASH_FOREACH(ASH_INTERFACE_PROXY_IMPLS_ONE, ASH_INTERFACE_PROXY_IMPLS_SEP, \
               __VA_ARGS__)
 
+#define ASH_INTERFACE_ASYNC_PROXY_IMPL(RETURN, METHOD, ARGS) \
+  ::ash::future<ASH_EXPAND_1 RETURN> METHOD(                 \
+      ASH_INTERFACE_PROXY_IMPL_ARGS ARGS) override {         \
+    return obj_.template async_call<&own_interface::METHOD>( \
+        ASH_INTERFACE_PROXY_FORWARD_ARGS ARGS);              \
+  }
+#define ASH_INTERFACE_ASYNC_PROXY_IMPLS_ONE(...) \
+  ASH_INTERFACE_ASYNC_PROXY_IMPL __VA_ARGS__
+#define ASH_INTERFACE_ASYNC_PROXY_IMPLS_SEP()
+#define ASH_INTERFACE_ASYNC_PROXY_IMPLS(...)       \
+  ASH_FOREACH(ASH_INTERFACE_ASYNC_PROXY_IMPLS_ONE, \
+              ASH_INTERFACE_ASYNC_PROXY_IMPLS_SEP, __VA_ARGS__)
+
 #define ASH_INTERFACE_METHOD(RETURN, METHOD, ARGS) \
   ::ash::method_descriptor<&own_interface::METHOD>
 #define ASH_INTERFACE_METHODS_ONE(...) ASH_INTERFACE_METHOD __VA_ARGS__
@@ -131,38 +179,60 @@ struct interface : virtual Extends... {
   ASH_FOREACH(ASH_INTERFACE_METHOD_NAMES_ONE, ASH_INTERFACE_METHOD_NAMES_SEP, \
               __VA_ARGS__)
 
-#define ASH_INTERFACE(NAME, EXTENDS, METHODS)                                \
-  struct NAME                                                                \
-      : ::ash::interface<NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(         \
-            , /* NOLINT(whitespace/parens) */)                               \
-                             ASH_EXPAND(ASH_INTERFACE_EXTENDS EXTENDS)> {    \
-    ASH_EXPAND(ASH_INTERFACE_DECLS METHODS)                                  \
-    using method_descriptors =                                               \
-        ::ash::mpt::pack<ASH_EXPAND(ASH_INTERFACE_METHODS METHODS)>;         \
-    static const std::array<const char *,                                    \
-                            ::ash::mpt::size_v<method_descriptors>>          \
-        &method_names() {                                                    \
-      static const std::array<const char *,                                  \
-                              ::ash::mpt::size_v<method_descriptors>>        \
-          names{ASH_EXPAND(ASH_INTERFACE_METHOD_NAMES METHODS)};             \
-      return names;                                                          \
-    }                                                                        \
-    template <typename O>                                                    \
-    struct proxy;                                                            \
-  };                                                                         \
-  template <typename O>                                                      \
-  struct NAME::proxy : virtual NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(   \
-                           , /* NOLINT(whitespace/parens) */)                \
-                           ASH_EXPAND(ASH_INTERFACE_PROXY_EXTENDS EXTENDS) { \
-    proxy(O obj)                                                             \
-        : ASH_EXPAND(ASH_INTERFACE_PROXY_CTOR EXTENDS)                       \
-              ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(                         \
-                  , /* NOLINT(whitespace/parens) */) obj_(std::move(obj)) {} \
-    ASH_EXPAND(ASH_INTERFACE_PROXY_IMPLS METHODS)                            \
-   private:                                                                  \
-    O obj_;                                                                  \
+#define ASH_INTERFACE(NAME, EXTENDS, METHODS)                                  \
+  struct NAME                                                                  \
+      : ::ash::interface<NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(           \
+            , /* NOLINT(whitespace/parens) */)                                 \
+                             ASH_EXPAND(ASH_INTERFACE_EXTENDS EXTENDS)> {      \
+    ASH_EXPAND(ASH_INTERFACE_DECLS METHODS)                                    \
+    using method_descriptors =                                                 \
+        ::ash::mpt::pack<ASH_EXPAND(ASH_INTERFACE_METHODS METHODS)>;           \
+    static const std::array<const char *,                                      \
+                            ::ash::mpt::size_v<method_descriptors>>            \
+        &method_names() {                                                      \
+      static const std::array<const char *,                                    \
+                              ::ash::mpt::size_v<method_descriptors>>          \
+          names{ASH_EXPAND(ASH_INTERFACE_METHOD_NAMES METHODS)};               \
+      return names;                                                            \
+    }                                                                          \
+    struct async                                                               \
+        : ::ash::async_interface<NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(   \
+              , /* NOLINT(whitespace/parens) */)                               \
+                                     ASH_EXPAND(                               \
+                                         ASH_INTERFACE_EXTENDS EXTENDS)> {     \
+      ASH_EXPAND(ASH_INTERFACE_ASYNC_DECLS METHODS)                            \
+      template <typename O>                                                    \
+      struct proxy;                                                            \
+    };                                                                         \
+    template <typename O>                                                      \
+    struct proxy;                                                              \
+  };                                                                           \
+  template <typename O>                                                        \
+  struct NAME::proxy : virtual NAME ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(     \
+                           , /* NOLINT(whitespace/parens) */)                  \
+                           ASH_EXPAND(ASH_INTERFACE_PROXY_EXTENDS EXTENDS) {   \
+    proxy(O obj)                                                               \
+        : ASH_EXPAND(ASH_INTERFACE_PROXY_CTOR EXTENDS)                         \
+              ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(                           \
+                  , /* NOLINT(whitespace/parens) */) obj_(std::move(obj)) {}   \
+    ASH_EXPAND(ASH_INTERFACE_PROXY_IMPLS METHODS)                              \
+   private:                                                                    \
+    O obj_;                                                                    \
+  };                                                                           \
+  template <typename O>                                                        \
+  struct NAME::async::proxy                                                    \
+      : virtual NAME::async                                                    \
+        ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(,                                \
+                                              /* NOLINT(whitespace/parens) */) \
+            ASH_EXPAND(ASH_INTERFACE_ASYNC_PROXY_EXTENDS EXTENDS) {            \
+    proxy(O obj)                                                               \
+        : ASH_EXPAND(ASH_INTERFACE_ASYNC_PROXY_CTOR EXTENDS)                   \
+              ASH_IF(ASH_NOT(ASH_IS_EMPTY EXTENDS))(                           \
+                  , /* NOLINT(whitespace/parens) */) obj_(std::move(obj)) {}   \
+    ASH_EXPAND(ASH_INTERFACE_ASYNC_PROXY_IMPLS METHODS)                        \
+   private:                                                                    \
+    O obj_;                                                                    \
   }
-
 }  // namespace ash
 
 #endif  // ASH_INTERFACE_H_

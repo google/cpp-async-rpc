@@ -137,6 +137,11 @@ void f() {
   std::cerr << "XXX: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
+template <auto v>
+void f() {
+  std::cerr << "XXX: " << __PRETTY_FUNCTION__ << std::endl;
+}
+
 struct kk {
   static constexpr int roro = 1;
 };
@@ -187,6 +192,18 @@ struct bad_connection {
 };
 
 int main() {
+  {
+    f<&Writer::get>();
+    f<decltype(&Writer::get)>();
+    f<&Writer::set>();
+    f<decltype(&Writer::set)>();
+  }
+  {
+    f<&Writer::async::get>();
+    f<decltype(&Writer::async::get)>();
+    f<&Writer::async::set>();
+    f<decltype(&Writer::async::set)>();
+  }
   {
     ash::promise<void> p1;
     auto f1 =
@@ -466,12 +483,12 @@ int main() {
   try {
     using namespace std::literals;
     ash::client_connection<> conn(ash::endpoint().name("localhost").port(9999));
-    auto obj = conn.get_proxy<Reader>("default"sv);
+    auto obj = conn.get_proxy<Reader::async>("default"sv);
     {
       ash::context ctx;
       ctx.set_timeout(std::chrono::seconds(10));
       ctx.set(X());
-      std::cerr << "XX" << obj.get("variable", 99) << "XX" << std::endl;
+      std::cerr << "XX" << obj.get("variable", 99).get() << "XX" << std::endl;
     }
   } catch (const std::runtime_error& e) {
     std::cerr << "CAUGHT: " << e.what() << std::endl;
