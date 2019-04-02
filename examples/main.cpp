@@ -193,6 +193,23 @@ struct bad_connection {
 
 int main() {
   {
+    std::cerr
+        << "ms: "
+        << ash::traits::type_hash_v<std::chrono::milliseconds> << std::endl;
+    std::cerr << "m: "
+              << ash::traits::type_hash_v<std::chrono::minutes> << std::endl;
+    std::cerr << "sys: "
+              << ash::traits::type_hash_v<
+                     std::chrono::system_clock::time_point> << std::endl;
+    std::cerr << "steady: "
+              << ash::traits::type_hash_v<
+                     std::chrono::steady_clock::time_point> << std::endl;
+    std::cerr
+        << "high-res: "
+        << ash::traits::type_hash_v<
+               std::chrono::high_resolution_clock::time_point> << std::endl;
+  }
+  {
     f<&Writer::get>();
     f<decltype(&Writer::get)>();
     f<&Writer::set>();

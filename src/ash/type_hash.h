@@ -23,8 +23,10 @@
 #define ASH_TYPE_HASH_H_
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -226,6 +228,29 @@ struct type_hash<std::optional<T>, Seen, base,
   static constexpr std::uint32_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::OPTIONAL, false, 0),
       mpt::insert_type_into_t<std::optional<T>, Seen>, T>::value;
+};
+
+template <typename Rep, std::intmax_t num, std::intmax_t denom, typename Seen,
+          std::uint32_t base>
+struct type_hash<
+    std::chrono::duration<Rep, std::ratio<num, denom>>, Seen, base,
+    std::enable_if_t<!mpt::is_type_in_v<
+        std::chrono::duration<Rep, std::ratio<num, denom>>, Seen>>> {
+  static constexpr std::uint32_t value =
+      detail::type_hash_add(base, detail::type_family::DURATION, denom > num,
+                            (denom > num) ? (denom - num) : (num - denom));
+};
+
+template <typename Clock, typename Duration, typename Seen, std::uint32_t base>
+struct type_hash<std::chrono::time_point<Clock, Duration>, Seen, base,
+                 std::enable_if_t<!mpt::is_type_in_v<
+                     std::chrono::time_point<Clock, Duration>, Seen>>> {
+  static constexpr std::uint32_t value = detail::type_hash_add(
+      base, detail::type_family::TIME_POINT,
+      Duration::period::den > Duration::period::num,
+      (Duration::period::den > Duration::period::num)
+          ? (Duration::period::den - Duration::period::num)
+          : (Duration::period::num - Duration::period::den));
 };
 
 template <typename T, typename Seen, typename Deleter, std::uint32_t base>
