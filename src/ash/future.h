@@ -80,7 +80,7 @@ class future_state : public future_state_base {
     std::scoped_lock lock(mu_);
     if (result_) {
       set_.reset();
-      return std::move(*result_);
+      return *std::move(result_);
     }
     throw errors::try_again("Future not ready yet");
   }

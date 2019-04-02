@@ -39,6 +39,7 @@
 #include "ash/mutex.h"
 #include "ash/object_name.h"
 #include "ash/packet_protocols.h"
+#include "ash/result_holder.h"
 #include "ash/select.h"
 #include "ash/string_adapters.h"
 #include "ash/thread.h"
@@ -87,7 +88,7 @@ class client_connection {
         using method_descriptor = method_descriptor<mptr>;
         encoder(method_descriptor::name());
         // Method signature hash.
-        constexpr auto method_hash = traits::type_hash<method_type>::value;
+        constexpr auto method_hash = traits::type_hash_v<method_type>;
         encoder(method_hash);
         // Actual arguments.
         encoder(args_refs);
@@ -100,20 +101,9 @@ class client_connection {
         return response_future.then([](std::string response) {
           string_input_stream response_is(response);
           Decoder decoder(response_is);
-          bool got_exception;
-          decoder(got_exception);
-          if (got_exception) {
-            std::string exception_type, exception_message;
-            decoder(exception_type);
-            decoder(exception_message);
-            ash::error_factory::get().throw_error(exception_type.c_str(),
-                                                  exception_message.c_str());
-          }
-          if constexpr (!std::is_same_v<return_type, void>) {
-            return_type result;
-            decoder(result);
-            return result;
-          }
+          result_holder<return_type> result;
+          decoder(result);
+          return std::move(result).value();
         });
       } catch (...) {
         connection_.cancel_request(req_id);
