@@ -25,14 +25,49 @@
 #include <algorithm>
 #include <exception>
 #include <optional>
+#include <string>
 #include <utility>
 #include "ash/errors.h"
+#include "ash/serializable.h"
 
 namespace ash {
 
 template <typename T>
-class result_holder {
+class result_holder : public serializable<result_holder<T>> {
  public:
+  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+
+  template <typename E>
+  void save(E& e) const {
+    e(value_);
+    if (exception_) {
+      e(true);
+      auto [type, message] = error_factory::analyze_exception(exception_);
+      e(type);
+      e(message);
+    } else {
+      e(false);
+    }
+  }
+
+  template <typename D>
+  void load(D& d) {
+    d(value_);
+    bool has_exception;
+    exception_ = nullptr;
+    d(has_exception);
+    if (has_exception) {
+      std::string type, message;
+      d(type);
+      d(message);
+      try {
+        error_factory::get().throw_error(type, message.c_str());
+      } catch (...) {
+        exception_ = std::current_exception();
+      }
+    }
+  }
+
   using value_type = T;
 
   result_holder() noexcept = default;
@@ -143,8 +178,10 @@ class result_holder {
 };
 
 template <>
-class result_holder<void> {
+class result_holder<void> : public serializable<result_holder<void>> {
  public:
+  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+
   using value_type = void;
 
   result_holder() noexcept = default;

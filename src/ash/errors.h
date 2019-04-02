@@ -23,9 +23,11 @@
 #define ASH_ERRORS_H_
 
 #include <cerrno>
+#include <exception>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include "ash/container/flat_map.h"
 #include "ash/singleton.h"
 
@@ -59,6 +61,9 @@ class error_factory : public singleton<error_factory> {
 
   template <typename T>
   std::string_view register_error_class(std::string_view error_class_name);
+
+  static std::pair<std::string, std::string> analyze_exception(
+      std::exception_ptr exc);
 
  private:
   ash::flat_map<std::string_view, error_function_type> error_function_map_;

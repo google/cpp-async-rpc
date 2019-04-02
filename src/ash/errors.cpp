@@ -40,6 +40,25 @@ void error_factory::throw_error(std::string_view error_class_name,
   it->second(what);
 }
 
+std::pair<std::string, std::string> error_factory::analyze_exception(
+    std::exception_ptr exc) {
+  std::string type, what;
+
+  if (exc) {
+    try {
+      std::rethrow_exception(exc);
+    } catch (const errors::base_error& e) {
+      type = e.portable_error_class_name();
+      what = e.what();
+    } catch (const std::exception& e) {
+      what = e.what();
+    } catch (...) {
+    }
+  }
+
+  return {type, what};
+}
+
 void throw_io_error(const std::string& message, int code) {
   if (code == EINPROGRESS) {
     // This is just an ongoing non-blocking connection. Nothing to see here.
