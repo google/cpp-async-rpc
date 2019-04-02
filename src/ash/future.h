@@ -74,6 +74,8 @@ class future_state : public future_state_base {
     set_.set();
   }
 
+  void set(result_holder<value_type>&& result) { result_ = std::move(result); }
+
   value_type maybe_get() {
     std::scoped_lock lock(mu_);
     if (result_) {
@@ -84,7 +86,7 @@ class future_state : public future_state_base {
   }
 
  private:
-  result_holder<T> result_;
+  result_holder<value_type> result_;
 };
 
 template <>
@@ -104,6 +106,8 @@ class future_state<void> : public future_state_base {
     set_.set();
   }
 
+  void set(result_holder<value_type>&& result) { result_ = std::move(result); }
+
   void maybe_get() {
     std::scoped_lock lock(mu_);
     if (result_) {
@@ -114,7 +118,7 @@ class future_state<void> : public future_state_base {
   }
 
  private:
-  result_holder<void> result_;
+  result_holder<value_type> result_;
 };
 
 }  // namespace detail
@@ -298,6 +302,10 @@ class promise {
   }
 
   void set_exception(std::exception_ptr exc) { state()->set_exception(exc); }
+
+  void set(result_holder<value_type>&& result) {
+    state()->set(std::move(result));
+  }
 
  private:
   using pointer_type =
