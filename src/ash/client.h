@@ -147,12 +147,17 @@ class client_connection {
   explicit client_connection(Args&&... args)
       : sequence_(0),
         connection_(std::forward<Args>(args)...),
-        receiver_(&client_connection::receive, this) {}
+        receiver_(&client_connection::receive, this),
+        new_timeout_(128),
+        timeout_handler_(&client_connection::handle_timeouts, this) {}
 
   ~client_connection() {
     receiver_.get_context().cancel();
     connection_.disconnect();
     receiver_.join();
+
+    timeout_handler_.get_context().cancel();
+    timeout_handler_.join();
   }
 
   template <typename I, typename N>
@@ -169,32 +174,38 @@ class client_connection {
   using pending_map_type = flat_map<std::uint32_t, pending_request>;
   using sequence_type = std::uint32_t;
 
-  void maybe_gc() {
-    if (++gc_count_ >= pending_.size()) {
-      gc_count_ = 0;
-      auto now = std::chrono::system_clock::now();
-      auto it = pending_.begin();
-      while (it != pending_.end()) {
-        if (it->second.deadline && *(it->second.deadline) < now) {
-          it->second.result.set_exception(std::make_exception_ptr(
-              errors::deadline_exceeded("Request timed out")));
-          it = pending_.erase(it);
-        } else {
-          ++it;
-        }
+  void gc() {
+    gc_count_ = 0;
+    auto now = std::chrono::system_clock::now();
+    auto it = pending_.begin();
+    while (it != pending_.end()) {
+      if (it->second.deadline && *(it->second.deadline) < now) {
+        it->second.result.set_exception(std::make_exception_ptr(
+            errors::deadline_exceeded("Request timed out")));
+        it = pending_.erase(it);
+      } else {
+        ++it;
       }
     }
   }
 
   std::pair<sequence_type, future<std::string>> start_request(Encoder& e) {
     std::scoped_lock lock(pending_mu_);
-    maybe_gc();
+    if (++gc_count_ >= pending_.size()) {
+      gc_count_ = 0;
+      gc();
+    }
 
     auto req_id = sequence_++;
     auto& pending = pending_[req_id];
     pending.deadline = context::current().deadline();
     auto result = pending.result.get_future();
     e(req_id);
+
+    if (pending.deadline) {
+      new_timeout_.put();
+    }
+
     return {req_id, std::move(result)};
   }
 
@@ -276,13 +287,41 @@ class client_connection {
     }
   }
 
+  void handle_timeouts() {
+    while (true) {
+      std::optional<context::time_point> earliest_deadline;
+      {
+        std::scoped_lock lock(pending_mu_);
+        for (const auto& p : pending_) {
+          if (p.second.deadline) {
+            if (earliest_deadline) {
+              earliest_deadline =
+                  std::min(*earliest_deadline, *p.second.deadline);
+            } else {
+              earliest_deadline = *p.second.deadline;
+            }
+          }
+        }
+      }
+      auto [again, do_gc] =
+          select(new_timeout_.async_get(),
+                 earliest_deadline ? deadline(*earliest_deadline) : never());
+      if (do_gc) {
+        std::scoped_lock lock(pending_mu_);
+        gc();
+      }
+    }
+  }
+
   mutex pending_mu_, sending_mu_;
   sequence_type sequence_;
   flag ready_;
   connection_type connection_;
   pending_map_type pending_;
   typename pending_map_type::size_type gc_count_ = 0;
-  ash::daemon_thread receiver_;
+  daemon_thread receiver_;
+  queue<void> new_timeout_;
+  daemon_thread timeout_handler_;
 };
 
 }  // namespace ash

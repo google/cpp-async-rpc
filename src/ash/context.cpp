@@ -109,15 +109,15 @@ bool context::is_cancelled() const {
 awaitable<void> context::wait_cancelled() {
   std::scoped_lock lock(mu_);
   return cancelled_.wait_set().then(
-      std::move([]() { throw errors::cancelled("Context is cancelled"); }));
+      []() { throw errors::cancelled("Context is cancelled"); });
 }
 
 awaitable<void> context::wait_deadline() {
   std::scoped_lock lock(mu_);
   if (deadline_) {
-    return ash::deadline(*deadline_).then(std::move([]() {
+    return ash::deadline(*deadline_).then([]() {
       throw errors::deadline_exceeded("Deadline exceeded");
-    }));
+    });
   } else {
     return ash::never();
   }
