@@ -22,6 +22,7 @@
 #ifndef ASH_CLIENT_H_
 #define ASH_CLIENT_H_
 
+#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <optional>
@@ -39,9 +40,11 @@
 #include "ash/flag.h"
 #include "ash/future.h"
 #include "ash/interface.h"
+#include "ash/message_defs.h"
 #include "ash/mutex.h"
 #include "ash/object_name.h"
 #include "ash/packet_protocols.h"
+#include "ash/queue.h"
 #include "ash/result_holder.h"
 #include "ash/select.h"
 #include "ash/string_adapters.h"
@@ -96,35 +99,35 @@ class client_connection {
       Encoder encoder(request_os);
 
       // Get the placeholder for the request.
-      auto [req_id, response_future] = connection_.start_request(encoder);
-      try {
-        // Name of the remote object.
-        encoder(name_);
-        // Method name.
-        using method_descriptor = method_descriptor<mptr>;
-        encoder(method_descriptor::name());
-        // Method signature hash.
-        constexpr auto method_hash = traits::type_hash_v<method_type>;
-        encoder(method_hash);
-        // Actual arguments.
-        encoder(args_refs);
-        // Current context.
-        encoder(context::current());
+      auto req_id = connection_.new_request_id();
+      // Message type: RPC request.
+      encoder(rpc_defs::message_type::REQUEST);
+      // Request ID.
+      encoder(req_id);
+      // Name of the remote object.
+      encoder(name_);
+      // Method name.
+      using method_descriptor = method_descriptor<mptr>;
+      encoder(method_descriptor::name());
+      // Method signature hash.
+      constexpr auto method_hash = traits::type_hash_v<method_type>;
+      encoder(method_hash);
+      // Current context.
+      encoder(context::current());
+      // Actual arguments.
+      encoder(args_refs);
 
-        // Send the request.
-        connection_.send(std::move(request));
+      // Send the request.
+      auto response_future =
+          connection_.send_request(req_id, std::move(request));
 
-        return response_future.then([](std::string response) {
-          string_input_stream response_is(response);
-          Decoder decoder(response_is);
-          result_holder<return_type> result;
-          decoder(result);
-          return std::move(result).value();
-        });
-      } catch (...) {
-        connection_.cancel_request(req_id);
-        throw;
-      }
+      return response_future.then([](std::string response) {
+        string_input_stream response_is(response);
+        Decoder decoder(response_is);
+        result_holder<return_type> result;
+        decoder(result);
+        return std::move(result).value();
+      });
     }
 
     template <auto mptr, typename... A>
@@ -175,7 +178,7 @@ class client_connection {
   using sequence_type = std::uint32_t;
 
   void gc() {
-    gc_count_ = 0;
+    std::scoped_lock lock(pending_mu_);
     auto now = std::chrono::system_clock::now();
     auto it = pending_.begin();
     while (it != pending_.end()) {
@@ -189,27 +192,12 @@ class client_connection {
     }
   }
 
-  std::pair<sequence_type, future<std::string>> start_request(Encoder& e) {
+  sequence_type new_request_id() {
     std::scoped_lock lock(pending_mu_);
-    if (++gc_count_ >= pending_.size()) {
-      gc_count_ = 0;
-      gc();
-    }
-
-    auto req_id = sequence_++;
-    auto& pending = pending_[req_id];
-    pending.deadline = context::current().deadline();
-    auto result = pending.result.get_future();
-    e(req_id);
-
-    if (pending.deadline) {
-      new_timeout_.put();
-    }
-
-    return {req_id, std::move(result)};
+    return sequence_++;
   }
 
-  void cancel_request(sequence_type req_id) {
+  void abandon_request(sequence_type req_id) {
     std::scoped_lock lock(pending_mu_);
     auto it = pending_.find(req_id);
     if (it != pending_.end()) {
@@ -237,8 +225,21 @@ class client_connection {
     pending_.clear();
   }
 
-  void send(std::string request) {
+  future<std::string> send_request(sequence_type req_id, std::string request) {
+    future<std::string> result;
+
     {
+      std::scoped_lock lock(pending_mu_);
+      auto& pending = pending_[req_id];
+      pending.deadline = context::current().deadline();
+      result = pending.result.get_future();
+
+      if (pending.deadline) {
+        new_timeout_.put();
+      }
+    }
+
+    try {
       std::scoped_lock lock(sending_mu_);
       try {
         connection_.connect();
@@ -250,7 +251,12 @@ class client_connection {
         connection_.disconnect();
         throw;
       }
+    } catch (...) {
+      abandon_request(req_id);
+      throw;
     }
+
+    return result;
   }
 
   void receive() {
@@ -262,15 +268,27 @@ class client_connection {
         while (true) {
           // Read the next packet.
           auto response = connection_.receive();
-
-          // Decode the request id.
           string_input_stream response_is(response);
           Decoder decoder(response_is);
-          sequence_type req_id;
-          decoder(req_id);
-          response.erase(0, response_is.pos());
 
-          set_response(req_id, response);
+          // Decode the message type.
+          rpc_defs::message_type message_type;
+          decoder(message_type);
+
+          switch (message_type) {
+            case rpc_defs::message_type::RESPONSE:
+              // Decode the request id.
+              sequence_type req_id;
+              decoder(req_id);
+
+              response.erase(0, response_is.pos());
+              set_response(req_id, std::move(response));
+              break;
+            default:
+              // Unknown message received.
+              throw errors::data_mismatch("Received invalid message type");
+              break;
+          }
         }
       } catch (...) {
         // Prevent sending more requests while we disconnect.
@@ -287,27 +305,28 @@ class client_connection {
     }
   }
 
-  void handle_timeouts() {
-    while (true) {
-      std::optional<context::time_point> earliest_deadline;
-      {
-        std::scoped_lock lock(pending_mu_);
-        for (const auto& p : pending_) {
-          if (p.second.deadline) {
-            if (earliest_deadline) {
-              earliest_deadline =
-                  std::min(*earliest_deadline, *p.second.deadline);
-            } else {
-              earliest_deadline = *p.second.deadline;
-            }
-          }
+  std::optional<context::time_point> get_earliest_deadline() {
+    std::scoped_lock lock(pending_mu_);
+    std::optional<context::time_point> earliest_deadline;
+    for (const auto& p : pending_) {
+      if (p.second.deadline) {
+        if (earliest_deadline) {
+          earliest_deadline = std::min(*earliest_deadline, *p.second.deadline);
+        } else {
+          earliest_deadline = *p.second.deadline;
         }
       }
-      auto [again, do_gc] =
+    }
+    return earliest_deadline;
+  }
+
+  void handle_timeouts() {
+    while (true) {
+      auto earliest_deadline = get_earliest_deadline();
+      auto [something_changed, time_to_do_gc] =
           select(new_timeout_.async_get(),
                  earliest_deadline ? deadline(*earliest_deadline) : never());
-      if (do_gc) {
-        std::scoped_lock lock(pending_mu_);
+      if (time_to_do_gc) {
         gc();
       }
     }
@@ -318,7 +337,6 @@ class client_connection {
   flag ready_;
   connection_type connection_;
   pending_map_type pending_;
-  typename pending_map_type::size_type gc_count_ = 0;
   daemon_thread receiver_;
   queue<void> new_timeout_;
   daemon_thread timeout_handler_;
