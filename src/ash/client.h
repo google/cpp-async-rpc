@@ -22,6 +22,9 @@
 #ifndef ASH_CLIENT_H_
 #define ASH_CLIENT_H_
 
+#include <chrono>
+#include <exception>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -48,6 +51,12 @@
 
 namespace ash {
 
+struct client_options {
+  // Deadline applied to each request (default to 1 hour).
+  std::optional<std::chrono::milliseconds> request_deadline =
+      std::chrono::hours(1);
+};
+
 template <typename Connection = client_socket_connection,
           typename Encoder = little_endian_binary_encoder,
           typename Decoder = little_endian_binary_decoder,
@@ -57,12 +66,19 @@ template <typename Connection = client_socket_connection,
 class client_connection {
  private:
   struct remote_object {
-    remote_object(client_connection& connection, std::string_view name)
-        : connection_(connection), name_(name) {}
+    remote_object(client_connection& connection, std::string_view name,
+                  const client_options& options = {})
+        : connection_(connection), name_(name), options_(options) {}
 
     template <auto mptr, typename... A>
     future<typename traits::member_function_pointer_traits<mptr>::return_type>
     async_call(A&&... args) {
+      // Propagate any timeout in client_options.
+      context ctx;
+      if (options_.request_deadline) {
+        ctx.set_timeout(*options_.request_deadline);
+      }
+
       using return_type =
           typename traits::member_function_pointer_traits<mptr>::return_type;
       using method_type =
@@ -119,6 +135,7 @@ class client_connection {
 
     client_connection& connection_;
     const std::string name_;
+    client_options options_;
   };
 
   using connection_type =
@@ -145,27 +162,57 @@ class client_connection {
   }
 
  private:
-  using pending_map_type = flat_map<std::uint32_t, promise<std::string>>;
+  struct pending_request {
+    std::optional<context::time_point> deadline;
+    promise<std::string> result;
+  };
+  using pending_map_type = flat_map<std::uint32_t, pending_request>;
   using sequence_type = std::uint32_t;
+
+  void maybe_gc() {
+    if (++gc_count_ >= pending_.size()) {
+      gc_count_ = 0;
+      auto now = std::chrono::system_clock::now();
+      auto it = pending_.begin();
+      while (it != pending_.end()) {
+        if (it->second.deadline && *(it->second.deadline) < now) {
+          it->second.result.set_exception(std::make_exception_ptr(
+              errors::deadline_exceeded("Request timed out")));
+          it = pending_.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    }
+  }
 
   std::pair<sequence_type, future<std::string>> start_request(Encoder& e) {
     std::scoped_lock lock(pending_mu_);
+    maybe_gc();
+
     auto req_id = sequence_++;
-    auto result = pending_[req_id].get_future();
+    auto& pending = pending_[req_id];
+    pending.deadline = context::current().deadline();
+    auto result = pending.result.get_future();
     e(req_id);
     return {req_id, std::move(result)};
   }
 
   void cancel_request(sequence_type req_id) {
     std::scoped_lock lock(pending_mu_);
-    pending_.erase(req_id);
+    auto it = pending_.find(req_id);
+    if (it != pending_.end()) {
+      it->second.result.set_exception(
+          std::make_exception_ptr(errors::cancelled("Request cancelled")));
+      pending_.erase(it);
+    }
   }
 
   void set_response(sequence_type req_id, std::string response) {
     std::scoped_lock lock(pending_mu_);
     auto it = pending_.find(req_id);
     if (it != pending_.end()) {
-      it->second.set_value(std::move(response));
+      it->second.result.set_value(std::move(response));
       pending_.erase(it);
     }
   }
@@ -174,7 +221,7 @@ class client_connection {
     std::scoped_lock lock(pending_mu_);
     // Report the exception for all pending requests and unqueue them.
     for (auto& p : pending_) {
-      p.second.set_exception(exc);
+      p.second.result.set_exception(exc);
     }
     pending_.clear();
   }
@@ -234,6 +281,7 @@ class client_connection {
   flag ready_;
   connection_type connection_;
   pending_map_type pending_;
+  typename pending_map_type::size_type gc_count_ = 0;
   ash::daemon_thread receiver_;
 };
 

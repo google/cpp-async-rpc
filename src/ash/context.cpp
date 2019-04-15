@@ -86,7 +86,8 @@ std::optional<context::time_point> context::deadline() const {
 std::optional<context::duration> context::deadline_left() const {
   std::scoped_lock lock(mu_);
   if (deadline_) {
-    return *deadline_ - std::chrono::system_clock::now();
+    return std::chrono::duration_cast<duration>(
+        *deadline_ - std::chrono::system_clock::now());
   } else {
     return std::nullopt;
   }
@@ -130,7 +131,8 @@ void context::set_deadline(time_point when) {
 }
 
 void context::set_timeout(duration timeout) {
-  set_deadline(std::chrono::system_clock::now() + timeout);
+  set_deadline(std::chrono::time_point_cast<context::duration>(
+      std::chrono::system_clock::now() + timeout));
 }
 
 void context::reset_all() {
