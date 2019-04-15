@@ -74,7 +74,9 @@ class client_connection {
         : connection_(connection), name_(name), options_(options) {}
 
     template <auto mptr, typename... A>
-    future<typename traits::member_function_pointer_traits<mptr>::return_type>
+    std::pair<future<typename traits::member_function_pointer_traits<
+                  mptr>::return_type>,
+              rpc_defs::request_id_type>
     async_call(A&&... args) {
       // Propagate any timeout in client_options.
       context ctx;
@@ -121,19 +123,26 @@ class client_connection {
       auto response_future =
           connection_.send_request(req_id, std::move(request));
 
-      return response_future.then([](std::string response) {
-        string_input_stream response_is(response);
-        Decoder decoder(response_is);
-        result_holder<return_type> result;
-        decoder(result);
-        return std::move(result).value();
-      });
+      return {response_future.then([](std::string response) {
+                string_input_stream response_is(response);
+                Decoder decoder(response_is);
+                result_holder<return_type> result;
+                decoder(result);
+                return std::move(result).value();
+              }),
+              req_id};
     }
 
     template <auto mptr, typename... A>
     typename traits::member_function_pointer_traits<mptr>::return_type call(
         A&&... args) {
-      return async_call<mptr>(std::forward<A>(args)...).get();
+      auto [result, req_id] = async_call<mptr>(std::forward<A>(args)...);
+      try {
+        return result.get();
+      } catch (const errors::cancelled&) {
+        connection_.cancel_request(req_id);
+        throw;
+      }
     }
 
     client_connection& connection_;
@@ -169,13 +178,29 @@ class client_connection {
         *this, object_name<ObjectNameEncoder>(std::forward<N>(name))));
   }
 
+  void cancel_request(rpc_defs::request_id_type req_id) {
+    abandon_request(req_id);
+
+    // Serialize to a string.
+    std::string cancel_request;
+    string_output_stream cancel_request_os(cancel_request);
+    Encoder encoder(cancel_request_os);
+
+    // Message type: RPC request.
+    encoder(rpc_defs::message_type::CANCEL_REQUEST);
+    // Request ID.
+    encoder(req_id);
+
+    // Send the cancellation request.
+    send(cancel_request);
+  }
+
  private:
   struct pending_request {
     std::optional<context::time_point> deadline;
     promise<std::string> result;
   };
   using pending_map_type = flat_map<std::uint32_t, pending_request>;
-  using sequence_type = std::uint32_t;
 
   void gc() {
     std::scoped_lock lock(pending_mu_);
@@ -192,12 +217,12 @@ class client_connection {
     }
   }
 
-  sequence_type new_request_id() {
+  rpc_defs::request_id_type new_request_id() {
     std::scoped_lock lock(pending_mu_);
     return sequence_++;
   }
 
-  void abandon_request(sequence_type req_id) {
+  void abandon_request(rpc_defs::request_id_type req_id) {
     std::scoped_lock lock(pending_mu_);
     auto it = pending_.find(req_id);
     if (it != pending_.end()) {
@@ -207,7 +232,7 @@ class client_connection {
     }
   }
 
-  void set_response(sequence_type req_id, std::string response) {
+  void set_response(rpc_defs::request_id_type req_id, std::string response) {
     std::scoped_lock lock(pending_mu_);
     auto it = pending_.find(req_id);
     if (it != pending_.end()) {
@@ -225,7 +250,22 @@ class client_connection {
     pending_.clear();
   }
 
-  future<std::string> send_request(sequence_type req_id, std::string request) {
+  void send(std::string data) {
+    std::scoped_lock lock(sending_mu_);
+    try {
+      connection_.connect();
+      connection_.send(std::move(data));
+      ready_.set();
+    } catch (...) {
+      // Disconnect the connection.
+      ready_.reset();
+      connection_.disconnect();
+      throw;
+    }
+  }
+
+  future<std::string> send_request(rpc_defs::request_id_type req_id,
+                                   std::string request) {
     future<std::string> result;
 
     {
@@ -240,17 +280,7 @@ class client_connection {
     }
 
     try {
-      std::scoped_lock lock(sending_mu_);
-      try {
-        connection_.connect();
-        connection_.send(std::move(request));
-        ready_.set();
-      } catch (...) {
-        // Disconnect the connection.
-        ready_.reset();
-        connection_.disconnect();
-        throw;
-      }
+      send(request);
     } catch (...) {
       abandon_request(req_id);
       throw;
@@ -278,7 +308,7 @@ class client_connection {
           switch (message_type) {
             case rpc_defs::message_type::RESPONSE:
               // Decode the request id.
-              sequence_type req_id;
+              rpc_defs::request_id_type req_id;
               decoder(req_id);
 
               response.erase(0, response_is.pos());
@@ -333,7 +363,7 @@ class client_connection {
   }
 
   mutex pending_mu_, sending_mu_;
-  sequence_type sequence_;
+  rpc_defs::request_id_type sequence_;
   flag ready_;
   connection_type connection_;
   pending_map_type pending_;

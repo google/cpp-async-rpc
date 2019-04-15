@@ -506,7 +506,9 @@ int main() {
       ash::context ctx;
       ctx.set_timeout(std::chrono::seconds(10));
       ctx.set(X());
-      res = obj.get("variable", 99);
+      auto [fut, req_id] = obj.get("variable", 99);
+      conn.cancel_request(req_id);
+      res = std::move(fut);
     }
     std::cerr << "XX" << res.get() << "XX" << std::endl;
   } catch (const std::runtime_error& e) {

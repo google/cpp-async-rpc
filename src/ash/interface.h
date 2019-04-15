@@ -114,9 +114,10 @@ struct async_interface : virtual Extends::async... {
 #define ASH_INTERFACE_DECLS(...) \
   ASH_FOREACH(ASH_INTERFACE_DECLS_ONE, ASH_INTERFACE_DECLS_SEP, __VA_ARGS__)
 
-#define ASH_INTERFACE_ASYNC_DECL(RETURN, METHOD, ARGS) \
-  virtual ::ash::future<ASH_EXPAND_1 RETURN> METHOD(   \
-      ASH_INTERFACE_DECL_ARGS ARGS) = 0;
+#define ASH_INTERFACE_ASYNC_DECL(RETURN, METHOD, ARGS)    \
+  virtual ::std::pair<::ash::future<ASH_EXPAND_1 RETURN>, \
+                      ::ash::rpc_defs::request_id_type>   \
+  METHOD(ASH_INTERFACE_DECL_ARGS ARGS) = 0;
 #define ASH_INTERFACE_ASYNC_DECLS_ONE(...) ASH_INTERFACE_ASYNC_DECL __VA_ARGS__
 #define ASH_INTERFACE_ASYNC_DECLS_SEP()
 #define ASH_INTERFACE_ASYNC_DECLS(...)                                      \
@@ -152,8 +153,9 @@ struct async_interface : virtual Extends::async... {
               __VA_ARGS__)
 
 #define ASH_INTERFACE_ASYNC_PROXY_IMPL(RETURN, METHOD, ARGS) \
-  ::ash::future<ASH_EXPAND_1 RETURN> METHOD(                 \
-      ASH_INTERFACE_PROXY_IMPL_ARGS ARGS) override {         \
+  ::std::pair<::ash::future<ASH_EXPAND_1 RETURN>,            \
+              ::ash::rpc_defs::request_id_type>              \
+  METHOD(ASH_INTERFACE_PROXY_IMPL_ARGS ARGS) override {      \
     return obj_.template async_call<&own_interface::METHOD>( \
         ASH_INTERFACE_PROXY_FORWARD_ARGS ARGS);              \
   }

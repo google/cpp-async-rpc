@@ -27,6 +27,8 @@
 namespace ash {
 namespace rpc_defs {
 
+using request_id_type = std::uint32_t;
+
 enum class message_type : std::uint8_t {
   REQUEST,         // RPC request
   RESPONSE,        // RPC response
