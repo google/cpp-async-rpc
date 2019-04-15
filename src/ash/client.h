@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <exception>
 #include <optional>
 #include <sstream>
@@ -65,7 +66,8 @@ template <typename Connection = client_socket_connection,
           typename Decoder = little_endian_binary_decoder,
           typename PacketProtocol =
               protected_stream_packet_protocol<Encoder, Decoder>,
-          typename ObjectNameEncoder = Encoder>
+          typename ObjectNameEncoder = Encoder,
+          std::size_t max_queued_events = 256>
 class client_connection {
  private:
   struct remote_object {
@@ -160,9 +162,10 @@ class client_connection {
       : sequence_(0),
         connection_(std::forward<Args>(args)...),
         receiver_(&client_connection::receive, this),
-        new_deadline_(16),
-        cancelled_requests_(16),
-        timeout_and_cancellation_handler_(&client_connection::handle_timeouts_and_cancellations, this) {}
+        new_deadline_(max_queued_events),
+        cancelled_requests_(max_queued_events),
+        timeout_and_cancellation_handler_(
+            &client_connection::handle_timeouts_and_cancellations, this) {}
 
   ~client_connection() {
     receiver_.get_context().cancel();
