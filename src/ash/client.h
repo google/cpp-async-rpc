@@ -97,29 +97,32 @@ class client_connection {
               mptr>::args_ref_tuple_type;
       args_ref_tuple_type args_refs(std::forward<A>(args)...);
 
-      // Serialize to a string.
-      std::string request;
-      string_output_stream request_os(request);
-      Encoder encoder(request_os);
-
       // Get the placeholder for the request.
       auto req_id = connection_.new_request_id();
-      // Message type: RPC request.
-      encoder(rpc_defs::message_type::REQUEST);
-      // Request ID.
-      encoder(req_id);
-      // Name of the remote object.
-      encoder(name_);
-      // Method name.
-      using method_descriptor = method_descriptor<mptr>;
-      encoder(method_descriptor::name());
-      // Method signature hash.
-      constexpr auto method_hash = traits::type_hash_v<method_type>;
-      encoder(method_hash);
-      // Current context.
-      encoder(context::current());
-      // Actual arguments.
-      encoder(args_refs);
+
+      // Serialize to a string.
+      std::string request;
+      {
+        string_output_stream request_os(request);
+        Encoder encoder(request_os);
+
+        // Message type: RPC request.
+        encoder(rpc_defs::message_type::REQUEST);
+        // Request ID.
+        encoder(req_id);
+        // Name of the remote object.
+        encoder(name_);
+        // Method name.
+        using method_descriptor = method_descriptor<mptr>;
+        encoder(method_descriptor::name());
+        // Method signature hash.
+        constexpr auto method_hash = traits::type_hash_v<method_type>;
+        encoder(method_hash);
+        // Current context.
+        encoder(context::current());
+        // Actual arguments.
+        encoder(args_refs);
+      }
 
       // Send the request.
       auto response_future =
@@ -366,16 +369,20 @@ class client_connection {
 
         // Serialize to a string.
         std::string cancel_request;
-        string_output_stream cancel_request_os(cancel_request);
-        Encoder encoder(cancel_request_os);
+        {
+          string_output_stream cancel_request_os(cancel_request);
+          Encoder encoder(cancel_request_os);
 
-        // Message type: RPC request.
-        encoder(rpc_defs::message_type::CANCEL_REQUEST);
-        // Request ID.
-        encoder(req_id);
-
-        // Send the cancellation request.
-        send(cancel_request);
+          // Message type: RPC request.
+          encoder(rpc_defs::message_type::CANCEL_REQUEST);
+          // Request ID.
+          encoder(req_id);
+        }
+        // Send the cancellation request. Ignore errors.
+        try {
+          send(cancel_request);
+        } catch (...) {
+        }
       }
     }
   }
