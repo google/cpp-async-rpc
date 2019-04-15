@@ -160,16 +160,17 @@ class client_connection {
       : sequence_(0),
         connection_(std::forward<Args>(args)...),
         receiver_(&client_connection::receive, this),
-        new_timeout_(128),
-        timeout_handler_(&client_connection::handle_timeouts, this) {}
+        new_deadline_(16),
+        cancelled_requests_(16),
+        timeout_and_cancellation_handler_(&client_connection::handle_timeouts_and_cancellations, this) {}
 
   ~client_connection() {
     receiver_.get_context().cancel();
     connection_.disconnect();
     receiver_.join();
 
-    timeout_handler_.get_context().cancel();
-    timeout_handler_.join();
+    timeout_and_cancellation_handler_.get_context().cancel();
+    timeout_and_cancellation_handler_.join();
   }
 
   template <typename I, typename N>
@@ -181,18 +182,10 @@ class client_connection {
   void cancel_request(rpc_defs::request_id_type req_id) {
     abandon_request(req_id);
 
-    // Serialize to a string.
-    std::string cancel_request;
-    string_output_stream cancel_request_os(cancel_request);
-    Encoder encoder(cancel_request_os);
-
-    // Message type: RPC request.
-    encoder(rpc_defs::message_type::CANCEL_REQUEST);
-    // Request ID.
-    encoder(req_id);
-
-    // Send the cancellation request.
-    send(cancel_request);
+    try {
+      cancelled_requests_.maybe_put(req_id);
+    } catch (const errors::try_again&) {
+    }
   }
 
  private:
@@ -275,7 +268,10 @@ class client_connection {
       result = pending.result.get_future();
 
       if (pending.deadline) {
-        new_timeout_.put();
+        try {
+          new_deadline_.maybe_put();
+        } catch (const errors::try_again&) {
+        }
       }
     }
 
@@ -350,14 +346,33 @@ class client_connection {
     return earliest_deadline;
   }
 
-  void handle_timeouts() {
+  void handle_timeouts_and_cancellations() {
     while (true) {
       auto earliest_deadline = get_earliest_deadline();
-      auto [something_changed, time_to_do_gc] =
-          select(new_timeout_.async_get(),
+
+      auto [new_deadline_added, cancelled_request, time_to_do_gc] =
+          select(new_deadline_.async_get(), cancelled_requests_.async_get(),
                  earliest_deadline ? deadline(*earliest_deadline) : never());
+
       if (time_to_do_gc) {
         gc();
+      }
+
+      if (cancelled_request) {
+        auto req_id = *cancelled_request;
+
+        // Serialize to a string.
+        std::string cancel_request;
+        string_output_stream cancel_request_os(cancel_request);
+        Encoder encoder(cancel_request_os);
+
+        // Message type: RPC request.
+        encoder(rpc_defs::message_type::CANCEL_REQUEST);
+        // Request ID.
+        encoder(req_id);
+
+        // Send the cancellation request.
+        send(cancel_request);
       }
     }
   }
@@ -368,8 +383,9 @@ class client_connection {
   connection_type connection_;
   pending_map_type pending_;
   daemon_thread receiver_;
-  queue<void> new_timeout_;
-  daemon_thread timeout_handler_;
+  queue<void> new_deadline_;
+  queue<rpc_defs::request_id_type> cancelled_requests_;
+  daemon_thread timeout_and_cancellation_handler_;
 };
 
 }  // namespace ash
