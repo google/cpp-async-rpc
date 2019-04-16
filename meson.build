@@ -1,5 +1,9 @@
 project('ash', 'cpp', default_options : ['cpp_std=c++17'], version : '0.0.1')
 
+# Third party includes.
+third_party_includes = include_directories('third_party/function2/include')
+third_party_test_includes = include_directories('third_party/catch2/single_include')
+
 # Global configuration data.
 config_data = configuration_data()
 config_data.set('VERSION', meson.project_version())

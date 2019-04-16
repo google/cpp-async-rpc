@@ -1,4 +1,6 @@
-includes = include_directories('.', '../function2/include')
+includes = include_directories('.')
+
+all_src_includes = [includes, third_party_includes]
 
 find_program_path = find_program('find') 
 
@@ -30,4 +32,4 @@ endforeach
 find_sources_output = run_command(find_program_path.path(), meson.current_source_dir(), '-name', '*.cpp', '-printf', '%P\n')
 sources_list = find_sources_output.stdout().strip().split('\n')
 
-ash_library = static_library('ash', sources_list, include_directories : includes)
+ash_library = static_library('ash', sources_list, include_directories : all_src_includes)
