@@ -1,9 +1,6 @@
 /// \file
 /// \brief Umbrella header to import all of the functionality in ash.
 ///
-/// This is the main header for ash.  This file `#include`s the all the other
-/// headers needed for the main functionality in ash.
-///
 /// \copyright
 ///   Copyright 2018 by Google Inc. All Rights Reserved.
 ///
@@ -21,6 +18,12 @@
 ///   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
+
+/// \file
+///
+/// This is the main header for ash.  This file `#include`s the all the other
+/// headers needed for the main functionality in ash.
+///
 
 #ifndef ASH_H_
 #define ASH_H_
