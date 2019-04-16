@@ -2,7 +2,7 @@
 /// \brief Test for the `ash/serialization_traits.h` header.
 ///
 /// \copyright
-///   Copyright 2018 by Google Inc. All Rights Reserved.
+///   Copyright 2019 by Google LLC. All Rights Reserved.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may

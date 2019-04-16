@@ -2,7 +2,7 @@
 /// \brief Utility for defining enumerations with named entries.
 ///
 /// \copyright
-///   Copyright 2018 by Google Inc. All Rights Reserved.
+///   Copyright 2019 by Google LLC. All Rights Reserved.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
