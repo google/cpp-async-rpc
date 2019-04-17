@@ -22,7 +22,6 @@
 #ifndef ASH_EXECUTOR_H_
 #define ASH_EXECUTOR_H_
 
-#include <thread>
 #include <utility>
 #include <vector>
 #include "ash/queue.h"

@@ -88,8 +88,6 @@ class client_connection {
 
       using return_type =
           typename traits::member_function_pointer_traits<mptr>::return_type;
-      using method_type =
-          typename traits::member_function_pointer_traits<mptr>::method_type;
 
       // Get a serializable tuple with the args.
       using args_ref_tuple_type =
@@ -113,10 +111,11 @@ class client_connection {
         // Name of the remote object.
         encoder(name_);
         // Method name.
-        using method_descriptor = method_descriptor<mptr>;
-        encoder(method_descriptor::name());
+        using method_info = method_descriptor<mptr>;
+        encoder(method_info::name());
         // Method signature hash.
-        constexpr auto method_hash = traits::type_hash_v<method_type>;
+        constexpr auto method_hash =
+            traits::type_hash_v<typename method_info::method_type>;
         encoder(method_hash);
         // Current context.
         encoder(context::current());
@@ -180,9 +179,9 @@ class client_connection {
   }
 
   template <typename I, typename N>
-  auto get_proxy(N&& name) {
+  auto get_proxy(N&& name, const client_options& options = {}) {
     return I::make_proxy(remote_object(
-        *this, object_name<ObjectNameEncoder>(std::forward<N>(name))));
+        *this, object_name<ObjectNameEncoder>(std::forward<N>(name)), options));
   }
 
   void cancel_request(rpc_defs::request_id_type req_id) {

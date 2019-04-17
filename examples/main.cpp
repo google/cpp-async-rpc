@@ -44,6 +44,7 @@
 #include "ash/queue.h"
 #include "ash/select.h"
 #include "ash/serializable.h"
+#include "ash/server.h"
 #include "ash/socket.h"
 #include "ash/string_adapters.h"
 #include "ash/thread.h"
@@ -191,7 +192,27 @@ struct bad_connection {
   }
 };
 
+struct WriterImpl : public Writer {
+  std::string get(const std::string& name, std::optional<int> extra) override {
+    return name + "_poo";
+  }
+
+  void set(const std::string& name, const std::string& value,
+           std::optional<int> extra) {}
+
+  void clear() {}
+};
+
 int main() {
+  {
+    ash::server_object<WriterImpl> writer;
+    ash::server_context server_context;
+    std::cerr << "AAA" << std::endl;
+    server_context.register_object("test", writer);
+    std::cerr << "BBB" << std::endl;
+    server_context.unregister_object("test", writer);
+    std::cerr << "CCC" << std::endl;
+  }
   {
     std::cerr
         << "ms: "

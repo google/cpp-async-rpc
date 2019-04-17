@@ -104,6 +104,7 @@ ERROR_CLASS(not_implemented);
 ERROR_CLASS(not_found);
 ERROR_CLASS(out_of_range);
 ERROR_CLASS(shutting_down);
+ERROR_CLASS(unavailable);
 ERROR_CLASS(try_again);
 
 }  // namespace errors

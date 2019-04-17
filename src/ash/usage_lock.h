@@ -30,11 +30,16 @@
 
 namespace ash {
 
-template <typename T, typename E>
+template <typename T, typename E = errors::unavailable>
 class usage_lock {
  public:
   explicit usage_lock(const char* exception_message = "")
       : message_(exception_message) {}
+
+  explicit usage_lock(T* ptr, const char* exception_message = "")
+      : message_(exception_message) {
+    arm(ptr);
+  }
 
   ~usage_lock() { drop(); }
 
