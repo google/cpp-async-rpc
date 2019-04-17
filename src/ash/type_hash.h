@@ -322,6 +322,14 @@ struct type_hash<R(A...), Seen, base,
       mpt::insert_type_into_t<R(A...), Seen>, R, A...>::value;
 };
 
+template <typename R, typename... A, typename Seen, type_hash_t base>
+struct type_hash<R(A...) const, Seen, base,
+                 std::enable_if_t<!mpt::is_type_in_v<R(A...), Seen>>> {
+  static constexpr type_hash_t value = detail::compose_with_types<
+      detail::type_hash_add(base, detail::type_family::FUNCTION, true, 0),
+      mpt::insert_type_into_t<R(A...), Seen>, R, A...>::value;
+};
+
 template <typename T>
 inline constexpr type_hash_t type_hash_v = type_hash<T>::value;
 }  // namespace traits
