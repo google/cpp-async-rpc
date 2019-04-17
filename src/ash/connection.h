@@ -30,6 +30,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include "ash/awaitable.h"
 #include "ash/channel.h"
 #include "ash/errors.h"
 #include "ash/flag.h"
@@ -53,6 +54,9 @@ class connection : public input_stream, public output_stream {
 
   /// Check whether the connection is active.
   virtual bool connected() = 0;
+
+  /// Signal for data becoming available to read.
+  virtual awaitable<void> data_available() = 0;
 };
 
 template <typename Connection>
@@ -107,6 +111,13 @@ class reconnectable_connection : public connection {
 
   char getc() override { return connection_.get()->getc(); }
 
+  awaitable<void> data_available() override {
+    // Keep the reference alive by capturing the shared_ptr within the
+    // awaitable (in the "then lambda").
+    auto connection_ref = connection_.get();
+    return connection_ref->data_available().then([connection_ref]() {});
+  }
+
  private:
   std::optional<Connection> connection_storage_;
   usage_lock<Connection, errors::io_error> connection_{"Connection is closed"};
@@ -133,6 +144,9 @@ class packet_connection {
 
   /// Receive a packet.
   virtual std::string receive() = 0;
+
+  /// Signal for data becoming available to read.
+  virtual awaitable<void> data_available() = 0;
 };
 
 template <typename Connection, typename PacketProtocol>
@@ -150,6 +164,9 @@ class packet_connection_impl : public packet_connection {
     protocol_.send(connection_, std::move(data));
   };
   std::string receive() override { return protocol_.receive(connection_); };
+  awaitable<void> data_available() override {
+    return connection_.data_available();
+  }
 
  private:
   Connection connection_;
@@ -167,6 +184,7 @@ class channel_connection : public connection {
   void flush() override;
   std::size_t read(char* data, std::size_t size) override;
   char getc() override;
+  awaitable<void> data_available() override;
 
  protected:
   usage_lock<channel_connection, errors::io_error> locked_{

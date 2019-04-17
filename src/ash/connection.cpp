@@ -96,6 +96,10 @@ std::size_t channel_connection::read(char* data, std::size_t size) {
 
 char channel_connection::getc() { return connection::getc(); }
 
+awaitable<void> channel_connection::data_available() {
+  return channel_.can_read();
+}
+
 char_dev_connection::char_dev_connection(const std::string& path)
     : channel_connection(open_path(path)) {}
 
