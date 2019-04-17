@@ -36,6 +36,8 @@ class usage_lock {
   explicit usage_lock(const char* exception_message = "")
       : message_(exception_message) {}
 
+  ~usage_lock() { drop(); }
+
   void arm(T* ptr) {
     std::scoped_lock arm_drop_lock(arm_drop_mu_);
     ptr_.reset(ptr, [this](T*) {

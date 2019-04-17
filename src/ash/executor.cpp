@@ -23,10 +23,10 @@
 
 namespace ash {
 
-thread_pool::thread_pool(int num_worker_threads, int queue_size)
+thread_pool::thread_pool(unsigned int num_worker_threads, int queue_size)
     : pending_(queue_size < 0 ? num_worker_threads : queue_size) {
   threads_.reserve(num_worker_threads);
-  for (int i = 0; i < num_worker_threads; i++) {
+  for (unsigned int i = 0; i < num_worker_threads; i++) {
     threads_.emplace_back([this]() {
       while (true) {
         auto f = pending_.get();

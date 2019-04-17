@@ -56,8 +56,8 @@
 namespace ash {
 
 struct client_options {
-  // Deadline applied to each request (default to 1 hour).
-  std::optional<std::chrono::milliseconds> request_deadline =
+  // Timeout applied to each request (default to 1 hour).
+  std::optional<std::chrono::milliseconds> request_timeout =
       std::chrono::hours(1);
 };
 
@@ -82,8 +82,8 @@ class client_connection {
     async_call(A&&... args) {
       // Propagate any timeout in client_options.
       context ctx;
-      if (options_.request_deadline) {
-        ctx.set_timeout(*options_.request_deadline);
+      if (options_.request_timeout) {
+        ctx.set_timeout(*options_.request_timeout);
       }
 
       using return_type =
