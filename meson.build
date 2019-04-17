@@ -41,7 +41,7 @@ license_file = files('LICENSE.md')
 subdir('src')
 subdir('examples')
 subdir('test')
-# subdir('doc')
+subdir('doc')
 
 # Declare this project as a dependency for others to use.
 proj_dep = declare_dependency(include_directories : includes, link_with : ash_library)
