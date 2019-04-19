@@ -278,8 +278,12 @@ auto select(Args&&... args) {
     });
     if (active) {
       auto [cancelled, deadline_exceeded] = mpt::range<n - 2, n>(res);
-      if (cancelled) *cancelled;
-      if (deadline_exceeded) *deadline_exceeded;
+      if (cancelled) {
+        *cancelled;
+      }
+      if (deadline_exceeded) {
+        *deadline_exceeded;
+      }
       return mpt::range<0, n - 2>(std::move(res));
     }
 

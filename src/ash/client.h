@@ -155,8 +155,8 @@ class client_connection {
   };
 
   using connection_type =
-      ash::packet_connection_impl<ash::reconnectable_connection<Connection>,
-                                  PacketProtocol>;
+      packet_connection_impl<reconnectable_connection<Connection>,
+                             PacketProtocol>;
 
  public:
   template <typename... Args>
@@ -317,7 +317,7 @@ class client_connection {
               break;
             default:
               // Unknown message received.
-              throw errors::data_mismatch("Received invalid message type");
+              throw errors::data_mismatch("Received unknown message type");
               break;
           }
         }
