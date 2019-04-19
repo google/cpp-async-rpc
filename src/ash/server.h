@@ -40,6 +40,7 @@
 #include "ash/object_name.h"
 #include "ash/queue.h"
 #include "ash/result_holder.h"
+#include "ash/semaphore.h"
 #include "ash/socket.h"
 #include "ash/string_adapters.h"
 #include "ash/thread.h"
@@ -89,15 +90,26 @@ class connection_producer {
     }
   }
 
+  awaitable<std::unique_ptr<connection_type>> get_connection() {
+    return output_.get();
+  }
+
+  void return_connection(std::unique_ptr<connection_type> returned) {
+    returned.reset();
+    connections_given_.get();
+  }
+
  private:
   void produce() {
     while (true) {
+      connections_given_.put();
       output_.put(factory_());
     }
   }
 
   std::mutex mu_;
   ConnectionFactory factory_;
+  semaphore connections_given_{max_connections};
   queue<std::unique_ptr<connection_type>> output_{max_connections};
   daemon_thread acceptor_;
 };
