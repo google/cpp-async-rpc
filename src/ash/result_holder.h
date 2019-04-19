@@ -169,7 +169,9 @@ class result_holder : public serializable<result_holder<T>> {
 
  private:
   void maybe_throw() const {
-    if (exception_) std::rethrow_exception(exception_);
+    if (exception_) {
+      std::rethrow_exception(exception_);
+    }
     if (!value_) throw errors::invalid_state("Empty result holder accessed");
   }
 
@@ -272,7 +274,9 @@ class result_holder<void> : public serializable<result_holder<void>> {
 
  private:
   void maybe_throw() const {
-    if (exception_) std::rethrow_exception(exception_);
+    if (exception_) {
+      std::rethrow_exception(exception_);
+    }
     if (!value_) throw errors::invalid_state("Empty result holder accessed");
   }
 

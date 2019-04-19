@@ -55,8 +55,7 @@ ASH_INTERFACE(
     Reader, (),
     (
         // Get the value of a variable.
-        ((std::string), get, (((const std::string&), name),
-            ((std::optional<int>), extra)))
+        ((std::string), get, (((const std::string&), name)))
     )
 );
 
@@ -66,8 +65,7 @@ ASH_INTERFACE(
         // Set the value of a variable.
         ((void), set,
             (((const std::string&), name),
-            ((const std::string&), value),
-            ((std::optional<int>), extra))),
+            ((const std::string&), value))),
 
         // Reset the server.
         ((void), clear, ())
@@ -193,35 +191,46 @@ struct bad_connection {
 };
 
 struct WriterImpl : public Writer {
-  std::string get(const std::string& name, std::optional<int> extra) override {
-    return name + "_poo";
+  std::string get(const std::string& name) override {
+    std::string res = name + "_poo";
+    std::cerr << "returning " << res << " for " << name << std::endl;
+    return res;
   }
 
-  void set(const std::string& name, const std::string& value,
-           std::optional<int> extra) {}
+  void set(const std::string& name, const std::string& value) {
+    std::cerr << "Set " << name << " = " << value << std::endl;
+  }
 
-  void clear() {}
+  void clear() {
+    throw ash::errors::invalid_argument("I don't like you!");
+    std::cerr << "Clearing..." << std::endl;
+  }
 };
 
 int main() {
-  {
+  try {
     using namespace std::literals;
 
-    ash::server server({}, ash::endpoint().port(12121));
     ash::server_object<WriterImpl> writer;
-    std::cerr << "AAA" << std::endl;
-    server.register_object("test"sv, writer);
-    std::cerr << "BBB" << std::endl;
-
+    ash::server server({}, ash::endpoint().port(12121));
+    server.register_object("test", writer);
     server.start();
 
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    ash::client_connection conn(ash::endpoint().name("localhost").port(12121));
+    auto obj = conn.get_proxy<Writer>("test");
+    auto result = obj.get("patata");
+    std::cerr << "RESULT: " << result << std::endl;
+    obj.set("pollo", "vaca");
+    obj.clear();
 
     server.stop();
-
-    server.unregister_object(writer);
-    server.unregister_object("test"sv);
-    std::cerr << "CCC" << std::endl;
+    return 0;
+  } catch (const ash::errors::base_error& e) {
+    std::cerr << e.portable_error_class_name() << ": " << e.what() << std::endl;
+    return 0;
+  } catch (int x) {
+    std::cerr << x << std::endl;
+    return 0;
   }
   {
     std::cerr
@@ -537,7 +546,7 @@ int main() {
       ash::context ctx;
       ctx.set_timeout(std::chrono::seconds(10));
       ctx.set(X());
-      auto [fut, req_id] = obj.get("variable", 99);
+      auto [fut, req_id] = obj.get("variable");
       conn.cancel_request(req_id);
       res = std::move(fut);
     }

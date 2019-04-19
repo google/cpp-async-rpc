@@ -25,7 +25,6 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -210,12 +209,8 @@ class server {
                 break;
             }
 
-            std::cerr << "Received connection (OK) " << key_ << std::endl;
-
             receive_done();
           } catch (...) {
-            std::cerr << "Received connection (ERROR) " << key_ << std::endl;
-
             receive_done(true);
           }
         });
@@ -249,8 +244,6 @@ class server {
 
     awaitable<void> remove() {
       return can_remove_.wait_set().then([this]() {
-        std::cerr << "Removing connection " << key_ << std::endl;
-
         server_.acceptor_.return_connection(std::move(connection_));
         server_.connections_.erase(key_);
       });
@@ -266,7 +259,7 @@ class server {
         if (failed) {
           failed_receive_ = true;
         }
-        if (failed_send_ || can_send_) {
+        if (failed_send_ || (can_send_ && failed)) {
           failed_receive_ = true;
           removed = true;
         }
@@ -284,7 +277,7 @@ class server {
         if (failed) {
           failed_send_ = true;
         }
-        if (failed_receive_ || can_receive_) {
+        if (failed_receive_ || (can_receive_ && failed)) {
           failed_send_ = true;
           removed = true;
         }
@@ -365,7 +358,7 @@ class server {
                &parent_context(wrapper_ptr->get_context())]() mutable {
       try {
         context ctx(parent_context);
-        promise.set_value(request_result{key, execute(key.second, std::move(request))});
+        promise.set_value(request_result{key, std::move(execute(key.second, std::move(request)))});
       } catch (...) {
         promise.set_exception(std::current_exception());
       }
@@ -414,7 +407,7 @@ class server {
             }
 
             std::string response;
-            string_output_stream request_os(request);
+            string_output_stream request_os(response);
             Encoder encoder(request_os);
 
             // Message type: RPC request.
@@ -504,8 +497,6 @@ class server {
       }
       connections_[next_connection_key_] = std::make_unique<connection_wrapper>(
           *this, next_connection_key_, std::move(new_connection));
-
-      std::cerr << "Added connection " << next_connection_key_ << std::endl;
     });
   }
 

@@ -132,6 +132,7 @@ class client_connection {
                 Decoder decoder(response_is);
                 result_holder<return_type> result;
                 decoder(result);
+
                 return std::move(result).value();
               }),
               req_id};

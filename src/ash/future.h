@@ -112,6 +112,7 @@ class future_state<void> : public future_state_base {
     std::scoped_lock lock(mu_);
     if (result_) {
       set_.reset();
+      *result_;
       return;
     }
     throw errors::try_again("Future not ready yet");
@@ -232,7 +233,10 @@ class future<void> {
     return std::move(can_get().then(std::move([this]() { maybe_get(); })));
   }
 
-  value_type get() { select(async_get()); }
+  value_type get() {
+    auto [res] = select(async_get());
+    *res;
+  }
 
   template <typename OGF>
   auto then(OGF&& get_fn) {

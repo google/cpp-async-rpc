@@ -22,7 +22,6 @@
 #ifndef ASH_PACKET_PROTOCOLS_H_
 #define ASH_PACKET_PROTOCOLS_H_
 
-#include <iostream>
 #include <limits>
 #include <string>
 #include <utility>
