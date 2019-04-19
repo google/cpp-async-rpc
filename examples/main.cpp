@@ -207,13 +207,20 @@ int main() {
   {
     using namespace std::literals;
 
-    ash::server_context server_context;
+    ash::server server({}, ash::endpoint().port(12121));
     ash::server_object<WriterImpl> writer;
     std::cerr << "AAA" << std::endl;
-    server_context.register_object("test"sv, writer);
+    server.register_object("test"sv, writer);
     std::cerr << "BBB" << std::endl;
-    server_context.unregister_object(writer);
-    server_context.unregister_object("test"sv);
+
+    server.start();
+
+    std::this_thread::sleep_for(std::chrono::seconds(20));
+
+    server.stop();
+
+    server.unregister_object(writer);
+    server.unregister_object("test"sv);
     std::cerr << "CCC" << std::endl;
   }
   {

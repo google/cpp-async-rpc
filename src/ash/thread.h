@@ -52,9 +52,10 @@ class base_thread : public std::thread {
         context_(std::make_unique<context>(
             daemon ? context::top() : context::current(), false)) {
     static_cast<std::thread&>(*this) = std::thread(
-        ([this, f(detail::decay_copy(std::forward<Function>(f)))](
+        ([&parent_context(*context_),
+          f(detail::decay_copy(std::forward<Function>(f)))](
              std::decay_t<Args>&&... args) mutable {
-          context new_context(*context_);
+          context new_context(parent_context);
           try {
             std::invoke(f, std::forward<std::decay_t<Args>>(args)...);
           } catch (const errors::cancelled&) {

@@ -37,7 +37,6 @@
 #include "ash/container/flat_map.h"
 #include "ash/message_defs.h"
 #include "ash/mpt.h"
-#include "ash/mutex.h"
 #include "ash/object_name.h"
 #include "ash/queue.h"
 #include "ash/result_holder.h"
@@ -48,6 +47,63 @@
 #include "ash/usage_lock.h"
 
 namespace ash {
+
+class listener_connection_factory : private listener {
+ public:
+  using connection_type = channel_connection;
+
+  using listener::listener;
+
+  std::unique_ptr<connection_type> operator()() {
+    auto s = accept();
+    return std::make_unique<connection_type>(std::move(s));
+  }
+};
+
+template <typename ConnectionFactory,
+          std::size_t max_connections = std::numeric_limits<std::size_t>::max()>
+class connection_producer {
+ public:
+  using connection_type = typename ConnectionFactory::connection_type;
+
+  template <typename... Args>
+  explicit connection_producer(Args&&... args)
+      : factory_(std::forward<Args>(args)...) {}
+
+  ~connection_producer() { stop(); }
+
+  void start() {
+    std::scoped_lock lock(mu_);
+
+    if (!acceptor_.joinable()) {
+      acceptor_ = daemon_thread(&connection_producer::produce, this);
+    }
+  }
+
+  void stop() {
+    std::scoped_lock lock(mu_);
+
+    if (acceptor_.joinable()) {
+      acceptor_.get_context().cancel();
+      acceptor_.join();
+    }
+  }
+
+ private:
+  void produce() {
+    while (true) {
+      output_.put(factory_());
+    }
+  }
+
+  std::mutex mu_;
+  ConnectionFactory factory_;
+  queue<std::unique_ptr<connection_type>> output_{max_connections};
+  daemon_thread acceptor_;
+};
+
+using listener_connection_producer =
+    connection_producer<listener_connection_factory>;
 
 struct server_options {
   // Timeout applied to each request (defaults to 1 hour).
@@ -72,11 +128,15 @@ class server_object : public ImplClass {
   usage_lock<ImplClass> usage_lock_{this};
 };
 
-template <typename Encoder = little_endian_binary_encoder,
+template <typename ConnectionProducer = listener_connection_producer,
+          typename Encoder = little_endian_binary_encoder,
           typename Decoder = little_endian_binary_decoder,
           typename ObjectNameEncoder = Encoder>
-class server_context {
+class server {
+ public:
  private:
+  using connection_type = typename ConnectionProducer::connection_type;
+
   using method_fn =
       std::function<std::string(rpc_defs::request_id_type, std::string)>;
   using method_fn_key = std::tuple<std::string, traits::type_hash_t>;
@@ -151,7 +211,6 @@ class server_context {
         });
   }
 
- public:
   std::string execute(std::string request) {
     string_input_stream request_is(request);
     Decoder decoder(request_is);
@@ -195,6 +254,12 @@ class server_context {
       // Current context.
       context ctx;
       decoder(ctx);
+
+      // Set any timeout.
+      if (options_.request_timeout) {
+        ctx.set_timeout(*options_.request_timeout);
+      }
+
       // What remains is the arguments for the actual object method. Trim the
       // request data and call the method.
       request.erase(0, request_is.pos());
@@ -219,6 +284,13 @@ class server_context {
       return result_str;
     }
   }
+
+ public:
+  template <typename... Args>
+  explicit server(const server_options& options, Args&&... args)
+      : options_(options), acceptor_(std::forward<Args>(args)...) {}
+
+  ~server() { stop(); }
 
   template <typename Impl, typename Name>
   void register_object(Name&& name, server_object<Impl>& object) {
@@ -252,32 +324,24 @@ class server_context {
     objects_.erase(object_name<ObjectNameEncoder>(std::forward<Name>(name)));
   }
 
- private:
-  mutex objects_mu_;
-  object_map objects_;
-};
+  void start() {
+    std::scoped_lock lock(mu_);
 
-class listener_connection_factory : private listener {
- public:
-  using connection_type = channel_connection;
-
-  using listener::listener;
-
-  connection_type operator()() {
-    auto s = accept();
-    return connection_type(std::move(s));
+    acceptor_.start();
   }
-};
 
-template <typename ConnectionFactory,
-          std::size_t max_connections = std::numeric_limits<std::size_t>::max()>
-class connection_producer {
- public:
-  using connection_type = typename ConnectionFactory::connection_type;
+  void stop() {
+    std::scoped_lock lock(mu_);
+
+    acceptor_.stop();
+  }
 
  private:
-  queue<connection_type> output_{max_connections};
-  thread acceptor_;
+  server_options options_;
+  std::mutex mu_;
+  std::mutex objects_mu_;
+  object_map objects_;
+  ConnectionProducer acceptor_;
 };
 
 }  // namespace ash
