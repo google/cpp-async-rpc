@@ -25,6 +25,7 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -44,6 +45,7 @@
 #include "ash/packet_protocols.h"
 #include "ash/queue.h"
 #include "ash/result_holder.h"
+#include "ash/select.h"
 #include "ash/semaphore.h"
 #include "ash/socket.h"
 #include "ash/string_adapters.h"
@@ -56,8 +58,7 @@ namespace ash {
 template <typename PacketProtocol>
 class listener_connection_factory : private listener {
  public:
-  using connection_type =
-      packet_connection_impl<channel_connection, PacketProtocol>;
+  using connection_type = packet_connection_impl<channel_connection, PacketProtocol>;
 
   using listener::listener;
 
@@ -74,8 +75,7 @@ class connection_producer {
   using connection_type = typename ConnectionFactory::connection_type;
 
   template <typename... Args>
-  explicit connection_producer(Args&&... args)
-      : factory_(std::forward<Args>(args)...) {}
+  explicit connection_producer(Args&&... args) : factory_(std::forward<Args>(args)...) {}
 
   ~connection_producer() { stop(); }
 
@@ -96,9 +96,7 @@ class connection_producer {
     }
   }
 
-  awaitable<std::unique_ptr<connection_type>> get_connection() {
-    return output_.get();
-  }
+  awaitable<std::unique_ptr<connection_type>> get_connection() { return output_.async_get(); }
 
   void return_connection(std::unique_ptr<connection_type> returned) {
     returned.reset();
@@ -126,8 +124,7 @@ using listener_connection_producer =
 
 struct server_options {
   // Timeout applied to each request (defaults to 1 hour).
-  std::optional<std::chrono::milliseconds> request_timeout =
-      std::chrono::hours(1);
+  std::optional<std::chrono::milliseconds> request_timeout = std::chrono::hours(1);
 
   // Number of threads in the server's thread pool.
   unsigned int num_worker_threads = 2 * thread::hardware_concurrency();
@@ -149,15 +146,12 @@ class server_object : public ImplClass {
 
 template <typename Encoder = little_endian_binary_encoder,
           typename Decoder = little_endian_binary_decoder,
-          typename PacketProtocol =
-              protected_stream_packet_protocol<Encoder, Decoder>,
+          typename PacketProtocol = protected_stream_packet_protocol<Encoder, Decoder>,
           typename ObjectNameEncoder = Encoder,
-          typename ConnectionProducer =
-              listener_connection_producer<PacketProtocol>>
+          typename ConnectionProducer = listener_connection_producer<PacketProtocol>>
 class server {
  private:
-  using method_fn =
-      std::function<std::string(rpc_defs::request_id_type, std::string)>;
+  using method_fn = std::function<std::string(rpc_defs::request_id_type, std::string)>;
   using method_fn_key = std::tuple<std::string, traits::type_hash_t>;
   using method_fn_map = flat_map<method_fn_key, method_fn>;
 
@@ -188,12 +182,12 @@ class server {
         return can_receive_.wait_set();
       }
 
-      return connection_.data_available().then([this]() {
+      return connection_->data_available().then([this]() {
         can_receive_.reset();
 
         server_.pool_.run([this]() {
           try {
-            auto request = connection_.receive();
+            auto request = connection_->receive();
 
             string_input_stream request_is(request);
             Decoder decoder(request_is);
@@ -205,10 +199,10 @@ class server {
             switch (message_type) {
               case rpc_defs::message_type::REQUEST:
                 request.erase(0, request_is.pos());
-                queue_request(request_key{key_, req_id}, request);
+                server_.queue_request(request_key{key_, req_id}, request);
                 break;
               case rpc_defs::message_type::CANCEL_REQUEST:
-                cancel_request(request_key{key_, req_id});
+                server_.cancel_request(request_key{key_, req_id});
                 break;
               default:
                 // Unknown message received.
@@ -216,8 +210,12 @@ class server {
                 break;
             }
 
+            std::cerr << "Received connection (OK) " << key_ << std::endl;
+
             receive_done();
           } catch (...) {
+            std::cerr << "Received connection (ERROR) " << key_ << std::endl;
+
             receive_done(true);
           }
         });
@@ -239,7 +237,7 @@ class server {
 
         server_.pool_.run([this, response(std::move(response))]() mutable {
           try {
-            connection_.send(std::move(response));
+            connection_->send(std::move(response));
 
             send_done();
           } catch (...) {
@@ -249,7 +247,16 @@ class server {
       });
     }
 
-    awaitable<void> remove() { return can_remove_.wait_set(); }
+    awaitable<void> remove() {
+      return can_remove_.wait_set().then([this]() {
+        std::cerr << "Removing connection " << key_ << std::endl;
+
+        server_.acceptor_.return_connection(std::move(connection_));
+        server_.connections_.erase(key_);
+      });
+    }
+
+    void add_response(std::string response) { responses_.put(std::move(response)); }
 
    private:
     void receive_done(bool failed = false) {
@@ -259,7 +266,7 @@ class server {
         if (failed) {
           failed_receive_ = true;
         }
-        if (failed_send_) {
+        if (failed_send_ || can_send_) {
           failed_receive_ = true;
           removed = true;
         }
@@ -277,7 +284,7 @@ class server {
         if (failed) {
           failed_send_ = true;
         }
-        if (failed_receive_) {
+        if (failed_receive_ || can_receive_) {
           failed_send_ = true;
           removed = true;
         }
@@ -297,21 +304,31 @@ class server {
     flag can_receive_, can_send_, can_remove_;
   };
 
-  using connection_map =
-      flat_map<connection_key, std::unique_ptr<connection_wrapper>>;
+  using connection_map = flat_map<connection_key, std::unique_ptr<connection_wrapper>>;
 
   using request_key = std::pair<connection_key, rpc_defs::request_id_type>;
   using request_result = std::pair<request_key, std::string>;
   class request_wrapper {
    public:
-    request_wrapper(future<request_result> result)
-        : result_(std::move(result)), context_(context::top(), false) {}
+    explicit request_wrapper(server& server, future<request_result> result)
+        : server_(server), result_(std::move(result)), context_(context::top(), false) {}
 
     context& get_context() { return context_; }
 
-    awaitable<request_result> get() { return result_.async_get(); }
+    awaitable<void> finish() {
+      return result_.async_get().then([this](request_result result) {
+        auto& [request_key, data] = result;
+        auto cit = server_.connections_.find(request_key.first);
+        if (cit != server_.connections_.end()) {
+          cit->second->add_response(std::move(data));
+        }
+
+        server_.remove_request(request_key);
+      });
+    }
 
    private:
+    server& server_;
     future<request_result> result_;
     context context_;
   };
@@ -326,6 +343,12 @@ class server {
     }
   }
 
+  void remove_request(const request_key& key) {
+    std::scoped_lock lock(requests_mu_);
+
+    requests_.erase(key);
+  }
+
   void queue_request(const request_key& key, std::string request) {
     std::scoped_lock lock(requests_mu_);
 
@@ -336,15 +359,13 @@ class server {
     }
 
     promise<request_result> promise;
-    wrapper_ptr = std::make_unique<request_wrapper>(promise.get_future());
+    wrapper_ptr = std::make_unique<request_wrapper>(*this, promise.get_future());
 
-    pool_.run([this, promise(std::move(promise)), key,
-               request(std::move(request)),
+    pool_.run([this, promise(std::move(promise)), key, request(std::move(request)),
                &parent_context(wrapper_ptr->get_context())]() mutable {
       try {
         context ctx(parent_context);
-        promise.set_value(
-            request_result{key, execute(key.second, std::move(request))});
+        promise.set_value(request_result{key, execute(key.second, std::move(request))});
       } catch (...) {
         promise.set_exception(std::current_exception());
       }
@@ -354,64 +375,58 @@ class server {
   template <typename Interface>
   static void register_object_interface(object_entry& entry,
                                         const std::shared_ptr<Interface>& ref) {
-    mpt::for_each(typename Interface::extended_interfaces{}, [&entry, &ref](
-                                                                 auto wrapped) {
+    mpt::for_each(typename Interface::extended_interfaces{}, [&entry, &ref](auto wrapped) {
       using extended_interface = typename decltype(wrapped)::type;
-      register_object_interface(
-          entry, std::static_pointer_cast<extended_interface>(ref));
+      register_object_interface(entry, std::static_pointer_cast<extended_interface>(ref));
     });
 
-    mpt::for_each(
-        typename Interface::method_descriptors{}, [&entry, &ref](auto wrapped) {
-          using method_info = typename decltype(wrapped)::type;
-          constexpr auto method_hash =
-              traits::type_hash_v<typename method_info::method_type>;
+    mpt::for_each(typename Interface::method_descriptors{}, [&entry, &ref](auto wrapped) {
+      using method_info = typename decltype(wrapped)::type;
+      constexpr auto method_hash = traits::type_hash_v<typename method_info::method_type>;
 
-          entry.methods[method_fn_key{method_info::name(), method_hash}] =
-              [ref](rpc_defs::request_id_type req_id, std::string request) {
-                using return_type = typename method_info::return_type;
-                result_holder<return_type> result;
+      entry.methods[method_fn_key{method_info::name(), method_hash}] =
+          [ref](rpc_defs::request_id_type req_id, std::string request) {
+            using return_type = typename method_info::return_type;
+            result_holder<return_type> result;
 
-                try {
-                  // Decode the call arguments.
-                  using args_tuple_type = typename method_info::args_tuple_type;
-                  string_input_stream request_is(request);
-                  Decoder decoder(request_is);
-                  args_tuple_type args;
-                  decoder(args);
+            try {
+              // Decode the call arguments.
+              using args_tuple_type = typename method_info::args_tuple_type;
+              string_input_stream request_is(request);
+              Decoder decoder(request_is);
+              args_tuple_type args;
+              decoder(args);
 
-                  // Call the method and set the result value.
-                  if constexpr (std::is_same_v<void, return_type>) {
+              // Call the method and set the result value.
+              if constexpr (std::is_same_v<void, return_type>) {
+                std::apply(method_info::method_ptr,
+                           std::tuple_cat(std::forward_as_tuple(*ref), std::move(args)));
+                result.set_value();
+              } else {
+                result.set_value(
                     std::apply(method_info::method_ptr,
-                               std::tuple_cat(std::forward_as_tuple(*ref),
-                                              std::move(args)));
-                    result.set_value();
-                  } else {
-                    result.set_value(
-                        std::apply(method_info::method_ptr,
-                                   std::tuple_cat(std::forward_as_tuple(*ref),
-                                                  std::move(args))));
-                  }
-                } catch (...) {
-                  // Set the return exception if either deserialization or
-                  // execution threw.
-                  result.set_exception(std::current_exception());
-                }
+                               std::tuple_cat(std::forward_as_tuple(*ref), std::move(args))));
+              }
+            } catch (...) {
+              // Set the return exception if either deserialization or
+              // execution threw.
+              result.set_exception(std::current_exception());
+            }
 
-                std::string response;
-                string_output_stream request_os(request);
-                Encoder encoder(request_os);
+            std::string response;
+            string_output_stream request_os(request);
+            Encoder encoder(request_os);
 
-                // Message type: RPC request.
-                encoder(rpc_defs::message_type::RESPONSE);
-                // Request ID.
-                encoder(req_id);
-                // Result.
-                encoder(result);
+            // Message type: RPC request.
+            encoder(rpc_defs::message_type::RESPONSE);
+            // Request ID.
+            encoder(req_id);
+            // Result.
+            encoder(result);
 
-                return response;
-              };
-        });
+            return response;
+          };
+    });
   }
 
   std::string execute(rpc_defs::request_id_type req_id, std::string request) {
@@ -441,11 +456,11 @@ class server {
 
         // Find the method function.
         auto mit = oit->second.methods.find({method_name, method_hash});
-        if (oit == oit->second.methods.end()) {
+        if (mit == oit->second.methods.end()) {
           throw errors::not_found("Method not found in object");
         }
 
-        method = oit->second();
+        method = mit->second;
       }
 
       // Current context.
@@ -479,6 +494,50 @@ class server {
       encoder(exception_result);
 
       return result_str;
+    }
+  }
+
+  awaitable<void> get_new_connection() {
+    return acceptor_.get_connection().then([this](std::unique_ptr<connection_type> new_connection) {
+      while (connections_.count(++next_connection_key_) > 0) {
+        // Ensure we prevent connection counter cycle collisions.
+      }
+      connections_[next_connection_key_] = std::make_unique<connection_wrapper>(
+          *this, next_connection_key_, std::move(new_connection));
+
+      std::cerr << "Added connection " << next_connection_key_ << std::endl;
+    });
+  }
+
+  void react() {
+    std::vector<awaitable<void>> awaitables;
+    while (true) {
+      awaitables.clear();
+
+      awaitables.push_back(get_new_connection());
+
+      for (auto& cit : connections_) {
+        auto& wrapper = cit.second;
+        awaitables.push_back(wrapper->receive());
+        awaitables.push_back(wrapper->send());
+        awaitables.push_back(wrapper->remove());
+      }
+      {
+        std::scoped_lock lock(requests_mu_);
+
+        for (auto& rit : requests_) {
+          auto& wrapper = rit.second;
+          awaitables.push_back(wrapper->finish());
+        }
+      }
+
+      auto [events] = select(awaitables);
+
+      for (auto& event : events) {
+        if (event) {
+          *event;
+        }
+      }
     }
   }
 
@@ -524,6 +583,10 @@ class server {
   void start() {
     std::scoped_lock lock(mu_);
 
+    if (!reactor_.joinable()) {
+      reactor_ = daemon_thread(&server::react, this);
+    }
+
     acceptor_.start();
   }
 
@@ -531,6 +594,11 @@ class server {
     std::scoped_lock lock(mu_);
 
     acceptor_.stop();
+
+    if (reactor_.joinable()) {
+      reactor_.get_context().cancel();
+      reactor_.join();
+    }
   }
 
  private:
@@ -544,6 +612,7 @@ class server {
   connection_map connections_;
   std::mutex requests_mu_;
   request_map requests_;
+  daemon_thread reactor_;
 };
 
 }  // namespace ash
