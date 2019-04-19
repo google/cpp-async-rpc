@@ -207,8 +207,8 @@ int main() {
   {
     using namespace std::literals;
 
-    ash::server_object<WriterImpl> writer;
     ash::server_context server_context;
+    ash::server_object<WriterImpl> writer;
     std::cerr << "AAA" << std::endl;
     server_context.register_object("test"sv, writer);
     std::cerr << "BBB" << std::endl;
@@ -523,7 +523,7 @@ int main() {
 
   try {
     using namespace std::literals;
-    ash::client_connection<> conn(ash::endpoint().name("localhost").port(9999));
+    ash::client_connection conn(ash::endpoint().name("localhost").port(9999));
     auto obj = conn.get_proxy<Reader::async>("default"sv);
     ash::future<std::string> res;
     {
