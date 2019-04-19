@@ -205,12 +205,15 @@ struct WriterImpl : public Writer {
 
 int main() {
   {
+    using namespace std::literals;
+
     ash::server_object<WriterImpl> writer;
     ash::server_context server_context;
     std::cerr << "AAA" << std::endl;
-    server_context.register_object("test", writer);
+    server_context.register_object("test"sv, writer);
     std::cerr << "BBB" << std::endl;
-    server_context.unregister_object("test", writer);
+    server_context.unregister_object(writer);
+    server_context.unregister_object("test"sv);
     std::cerr << "CCC" << std::endl;
   }
   {

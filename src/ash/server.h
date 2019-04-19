@@ -25,11 +25,17 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
+#include "ash/binary_codecs.h"
 #include "ash/container/flat_map.h"
+#include "ash/message_defs.h"
 #include "ash/mpt.h"
+#include "ash/mutex.h"
+#include "ash/object_name.h"
 #include "ash/thread.h"
 #include "ash/type_hash.h"
 #include "ash/usage_lock.h"
@@ -59,67 +65,78 @@ class server_object : public ImplClass {
   usage_lock<ImplClass> usage_lock_{this};
 };
 
+template <typename Encoder = little_endian_binary_encoder,
+          typename Decoder = little_endian_binary_decoder,
+          typename ObjectNameEncoder = Encoder>
 class server_context {
  private:
+  using method_fn =
+      std::function<std::string(rpc_defs::request_id_type, std::string)>;
+  using method_fn_key = std::tuple<std::string, traits::type_hash_t>;
+  using method_fn_map = flat_map<method_fn_key, method_fn>;
+
+  struct object_entry {
+    std::shared_ptr<void> ref;
+    method_fn_map methods;
+  };
+  using object_map = flat_map<std::string, object_entry>;
+
   template <typename Interface>
-  void register_object_interface(std::string_view name,
-                                 const std::shared_ptr<Interface>& ref) {
-    mpt::for_each(typename Interface::extended_interfaces{}, [this, name, &ref](
+  static void register_object_interface(object_entry& entry,
+                                        const std::shared_ptr<Interface>& ref) {
+    mpt::for_each(typename Interface::extended_interfaces{}, [&entry, &ref](
                                                                  auto wrapped) {
       using extended_interface = typename decltype(wrapped)::type;
       register_object_interface(
-          name, std::static_pointer_cast<extended_interface>(ref));
+          entry, std::static_pointer_cast<extended_interface>(ref));
     });
 
-    mpt::for_each(typename Interface::method_descriptors{}, [this, name, &ref](
+    mpt::for_each(typename Interface::method_descriptors{}, [&entry, &ref](
                                                                 auto wrapped) {
       using method_info = typename decltype(wrapped)::type;
       constexpr auto method_hash =
           traits::type_hash_v<typename method_info::method_type>;
 
-      object_fns_[object_fn_key{name, method_info::name(), method_hash}] =
-          nullptr;
-    });
-  }
-
-  template <typename Interface>
-  void unregister_object_interface(std::string_view name,
-                                   const std::shared_ptr<Interface>& ref) {
-    mpt::for_each(typename Interface::extended_interfaces{}, [this, name, &ref](
-                                                                 auto wrapped) {
-      using extended_interface = typename decltype(wrapped)::type;
-      unregister_object_interface(
-          name, std::static_pointer_cast<extended_interface>(ref));
-    });
-
-    mpt::for_each(typename Interface::method_descriptors{}, [this, name, &ref](
-                                                                auto wrapped) {
-      using method_info = typename decltype(wrapped)::type;
-      constexpr auto method_hash =
-          traits::type_hash_v<typename method_info::method_type>;
-
-      object_fns_.erase(object_fn_key{name, method_info::name(), method_hash});
+      entry.methods[method_fn_key{method_info::name(), method_hash}] = nullptr;
     });
   }
 
  public:
-  template <typename Impl>
-  void register_object(std::string_view name, server_object<Impl>& object) {
-    register_object_interface(name, object.get_ref());
+  template <typename Impl, typename Name>
+  void register_object(Name&& name, server_object<Impl>& object) {
+    std::scoped_lock lock(objects_mu_);
+
+    auto key = object_name<ObjectNameEncoder>(std::forward<Name>(name));
+    auto& entry = objects_[key];
+    entry.ref = object.get_ref();
+
+    register_object_interface(entry, object.get_ref());
   }
 
   template <typename Impl>
-  void unregister_object(std::string_view name, server_object<Impl>& object) {
-    unregister_object_interface(name, object.get_ref());
+  void unregister_object(server_object<Impl>& object) {
+    std::scoped_lock lock(objects_mu_);
+
+    auto ref = object.get_ref();
+    for (auto it = objects_.begin(); it != objects_.end();) {
+      if (it->second.ref == ref) {
+        it = objects_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
+  template <typename Name>
+  void unregister_object(Name&& name) {
+    std::scoped_lock lock(objects_mu_);
+
+    objects_.erase(object_name<ObjectNameEncoder>(std::forward<Name>(name)));
   }
 
  private:
-  using object_fn = std::function<std::string(std::string)>;
-  using object_fn_key =
-      std::tuple<std::string, std::string, traits::type_hash_t>;
-  using object_fn_map = flat_map<object_fn_key, object_fn>;
-
-  object_fn_map object_fns_;
+  mutex objects_mu_;
+  object_map objects_;
 };
 
 }  // namespace ash
