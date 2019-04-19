@@ -23,7 +23,9 @@
 #define ASH_SERVER_H_
 
 #include <chrono>
+#include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -31,11 +33,16 @@
 #include <tuple>
 #include <utility>
 #include "ash/binary_codecs.h"
+#include "ash/connection.h"
 #include "ash/container/flat_map.h"
 #include "ash/message_defs.h"
 #include "ash/mpt.h"
 #include "ash/mutex.h"
 #include "ash/object_name.h"
+#include "ash/queue.h"
+#include "ash/result_holder.h"
+#include "ash/socket.h"
+#include "ash/string_adapters.h"
 #include "ash/thread.h"
 #include "ash/type_hash.h"
 #include "ash/usage_lock.h"
@@ -91,17 +98,128 @@ class server_context {
           entry, std::static_pointer_cast<extended_interface>(ref));
     });
 
-    mpt::for_each(typename Interface::method_descriptors{}, [&entry, &ref](
-                                                                auto wrapped) {
-      using method_info = typename decltype(wrapped)::type;
-      constexpr auto method_hash =
-          traits::type_hash_v<typename method_info::method_type>;
+    mpt::for_each(
+        typename Interface::method_descriptors{}, [&entry, &ref](auto wrapped) {
+          using method_info = typename decltype(wrapped)::type;
+          constexpr auto method_hash =
+              traits::type_hash_v<typename method_info::method_type>;
 
-      entry.methods[method_fn_key{method_info::name(), method_hash}] = nullptr;
-    });
+          entry.methods[method_fn_key{method_info::name(), method_hash}] =
+              [ref](rpc_defs::request_id_type req_id, std::string request) {
+                using return_type = typename method_info::return_type;
+                result_holder<return_type> result;
+
+                try {
+                  // Decode the call arguments.
+                  using args_tuple_type = typename method_info::args_tuple_type;
+                  string_input_stream response_is(request);
+                  Decoder decoder(response_is);
+                  args_tuple_type args;
+                  decoder(args);
+
+                  // Call the method and set the result value.
+                  if constexpr (std::is_same_v<void, return_type>) {
+                    std::apply(method_info::method_ptr,
+                               std::tuple_cat(std::forward_as_tuple(*ref),
+                                              std::move(args)));
+                    result.set_value();
+                  } else {
+                    result.set_value(
+                        std::apply(method_info::method_ptr,
+                                   std::tuple_cat(std::forward_as_tuple(*ref),
+                                                  std::move(args))));
+                  }
+                } catch (...) {
+                  // Set the return exception if either deserialization or
+                  // execution threw.
+                  result.set_exception(std::current_exception());
+                }
+
+                std::string response;
+                string_output_stream request_os(request);
+                Encoder encoder(request_os);
+
+                // Message type: RPC request.
+                encoder(rpc_defs::message_type::RESPONSE);
+                // Request ID.
+                encoder(req_id);
+                // Result.
+                encoder(result);
+
+                return response;
+              };
+        });
   }
 
  public:
+  std::string execute(std::string request) {
+    string_input_stream request_is(request);
+    Decoder decoder(request_is);
+
+    // Request ID.
+    rpc_defs::request_id_type req_id;
+    // We just let the exception bubble if we can't deserialize even the request
+    // id.
+    decoder(req_id);
+
+    try {
+      // Name of the remote object.
+      std::string object_name;
+      decoder(object_name);
+      // Method name.
+      std::string method_name;
+      decoder(method_name);
+      // Method signature hash.
+      traits::type_hash_t method_hash;
+      decoder(method_hash);
+
+      method_fn method;
+      {
+        std::scoped_lock lock(objects_mu_);
+
+        // Find the object entry.
+        auto oit = objects_.find(object_name);
+        if (oit == objects_.end()) {
+          throw errors::not_found("Object not found");
+        }
+
+        // Find the method function.
+        auto mit = oit->second.methods.find({method_name, method_hash});
+        if (oit == oit->second.methods.end()) {
+          throw errors::not_found("Method not found in object");
+        }
+
+        method = oit->second();
+      }
+
+      // Current context.
+      context ctx;
+      decoder(ctx);
+      // What remains is the arguments for the actual object method. Trim the
+      // request data and call the method.
+      request.erase(0, request_is.pos());
+      return method(req_id, std::move(request));
+    } catch (...) {
+      // We directly return the result here if we caught an exception before
+      // getting to the object's function.
+      result_holder<void> exception_result;
+      exception_result.set_exception(std::current_exception());
+
+      std::string result_str;
+      string_output_stream result_is(result_str);
+      Encoder encoder(result_is);
+
+      // Message type: RPC request.
+      encoder(rpc_defs::message_type::RESPONSE);
+      // Request ID.
+      encoder(req_id);
+      // Result.
+      encoder(exception_result);
+
+      return result_str;
+    }
+  }
+
   template <typename Impl, typename Name>
   void register_object(Name&& name, server_object<Impl>& object) {
     std::scoped_lock lock(objects_mu_);
@@ -137,6 +255,29 @@ class server_context {
  private:
   mutex objects_mu_;
   object_map objects_;
+};
+
+class listener_connection_factory : private listener {
+ public:
+  using connection_type = channel_connection;
+
+  using listener::listener;
+
+  connection_type operator()() {
+    auto s = accept();
+    return connection_type(std::move(s));
+  }
+};
+
+template <typename ConnectionFactory,
+          std::size_t max_connections = std::numeric_limits<std::size_t>::max()>
+class connection_producer {
+ public:
+  using connection_type = typename ConnectionFactory::connection_type;
+
+ private:
+  queue<connection_type> output_{max_connections};
+  thread acceptor_;
 };
 
 }  // namespace ash
