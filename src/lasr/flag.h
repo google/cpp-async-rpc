@@ -23,7 +23,6 @@
 #define LASR_FLAG_H_
 
 #include <mutex>
-
 #include "lasr/awaitable.h"
 #include "lasr/channel.h"
 

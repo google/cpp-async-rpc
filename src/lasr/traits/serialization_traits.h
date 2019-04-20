@@ -24,7 +24,6 @@
 
 #include <cstdint>
 #include <type_traits>
-
 #include "lasr/mpt.h"
 #include "lasr/traits/trait_factories.h"
 
@@ -104,7 +103,7 @@ using custom_serialization_version_type = std::uint32_t;
 
 namespace detail {
 LASR_MAKE_NESTED_CONSTANT_CHECKER(has_custom_serialization_version,
-                                 custom_serialization_version);
+                                  custom_serialization_version);
 }  // namespace detail
 
 /// \brief Check if a type `T` implements custom serialization.

@@ -26,7 +26,6 @@
 #include <mutex>
 #include <queue>
 #include <utility>
-
 #include "lasr/awaitable.h"
 #include "lasr/flag.h"
 #include "lasr/select.h"

@@ -23,7 +23,6 @@
 #define LASR_IO_ADAPTERS_H_
 
 #include <cstddef>
-
 #include "lasr/errors.h"
 
 namespace lasr {

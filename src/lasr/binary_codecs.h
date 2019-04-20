@@ -33,7 +33,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
 #include "lasr/container/flat_map.h"
 #include "lasr/errors.h"
 #include "lasr/io_adapters.h"

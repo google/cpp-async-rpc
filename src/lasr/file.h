@@ -23,7 +23,6 @@
 #define LASR_FILE_H_
 
 #include <string>
-
 #include "lasr/channel.h"
 
 namespace lasr {

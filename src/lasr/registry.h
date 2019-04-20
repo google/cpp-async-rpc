@@ -28,7 +28,6 @@
 #include <set>
 #include <string_view>
 #include <vector>
-
 #include "lasr/container/flat_map.h"
 #include "lasr/container/flat_set.h"
 #include "lasr/dynamic_base_class.h"
@@ -158,9 +157,10 @@ class dynamic_object_factory : public singleton<dynamic_object_factory> {
 
   template <typename T, typename Encoders, typename Decoders>
   std::string_view register_class(std::string_view class_name) {
-    static_assert(is_dynamic<T>::value,
-                  "Only classes inheriting from lasr::dynamic_base_class can be "
-                  "registered for polymorphism");
+    static_assert(
+        is_dynamic<T>::value,
+        "Only classes inheriting from lasr::dynamic_base_class can be "
+        "registered for polymorphism");
 
     // Register the class into this factory for object creation.
     factory_function_type f = []() {

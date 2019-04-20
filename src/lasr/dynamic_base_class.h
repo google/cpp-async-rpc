@@ -24,7 +24,6 @@
 
 #include <string_view>
 #include <type_traits>
-
 #include "lasr/mpt.h"
 
 namespace lasr {

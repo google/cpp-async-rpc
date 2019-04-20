@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <string>
-
 #include "lasr/errors.h"
 #include "lasr/io_adapters.h"
 

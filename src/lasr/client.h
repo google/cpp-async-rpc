@@ -33,7 +33,6 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-
 #include "lasr/binary_codecs.h"
 #include "lasr/connection.h"
 #include "lasr/container/flat_map.h"

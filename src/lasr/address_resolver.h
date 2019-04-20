@@ -27,7 +27,6 @@
 #include <sys/types.h>
 #include <string>
 #include <utility>
-
 #include "lasr/address.h"
 #include "lasr/future.h"
 #include "lasr/queue.h"

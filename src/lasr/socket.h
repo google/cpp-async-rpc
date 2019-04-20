@@ -23,7 +23,6 @@
 #define LASR_SOCKET_H_
 
 #include <vector>
-
 #include "lasr/address.h"
 #include "lasr/channel.h"
 

@@ -33,7 +33,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
 #include "lasr/awaitable.h"
 #include "lasr/container/flat_map.h"
 #include "lasr/container/flat_set.h"

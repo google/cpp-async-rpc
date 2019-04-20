@@ -24,10 +24,9 @@
 
 #include <utility>
 #include <vector>
-
+#include "function2/function2.hpp"
 #include "lasr/queue.h"
 #include "lasr/thread.h"
-#include "function2/function2.hpp"
 
 namespace lasr {
 

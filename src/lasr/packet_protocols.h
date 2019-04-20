@@ -25,7 +25,6 @@
 #include <limits>
 #include <string>
 #include <utility>
-
 #include "lasr/binary_codecs.h"
 #include "lasr/errors.h"
 #include "lasr/io_adapters.h"

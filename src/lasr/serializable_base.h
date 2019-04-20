@@ -25,7 +25,6 @@
 #include <array>
 #include <cstdint>
 #include <type_traits>
-
 #include "lasr/dynamic_base_class.h"
 #include "lasr/errors.h"
 #include "lasr/mpt.h"
@@ -114,19 +113,21 @@ using dynamic = std::conditional_t<
 #define LASR_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define LASR_FIELDS(...)                                                        \
-  using field_descriptors =                                                    \
-      ::lasr::mpt::pack<LASR_FOREACH(LASR_FIELD, LASR_FIELD_SEP, __VA_ARGS__)>;    \
-  static const std::array<const char*, ::lasr::mpt::size_v<field_descriptors>>& \
-  field_names() {                                                              \
-    static const std::array<const char*,                                       \
-                            ::lasr::mpt::size_v<field_descriptors>>             \
-        names{LASR_FOREACH(LASR_FIELD_NAME, LASR_FIELD_NAME_SEP, __VA_ARGS__)};   \
-    return names;                                                              \
+#define LASR_FIELDS(...)                                                      \
+  using field_descriptors = ::lasr::mpt::pack<LASR_FOREACH(                   \
+      LASR_FIELD, LASR_FIELD_SEP, __VA_ARGS__)>;                              \
+  static const std::array<const char*,                                        \
+                          ::lasr::mpt::size_v<field_descriptors>>&            \
+  field_names() {                                                             \
+    static const std::array<const char*,                                      \
+                            ::lasr::mpt::size_v<field_descriptors>>           \
+        names{                                                                \
+            LASR_FOREACH(LASR_FIELD_NAME, LASR_FIELD_NAME_SEP, __VA_ARGS__)}; \
+    return names;                                                             \
   }
 
 /// Version of the load/save methods.
-#define LASR_CUSTOM_SERIALIZATION_VERSION(VERSION)                  \
+#define LASR_CUSTOM_SERIALIZATION_VERSION(VERSION)                 \
   static_assert(VERSION != 0,                                      \
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION

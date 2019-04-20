@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <fcntl.h>
 #include "lasr/file.h"
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "lasr/errors.h"

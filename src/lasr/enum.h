@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <type_traits>
 #include <utility>
-
 #include "lasr/preprocessor.h"
 
 namespace lasr {
@@ -61,17 +60,18 @@ struct enum_names {
   LASR_NO_PARENS(LASR_ENUM_ENTRY_IN_ARRAY_IMPL, __VA_ARGS__)
 #define LASR_ENUM_ENTRY_SEP() ,
 
-#define LASR_ENUM(NAME, BASE_TYPE, UNKNOWN_NAME, ...)                           \
-  enum class NAME : BASE_TYPE {                                                \
-    LASR_FOREACH(LASR_ENUM_ENTRY_IN_BODY, LASR_ENUM_ENTRY_SEP, __VA_ARGS__)       \
-  };                                                                           \
-  template <>                                                                  \
-  const std::size_t::lasr::enum_names<NAME>::size = LASR_ARG_COUNT(__VA_ARGS__); \
-  template <>                                                                  \
-  const char* ::lasr::enum_names<NAME>::unknown_name = UNKNOWN_NAME;            \
-  template <>                                                                  \
-  const std::pair<typename ::lasr::enum_names<NAME>::base_type, const char*>    \
-      lasr::enum_names<NAME>::entries[] = {LASR_FOREACH(                         \
+#define LASR_ENUM(NAME, BASE_TYPE, UNKNOWN_NAME, ...)                        \
+  enum class NAME : BASE_TYPE {                                              \
+    LASR_FOREACH(LASR_ENUM_ENTRY_IN_BODY, LASR_ENUM_ENTRY_SEP, __VA_ARGS__)  \
+  };                                                                         \
+  template <>                                                                \
+  const std::size_t::lasr::enum_names<NAME>::size =                          \
+      LASR_ARG_COUNT(__VA_ARGS__);                                           \
+  template <>                                                                \
+  const char* ::lasr::enum_names<NAME>::unknown_name = UNKNOWN_NAME;         \
+  template <>                                                                \
+  const std::pair<typename ::lasr::enum_names<NAME>::base_type, const char*> \
+      lasr::enum_names<NAME>::entries[] = {LASR_FOREACH(                     \
           LASR_ENUM_ENTRY_IN_ARRAY, LASR_ENUM_ENTRY_SEP, __VA_ARGS__)}
 
 }  // namespace lasr

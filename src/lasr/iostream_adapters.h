@@ -25,7 +25,6 @@
 #include <cstddef>
 #include <istream>
 #include <ostream>
-
 #include "lasr/io_adapters.h"
 
 namespace lasr {

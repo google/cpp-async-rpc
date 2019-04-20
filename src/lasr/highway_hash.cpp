@@ -20,7 +20,6 @@
 ///   under the License.
 
 #include "lasr/highway_hash.h"
-
 #include <algorithm>
 
 namespace lasr {

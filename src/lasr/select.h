@@ -52,7 +52,7 @@ result_holder<typename A::return_type> make_one_select_result(A& a, const pollfd
     active = (a.timeout() >= std::chrono::milliseconds::zero() &&
               (a.timeout() <= min_timeout || (min_timeout_is_polling && a.for_polling())));
   } else {
-    active = ((fd.revents & fd.events) != 0);
+    active = (fd.revents != 0);
   }
 
   result_holder<typename A::return_type> res;
@@ -77,8 +77,9 @@ result_holder<typename A::return_type> make_one_select_result(A& a, const pollfd
 template <typename T>
 constexpr pollfd make_pollfd(const T& awaitable) {
   return {awaitable.get_fd(),
-          static_cast<short> /* NOLINT(runtime/int) */ (awaitable.for_write() ? (POLLOUT | POLLERR)
-                                                                              : (POLLIN | POLLHUP)),
+          static_cast<short> /* NOLINT(runtime/int) */ (
+              awaitable.for_write() ? (POLLOUT | POLLERR | POLLHUP | POLLNVAL)
+                                    : (POLLIN | POLLERR | POLLHUP | POLLNVAL)),
           0};
 }
 

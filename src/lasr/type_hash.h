@@ -31,7 +31,6 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-
 #include "lasr/mpt.h"
 #include "lasr/serializable_base.h"
 #include "lasr/traits/container_traits.h"

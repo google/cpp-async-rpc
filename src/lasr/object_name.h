@@ -24,7 +24,6 @@
 
 #include <string>
 #include <utility>
-
 #include "lasr/string_adapters.h"
 
 namespace lasr {

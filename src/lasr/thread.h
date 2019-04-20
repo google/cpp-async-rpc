@@ -27,7 +27,6 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
-
 #include "lasr/context.h"
 #include "lasr/errors.h"
 

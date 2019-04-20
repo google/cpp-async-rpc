@@ -29,7 +29,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
 #include "lasr/traits/trait_factories.h"
 
 namespace lasr {

@@ -24,7 +24,6 @@
 
 #include <functional>
 #include <memory>
-
 #include "lasr/container/detail/flat_tree.h"
 
 namespace lasr {

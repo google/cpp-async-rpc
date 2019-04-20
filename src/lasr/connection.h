@@ -30,7 +30,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-
 #include "lasr/awaitable.h"
 #include "lasr/channel.h"
 #include "lasr/errors.h"

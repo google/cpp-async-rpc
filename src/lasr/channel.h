@@ -26,7 +26,6 @@
 #include <sys/types.h>
 #include <chrono>
 #include <cstddef>
-
 #include "lasr/address.h"
 #include "lasr/awaitable.h"
 

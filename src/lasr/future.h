@@ -28,12 +28,11 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
-
+#include "function2/function2.hpp"
 #include "lasr/errors.h"
 #include "lasr/flag.h"
 #include "lasr/result_holder.h"
 #include "lasr/select.h"
-#include "function2/function2.hpp"
 
 namespace lasr {
 namespace detail {

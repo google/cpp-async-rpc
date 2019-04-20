@@ -27,7 +27,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-
 #include "lasr/errors.h"
 #include "lasr/serializable.h"
 

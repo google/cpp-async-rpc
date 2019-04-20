@@ -28,28 +28,27 @@
 #include <string>
 #include <string_view>
 #include <utility>
-
 #include "lasr/container/flat_map.h"
 #include "lasr/singleton.h"
 
-#define ERROR_CLASS(NAME)                                                   \
-  class NAME;                                                               \
-  template <>                                                               \
-  inline std::string_view                                                   \
+#define ERROR_CLASS(NAME)                                                    \
+  class NAME;                                                                \
+  template <>                                                                \
+  inline std::string_view                                                    \
       lasr::errors::detail::error_class_descriptor<NAME>::error_class_name = \
           ::lasr::error_factory::get().register_error_class<NAME>(#NAME);    \
-                                                                            \
+                                                                             \
   class NAME : public ::lasr::errors::base_error {                           \
-   public:                                                                  \
+   public:                                                                   \
     using ::lasr::errors::base_error::base_error;                            \
-                                                                            \
-   private:                                                                 \
-    std::string_view portable_error_class_name_internal() const override {  \
+                                                                             \
+   private:                                                                  \
+    std::string_view portable_error_class_name_internal() const override {   \
       using Descriptor = lasr::errors::detail::error_class_descriptor<NAME>; \
-      if (Descriptor::error_class_name == nullptr)                          \
-        throw std::runtime_error("Error class had no name set");            \
-      return Descriptor::error_class_name;                                  \
-    }                                                                       \
+      if (Descriptor::error_class_name == nullptr)                           \
+        throw std::runtime_error("Error class had no name set");             \
+      return Descriptor::error_class_name;                                   \
+    }                                                                        \
   }
 
 namespace lasr {
