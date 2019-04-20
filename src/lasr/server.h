@@ -187,13 +187,14 @@ class server {
         server_.pool_.run([this]() {
           try {
             auto request = connection_->receive();
-
             string_input_stream request_is(request);
-            Decoder decoder(request_is);
+
+            // A decoder for the header.
+            Decoder header_decoder(request_is);
             rpc_defs::message_type message_type;
-            decoder(message_type);
+            header_decoder(message_type);
             rpc_defs::request_id_type req_id;
-            decoder(req_id);
+            header_decoder(req_id);
 
             switch (message_type) {
               case rpc_defs::message_type::REQUEST:
@@ -388,9 +389,11 @@ class server {
               // Decode the call arguments.
               using args_tuple_type = typename method_info::args_tuple_type;
               string_input_stream request_is(request);
-              Decoder decoder(request_is);
+
+              // A decoder for the arguments.
+              Decoder args_decoder(request_is);
               args_tuple_type args;
-              decoder(args);
+              args_decoder(args);
 
               // Call the method and set the result value.
               if constexpr (std::is_same_v<void, return_type>) {
@@ -410,14 +413,22 @@ class server {
 
             std::string response;
             string_output_stream request_os(response);
-            Encoder encoder(request_os);
 
-            // Message type: RPC request.
-            encoder(rpc_defs::message_type::RESPONSE);
-            // Request ID.
-            encoder(req_id);
-            // Result.
-            encoder(result);
+            {
+              // An encoder for the header.
+              Encoder header_encoder(request_os);
+              // Message type: RPC request.
+              header_encoder(rpc_defs::message_type::RESPONSE);
+              // Request ID.
+              header_encoder(req_id);
+            }
+
+            {
+              // An encoder for the result.
+              Encoder result_encoder(request_os);
+              // Result.
+              result_encoder(result);
+            }
 
             return response;
           };
@@ -427,17 +438,18 @@ class server {
   std::string execute(rpc_defs::request_id_type req_id, std::string request) {
     try {
       string_input_stream request_is(request);
-      Decoder decoder(request_is);
 
+      // A decoder for the method id and the context.
+      Decoder method_decoder(request_is);
       // Name of the remote object.
       std::string object_name;
-      decoder(object_name);
+      method_decoder(object_name);
       // Method name.
       std::string method_name;
-      decoder(method_name);
+      method_decoder(method_name);
       // Method signature hash.
       traits::type_hash_t method_hash;
-      decoder(method_hash);
+      method_decoder(method_hash);
 
       method_fn method;
       {
@@ -460,7 +472,7 @@ class server {
 
       // Current context.
       context ctx;
-      decoder(ctx);
+      method_decoder(ctx);
 
       // Set any timeout.
       if (options_.request_timeout) {
@@ -479,14 +491,22 @@ class server {
 
       std::string result_str;
       string_output_stream result_is(result_str);
-      Encoder encoder(result_is);
 
-      // Message type: RPC request.
-      encoder(rpc_defs::message_type::RESPONSE);
-      // Request ID.
-      encoder(req_id);
-      // Result.
-      encoder(exception_result);
+      {
+        // A encoder for the header.
+        Encoder header_encoder(result_is);
+        // Message type: RPC request.
+        header_encoder(rpc_defs::message_type::RESPONSE);
+        // Request ID.
+        header_encoder(req_id);
+      }
+
+      {
+        // A encoder for the result.
+        Encoder result_encoder(result_is);
+        // Result.
+        result_encoder(exception_result);
+      }
 
       return result_str;
     }

@@ -102,25 +102,38 @@ class client_connection {
       std::string request;
       {
         string_output_stream request_os(request);
-        Encoder encoder(request_os);
 
-        // Message type: RPC request.
-        encoder(rpc_defs::message_type::REQUEST);
-        // Request ID.
-        encoder(req_id);
-        // Name of the remote object.
-        encoder(name_);
-        // Method name.
-        using method_info = method_descriptor<mptr>;
-        encoder(method_info::name());
-        // Method signature hash.
-        constexpr auto method_hash =
-            traits::type_hash_v<typename method_info::method_type>;
-        encoder(method_hash);
-        // Current context.
-        encoder(context::current());
-        // Actual arguments.
-        encoder(args_refs);
+        {
+          // An encoder for the header.
+          Encoder header_encoder(request_os);
+          // Message type: RPC request.
+          header_encoder(rpc_defs::message_type::REQUEST);
+          // Request ID.
+          header_encoder(req_id);
+        }
+
+        {
+          // An encoder for the method id and the context.
+          Encoder method_encoder(request_os);
+          // Name of the remote object.
+          method_encoder(name_);
+          // Method name.
+          using method_info = method_descriptor<mptr>;
+          method_encoder(method_info::name());
+          // Method signature hash.
+          constexpr auto method_hash =
+              traits::type_hash_v<typename method_info::method_type>;
+          method_encoder(method_hash);
+          // Current context.
+          method_encoder(context::current());
+        }
+
+        {
+          // An encoder for the arguments.
+          Encoder args_encoder(request_os);
+          // Actual arguments.
+          args_encoder(args_refs);
+        }
       }
 
       // Send the request.
@@ -129,9 +142,11 @@ class client_connection {
 
       return {response_future.then([](std::string response) {
                 string_input_stream response_is(response);
-                Decoder decoder(response_is);
+
+                // A decoder for the result.
+                Decoder result_decoder(response_is);
                 result_holder<return_type> result;
-                decoder(result);
+                result_decoder(result);
 
                 return std::move(result).value();
               }),
@@ -301,17 +316,18 @@ class client_connection {
           // Read the next packet.
           auto response = connection_.receive();
           string_input_stream response_is(response);
-          Decoder decoder(response_is);
 
+          // A decoder for the header.
+          Decoder header_decoder(response_is);
           // Decode the message type.
           rpc_defs::message_type message_type;
-          decoder(message_type);
+          header_decoder(message_type);
 
           switch (message_type) {
             case rpc_defs::message_type::RESPONSE:
               // Decode the request id.
               rpc_defs::request_id_type req_id;
-              decoder(req_id);
+              header_decoder(req_id);
 
               response.erase(0, response_is.pos());
               set_response(req_id, std::move(response));
