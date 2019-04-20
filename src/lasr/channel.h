@@ -59,6 +59,7 @@ class channel {
   awaitable<std::size_t> async_write(const void* buf, std::size_t len);
 
   // Socket methods.
+  channel& flush();
   address own_addr() const;
   address peer_addr() const;
   channel& shutdown(bool read, bool write);
@@ -75,6 +76,7 @@ class channel {
   channel& reuse_port(bool reuse = true);
   channel& linger(bool do_linger = true,
                   std::chrono::seconds linger_time = default_linger_time);
+  channel& no_delay(bool no_delay = true);
 
  private:
   int fd_;

@@ -159,6 +159,7 @@ class context : public serializable<context> {
   std::condition_variable child_detached_;
   bool set_current_;
   context* parent_;
+  context* previous_;
   lasr::flat_set<context*> children_;
   flag cancelled_;
   std::optional<time_point> deadline_;

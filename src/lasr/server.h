@@ -345,14 +345,14 @@ class server {
   void queue_request(const request_key& key, std::string request) {
     std::scoped_lock lock(requests_mu_);
 
-    auto& wrapper_ptr = requests_[key];
-    if (wrapper_ptr) {
+    if (requests_.count(key) > 0) {
       // A previous request with the same key was already registered... dupe?
       // Just drop the new one.
+      return;
     }
 
     promise<request_result> promise;
-    wrapper_ptr = std::make_unique<request_wrapper>(*this, promise.get_future());
+    auto wrapper_ptr = std::make_unique<request_wrapper>(*this, promise.get_future());
 
     pool_.run([this, promise(std::move(promise)), key, request(std::move(request)),
                &parent_context(wrapper_ptr->get_context())]() mutable {
@@ -363,6 +363,8 @@ class server {
         promise.set_exception(std::current_exception());
       }
     });
+
+    requests_.insert({key, std::move(wrapper_ptr)});
   }
 
   template <typename Interface>
@@ -495,8 +497,9 @@ class server {
       while (connections_.count(++next_connection_key_) > 0) {
         // Ensure we prevent connection counter cycle collisions.
       }
-      connections_[next_connection_key_] = std::make_unique<connection_wrapper>(
-          *this, next_connection_key_, std::move(new_connection));
+      connections_.insert(
+          {next_connection_key_, std::make_unique<connection_wrapper>(*this, next_connection_key_,
+                                                                      std::move(new_connection))});
     });
   }
 

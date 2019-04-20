@@ -58,8 +58,8 @@ class base_thread : public std::thread {
           context new_context(parent_context);
           try {
             std::invoke(f, std::forward<std::decay_t<Args>>(args)...);
-          } catch (const errors::cancelled&) {
-          } catch (const errors::deadline_exceeded&) {
+          } catch (const errors::cancelled& e) {
+          } catch (const errors::deadline_exceeded& e) {
           }
         }),
         std::forward<Args>(args)...);

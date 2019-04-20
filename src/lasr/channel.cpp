@@ -19,11 +19,12 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
+#include "lasr/channel.h"
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <utility>
-#include "lasr/channel.h"
 #include "lasr/errors.h"
 #include "lasr/select.h"
 
@@ -201,6 +202,21 @@ channel& channel::reuse_port(bool reuse) {
   int value = reuse;
   if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEPORT, &value, sizeof(value)))
     throw_io_error("Error setting reuse_port");
+  return *this;
+}
+
+channel& channel::flush() {
+  constexpr int on = 1, off = 0;
+  if (!::setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on))) {
+    ::setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &off, sizeof(off));
+  }
+  return *this;
+}
+
+channel& channel::no_delay(bool no_delay) {
+  int value = no_delay;
+  if (::setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &value, sizeof(value)))
+    throw_io_error("Error setting no_delay");
   return *this;
 }
 

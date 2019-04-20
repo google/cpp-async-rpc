@@ -20,6 +20,7 @@
 ///   under the License.
 
 #include "lasr/flag.h"
+#include "lasr/errors.h"
 #include "lasr/pipe.h"
 
 namespace lasr {
@@ -54,6 +55,12 @@ bool flag::is_set() const {
 
 flag::operator bool() const { return is_set(); }
 
-awaitable<void> flag::wait_set() { return pipe_[0].can_read(); }
+awaitable<void> flag::wait_set() {
+  return pipe_[0].can_read().then([this]() {
+    if (!is_set()) {
+      throw errors::try_again("Flag not yet set");
+    }
+  });
+}
 
 }  // namespace lasr

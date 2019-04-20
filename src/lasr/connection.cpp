@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <utility>
 #include "lasr/connection.h"
+#include <utility>
 #include "lasr/file.h"
 #include "lasr/select.h"
 
@@ -73,7 +73,7 @@ void channel_connection::write(const char* data, std::size_t size) {
 
 void channel_connection::putc(char c) { connection::putc(c); }
 
-void channel_connection::flush() {}
+void channel_connection::flush() { channel_.flush(); }
 
 std::size_t channel_connection::read(char* data, std::size_t size) {
   auto lock = locked_.get();

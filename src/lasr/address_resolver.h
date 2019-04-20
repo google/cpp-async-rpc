@@ -37,9 +37,9 @@ namespace lasr {
 
 class address_resolver : public singleton<address_resolver> {
  public:
-  lasr::future<address_list> async_resolve(const endpoint& req);
+  future<address_list> async_resolve(const endpoint& req);
   address_list resolve(const endpoint& req);
-  lasr::future<address_list> async_resolve(endpoint&& req);
+  future<address_list> async_resolve(endpoint&& req);
   address_list resolve(endpoint&& req);
 
  private:
@@ -52,7 +52,7 @@ class address_resolver : public singleton<address_resolver> {
   ~address_resolver();
 
   queue_type requests_;
-  lasr::daemon_thread resolver_thread_;
+  daemon_thread resolver_thread_;
 };
 
 }  // namespace lasr

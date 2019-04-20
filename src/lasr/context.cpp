@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <utility>
 #include "lasr/context.h"
+#include <utility>
 #include "lasr/errors.h"
 
 namespace lasr {
@@ -45,21 +45,27 @@ context::context(context& parent, bool set_current)
     data_ = parent_->data_;
   }
 
-  if (set_current_) current_ = this;
+  if (set_current_) {
+    previous_ = current_;
+    current_ = this;
+  }
 }
 
 context::context(root)
-    : set_current_(false), parent_(nullptr), deadline_(std::nullopt) {}
+    : set_current_(false),
+      parent_(nullptr),
+      previous_(nullptr),
+      deadline_(std::nullopt) {}
 
 context::~context() {
-  if (set_current_) current_ = parent_;
+  if (set_current_) current_ = previous_;
+
+  if (parent_) parent_->remove_child(this);
 
   cancel();
 
   std::unique_lock lock(mu_);
   child_detached_.wait(lock, [this]() { return children_.empty(); });
-
-  if (parent_) parent_->remove_child(this);
 }
 
 void context::add_child(context* child) {
