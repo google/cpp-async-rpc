@@ -1,8 +1,8 @@
 /// \file
-/// \brief Test for the `ash/container_traits.h` header.
+/// \brief Test for the `lasr/container_traits.h` header.
 ///
 /// \copyright
-///   Copyright 2019 by Google LLC. All Rights Reserved.
+///   Copyright 2019 by Google LLC.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -28,9 +28,8 @@
 #include "lasr/testing/static_checks.h"
 
 template <typename T, bool v>
-using check_is_bit_transferrable_scalar =
-    lasr::testing::check_value<bool,
-                              lasr::traits::is_bit_transferrable_scalar_v<T>, v>;
+using check_is_bit_transferrable_scalar = lasr::testing::check_value<
+    bool, lasr::traits::is_bit_transferrable_scalar_v<T>, v>;
 
 TEST_CASE("is_bit_transferrable_scalar") {
   check_is_bit_transferrable_scalar<std::string, false>();
@@ -58,7 +57,7 @@ TEST_CASE("is_bit_transferrable_scalar") {
 template <typename T1, typename T2>
 using check_writable_value_type =
     lasr::testing::check_type<typename lasr::traits::writable_value_type_t<T1>,
-                             T2>;
+                              T2>;
 
 TEST_CASE("writable_value_type") {
   check_writable_value_type<const int&, int>();

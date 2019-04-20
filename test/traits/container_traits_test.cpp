@@ -1,8 +1,8 @@
 /// \file
-/// \brief Test for the `ash/container_traits.h` header.
+/// \brief Test for the `lasr/container_traits.h` header.
 ///
 /// \copyright
-///   Copyright 2019 by Google LLC. All Rights Reserved.
+///   Copyright 2019 by Google LLC.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -85,7 +85,7 @@ TEST_CASE("is_const_iterable tests") {
 template <typename T, bool v>
 using check_is_contiguous_sequence =
     lasr::testing::check_value<bool, lasr::traits::is_contiguous_sequence_v<T>,
-                              v>;
+                               v>;
 
 TEST_CASE("is_contiguous_sequence tests") {
   check_is_contiguous_sequence<int, false>();
@@ -110,7 +110,8 @@ TEST_CASE("is_contiguous_sequence tests") {
 
 template <typename T, bool v>
 using check_can_reserve_capacity =
-    lasr::testing::check_value<bool, lasr::traits::can_reserve_capacity_v<T>, v>;
+    lasr::testing::check_value<bool, lasr::traits::can_reserve_capacity_v<T>,
+                               v>;
 
 TEST_CASE("can_reserve_capacity tests") {
   check_can_reserve_capacity<int, false>();

@@ -1,8 +1,8 @@
 /// \file
-/// \brief Test for the `ash/trait_factories.h` header.
+/// \brief Test for the `lasr/trait_factories.h` header.
 ///
 /// \copyright
-///   Copyright 2019 by Google LLC. All Rights Reserved.
+///   Copyright 2019 by Google LLC.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may

@@ -1,8 +1,8 @@
 /// \file
-/// \brief Test for the `ash/serialization_traits.h` header.
+/// \brief Test for the `lasr/serialization_traits.h` header.
 ///
 /// \copyright
-///   Copyright 2019 by Google LLC. All Rights Reserved.
+///   Copyright 2019 by Google LLC.
 ///
 /// \copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -47,7 +47,7 @@ struct D {};
 template <typename T, bool v>
 using check_can_be_serialized =
     lasr::testing::check_value<bool, lasr::traits::can_be_serialized<T>::value,
-                              v>;
+                               v>;
 
 TEST_CASE("can_be_serialized") {
   check_can_be_serialized<A, true>();
@@ -59,7 +59,7 @@ TEST_CASE("can_be_serialized") {
 template <typename T1, typename T2>
 using check_get_base_classes =
     lasr::testing::check_type<typename lasr::traits::get_base_classes<T1>::type,
-                             T2>;
+                              T2>;
 
 TEST_CASE("get_base_classes") {
   check_get_base_classes<A, lasr::mpt::pack<>>();
@@ -95,7 +95,8 @@ TEST_CASE("get_field_descriptors") {
 
 template <typename T, bool v>
 using check_has_base_classes =
-    lasr::testing::check_value<bool, lasr::traits::has_base_classes<T>::value, v>;
+    lasr::testing::check_value<bool, lasr::traits::has_base_classes<T>::value,
+                               v>;
 
 TEST_CASE("has_base_classes") {
   check_has_base_classes<A, true>();
@@ -116,9 +117,8 @@ TEST_CASE("has_custom_serialization") {
 }
 
 template <typename T, bool v>
-using check_has_field_descriptors =
-    lasr::testing::check_value<bool,
-                              lasr::traits::has_field_descriptors<T>::value, v>;
+using check_has_field_descriptors = lasr::testing::check_value<
+    bool, lasr::traits::has_field_descriptors<T>::value, v>;
 
 TEST_CASE("has_field_descriptors") {
   check_has_field_descriptors<A, true>();

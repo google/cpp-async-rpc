@@ -1,1 +1,1 @@
-# LASR: Library for Asynchronicity, Serialization and Remoting
+# lasr: Library for Asynchronicity, Serialization and Remoting
