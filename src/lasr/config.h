@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief Header providing static configuration for Ash components.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,23 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#ifndef LASR_CONFIG_H_
+#define LASR_CONFIG_H_
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
-}
+#include "lasr/binary_codecs.h"
+#include "lasr/mpt.h"
+
+namespace lasr {
+namespace config {
+
+using all_encoders =
+    mpt::pack<lasr::binary_sizer, lasr::big_endian_binary_encoder,
+              lasr::little_endian_binary_encoder>;
+
+using all_decoders = mpt::pack<lasr::big_endian_binary_decoder,
+                               lasr::little_endian_binary_decoder>;
+
+}  // namespace config
+}  // namespace ash
+
+#endif  // LASR_CONFIG_H_

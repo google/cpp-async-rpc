@@ -22,13 +22,13 @@
 #include "module2.h"
 #include <chrono>
 #include <iostream>
-#include "ash/channel.h"
-#include "ash/select.h"
+#include "lasr/channel.h"
+#include "lasr/select.h"
 
 void run_module2() {
-  ash::channel in(0);
+  lasr::channel in(0);
   auto [read, timeout] =
-      ash::select(in.can_read(), ash::timeout(std::chrono::milliseconds(3000)));
+      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
   std::cerr << !!read << !!timeout << std::endl;
   in.release();
 }

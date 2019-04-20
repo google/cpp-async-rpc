@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief select-friendly futures and promises.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,38 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "lasr/future.h"
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
+namespace lasr {
+namespace detail {
+
+future_state_base::~future_state_base() {}
+
+void future_state_base::release_reader() {
+  bool has_writer;
+  {
+    std::scoped_lock lock(mu_);
+    has_reader_ = false;
+    has_writer = has_writer_;
+  }
+  if (!has_writer) {
+    delete this;
+  }
 }
+
+void future_state_base::release_writer() {
+  bool has_reader;
+  {
+    std::scoped_lock lock(mu_);
+    has_writer_ = false;
+    has_reader = has_reader_;
+  }
+  if (!has_reader) {
+    delete this;
+  }
+}
+
+awaitable<void> future_state_base::can_get() { return set_.wait_set(); }
+
+}  // namespace detail
+}  // namespace ash

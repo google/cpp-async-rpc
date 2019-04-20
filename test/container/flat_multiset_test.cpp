@@ -21,11 +21,11 @@
 
 #include <utility>
 #include <vector>
-#include "ash/container/flat_set.h"
 #include "catch2/catch.hpp"
+#include "lasr/container/flat_set.h"
 
 TEST_CASE("flat_multiset tests") {
-  using set = ash::flat_multiset<int>;
+  using set = lasr::flat_multiset<int>;
   using vector = std::vector<int>;
 
   set s1;

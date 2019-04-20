@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief select-friendly flag objects.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,41 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "lasr/flag.h"
+#include "lasr/pipe.h"
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
+namespace lasr {
+
+flag::flag() {
+  pipe(pipe_);
+  pipe_[0].make_non_blocking();
+  pipe_[1].make_non_blocking();
 }
+
+void flag::set() {
+  std::scoped_lock lock(mu_);
+  if (!set_) {
+    pipe_[1].write("*", 1);
+    set_ = true;
+  }
+}
+
+void flag::reset() {
+  std::scoped_lock lock(mu_);
+  if (set_) {
+    char c;
+    pipe_[0].read(&c, 1);
+    set_ = false;
+  }
+}
+
+bool flag::is_set() const {
+  std::scoped_lock lock(mu_);
+  return set_;
+}
+
+flag::operator bool() const { return is_set(); }
+
+awaitable<void> flag::wait_set() { return pipe_[0].can_read(); }
+
+}  // namespace ash

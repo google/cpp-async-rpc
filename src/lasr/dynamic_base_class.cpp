@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief Header defining a base class for polymorphic serializable data.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,14 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "lasr/dynamic_base_class.h"
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
+namespace lasr {
+
+std::string_view dynamic_base_class::portable_class_name() const {
+  return portable_class_name_internal();
 }
+
+dynamic_base_class::~dynamic_base_class() {}
+
+}  // namespace ash

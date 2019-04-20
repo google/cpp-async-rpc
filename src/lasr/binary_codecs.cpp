@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief Binary format codecs for serialization.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,15 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "lasr/binary_codecs.h"
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
-}
+namespace lasr {
+
+binary_sizer::binary_sizer()
+    : binary_encoder<binary_sizer, output_sizer, false>(output_sizer()) {}
+
+std::size_t binary_sizer::size() { return out_.size(); }
+
+void binary_sizer::reset() { out_.reset(); }
+
+}  // namespace ash

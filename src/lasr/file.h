@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief File channel factory.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,26 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#ifndef LASR_FILE_H_
+#define LASR_FILE_H_
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
-}
+#include <string>
+
+#include "lasr/channel.h"
+
+namespace lasr {
+
+enum class open_mode : int {
+  READ,
+  WRITE,
+  APPEND,
+  READ_PLUS,
+  WRITE_PLUS,
+  APPEND_PLUS,
+};
+
+channel file(const std::string& path, open_mode mode = open_mode::READ);
+
+}  // namespace ash
+
+#endif  // LASR_FILE_H_

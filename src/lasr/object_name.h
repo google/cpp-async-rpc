@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief Helper for serialized names.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,25 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#ifndef LASR_OBJECT_NAME_H_
+#define LASR_OBJECT_NAME_H_
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
+#include <string>
+#include <utility>
+
+#include "lasr/string_adapters.h"
+
+namespace lasr {
+
+template <typename Encoder, typename Arg>
+std::string object_name(Arg&& arg) {
+  std::string result;
+  string_output_stream sos(result);
+  Encoder encoder(sos);
+  encoder(std::forward<Arg>(arg));
+  return result;
 }
+
+}  // namespace ash
+
+#endif  // LASR_OBJECT_NAME_H_

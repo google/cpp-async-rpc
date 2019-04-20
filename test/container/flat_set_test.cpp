@@ -19,13 +19,13 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/container/flat_set.h"
+#include "lasr/container/flat_set.h"
 #include <utility>
 #include <vector>
 #include "catch2/catch.hpp"
 
 TEST_CASE("flat_set tests") {
-  using set = ash::flat_set<int>;
+  using set = lasr::flat_set<int>;
   using vector = std::vector<int>;
 
   set s1;

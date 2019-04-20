@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief Registry classes for encoders, decoders and dynamic class factories.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,20 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "lasr/registry.h"
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
+namespace lasr {
+
+namespace registry {
+
+dynamic_object_factory::info dynamic_object_factory::operator[](
+    std::string_view class_name) const {
+  const auto it = factory_function_map_.find(class_name);
+  if (it == factory_function_map_.end())
+    throw errors::not_found("Class factory function not found");
+  return it->second;
 }
+
+}  // namespace registry
+
+}  // namespace ash

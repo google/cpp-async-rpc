@@ -19,9 +19,9 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/traits/trait_factories.h"
-#include "ash/testing/static_checks.h"
+#include "lasr/traits/trait_factories.h"
 #include "catch2/catch.hpp"
+#include "lasr/testing/static_checks.h"
 
 struct A {
   static constexpr int x = 1;
@@ -48,11 +48,11 @@ struct D {
 LASR_MAKE_METHOD_CHECKER(has_s_v, s_v);
 template <typename T, bool v>
 using check_has_s_v =
-    ash::testing::check_value<bool, has_s_v<T, void()>::value, v>;
+    lasr::testing::check_value<bool, has_s_v<T, void()>::value, v>;
 
 LASR_MAKE_METHOD_CHECKER(has_i, i);
 template <typename T, bool v>
-using check_has_i = ash::testing::check_value<bool, has_i<T, int()>::value, v>;
+using check_has_i = lasr::testing::check_value<bool, has_i<T, int()>::value, v>;
 
 TEST_CASE("method_checker") {
   check_has_s_v<A, true>();
@@ -69,12 +69,12 @@ TEST_CASE("method_checker") {
 LASR_MAKE_METHOD_CHECKER(has_s_v_c, s_v);
 template <typename T, bool v>
 using check_has_s_v_c =
-    ash::testing::check_value<bool, has_s_v_c<T, void()>::value, v>;
+    lasr::testing::check_value<bool, has_s_v_c<T, void()>::value, v>;
 
 LASR_MAKE_CONST_METHOD_CHECKER(has_i_c, i_c);
 template <typename T, bool v>
 using check_has_i_c =
-    ash::testing::check_value<bool, has_i_c<T, int()>::value, v>;
+    lasr::testing::check_value<bool, has_i_c<T, int()>::value, v>;
 
 TEST_CASE("const_method_checker") {
   check_has_s_v_c<A, true>();
@@ -90,7 +90,7 @@ TEST_CASE("const_method_checker") {
 
 LASR_MAKE_NESTED_CONSTANT_CHECKER(has_x, x);
 template <typename T, bool v>
-using check_has_x = ash::testing::check_value<bool, has_x<T, int>::value, v>;
+using check_has_x = lasr::testing::check_value<bool, has_x<T, int>::value, v>;
 
 TEST_CASE("nested_constant_checker") {
   check_has_x<A, true>();
@@ -101,7 +101,7 @@ TEST_CASE("nested_constant_checker") {
 
 LASR_MAKE_NESTED_TYPE_CHECKER(has_t, t);
 template <typename T, bool v>
-using check_has_t = ash::testing::check_value<bool, has_t<T>::value, v>;
+using check_has_t = lasr::testing::check_value<bool, has_t<T>::value, v>;
 
 TEST_CASE("nested_type_checker") {
   check_has_t<A, true>();

@@ -21,11 +21,11 @@
 
 #include <utility>
 #include <vector>
-#include "ash/container/flat_map.h"
 #include "catch2/catch.hpp"
+#include "lasr/container/flat_map.h"
 
 TEST_CASE("flat_multimap tests") {
-  using map = ash::flat_multimap<int, int>;
+  using map = lasr::flat_multimap<int, int>;
   using vector = std::vector<std::pair<int, int>>;
 
   map s1;

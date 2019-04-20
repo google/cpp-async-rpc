@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test compilation unit.
+/// \brief Channel descriptor wrapper.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC. All Rights Reserved.
@@ -19,16 +19,17 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "module1.h"
-#include <chrono>
-#include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "lasr/pipe.h"
+#include <unistd.h>
+#include "lasr/errors.h"
 
-void run_module1() {
-  lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
-  std::cerr << !!read << !!timeout << std::endl;
-  in.release();
+namespace lasr {
+
+void pipe(channel fds[2]) {
+  int fd[2];
+  if (::pipe(fd)) throw_io_error("Error creating pipe pair");
+  fds[0].reset(fd[0]);
+  fds[1].reset(fd[1]);
 }
+
+}  // namespace ash

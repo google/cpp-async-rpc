@@ -19,18 +19,18 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "ash/traits/type_traits.h"
+#include "lasr/traits/type_traits.h"
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include "ash/testing/static_checks.h"
 #include "catch2/catch.hpp"
+#include "lasr/testing/static_checks.h"
 
 template <typename T, bool v>
 using check_is_bit_transferrable_scalar =
-    ash::testing::check_value<bool,
-                              ash::traits::is_bit_transferrable_scalar_v<T>, v>;
+    lasr::testing::check_value<bool,
+                              lasr::traits::is_bit_transferrable_scalar_v<T>, v>;
 
 TEST_CASE("is_bit_transferrable_scalar") {
   check_is_bit_transferrable_scalar<std::string, false>();
@@ -57,7 +57,7 @@ TEST_CASE("is_bit_transferrable_scalar") {
 
 template <typename T1, typename T2>
 using check_writable_value_type =
-    ash::testing::check_type<typename ash::traits::writable_value_type_t<T1>,
+    lasr::testing::check_type<typename lasr::traits::writable_value_type_t<T1>,
                              T2>;
 
 TEST_CASE("writable_value_type") {
