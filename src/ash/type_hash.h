@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_TYPE_HASH_H_
-#define ASH_TYPE_HASH_H_
+#ifndef LASR_TYPE_HLASR_H_
+#define LASR_TYPE_HLASR_H_
 
 #include <array>
 #include <chrono>
@@ -336,4 +336,4 @@ inline constexpr type_hash_t type_hash_v = type_hash<T>::value;
 
 }  // namespace ash
 
-#endif  // ASH_TYPE_HASH_H_
+#endif  // LASR_TYPE_HLASR_H_

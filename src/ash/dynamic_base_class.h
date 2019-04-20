@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_DYNAMIC_BASE_CLASS_H_
-#define ASH_DYNAMIC_BASE_CLASS_H_
+#ifndef LASR_DYNAMIC_BASE_CLASS_H_
+#define LASR_DYNAMIC_BASE_CLASS_H_
 
 #include <string_view>
 #include <type_traits>
@@ -66,4 +66,4 @@ std::string_view portable_class_name() {
 
 }  // namespace ash
 
-#endif  // ASH_DYNAMIC_BASE_CLASS_H_
+#endif  // LASR_DYNAMIC_BASE_CLASS_H_

@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SEMAPHORE_H_
-#define ASH_SEMAPHORE_H_
+#ifndef LASR_SEMAPHORE_H_
+#define LASR_SEMAPHORE_H_
 
 #include "ash/queue.h"
 
@@ -31,4 +31,4 @@ using semaphore = queue<void>;
 
 }  // namespace ash
 
-#endif  // ASH_SEMAPHORE_H_
+#endif  // LASR_SEMAPHORE_H_

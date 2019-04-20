@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_THREAD_H_
-#define ASH_THREAD_H_
+#ifndef LASR_THREAD_H_
+#define LASR_THREAD_H_
 
 #include <functional>
 #include <memory>
@@ -78,4 +78,4 @@ using daemon_thread = base_thread<true>;
 
 }  // namespace ash
 
-#endif  // ASH_THREAD_H_
+#endif  // LASR_THREAD_H_

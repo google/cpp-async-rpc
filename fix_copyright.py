@@ -24,7 +24,7 @@ CPP_HEADER = """\
 /// \\brief {description}
 ///
 /// \\copyright
-///   Copyright 2019 by Google LLC. All Rights Reserved.
+///   Copyright 2019 by Google LLC.
 ///
 /// \\copyright
 ///   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -49,7 +49,7 @@ PY_HEADER_PREFIX = """#"""
 PY_HEADER = """\
 # *** {description}
 #
-# Copyright 2019 by Google LLC. All Rights Reserved.
+# Copyright 2019 by Google LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain a

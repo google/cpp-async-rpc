@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_PIPE_H_
-#define ASH_PIPE_H_
+#ifndef LASR_PIPE_H_
+#define LASR_PIPE_H_
 
 #include "ash/channel.h"
 
@@ -30,4 +30,4 @@ void pipe(channel fds[2]);
 
 }  // namespace ash
 
-#endif  // ASH_PIPE_H_
+#endif  // LASR_PIPE_H_

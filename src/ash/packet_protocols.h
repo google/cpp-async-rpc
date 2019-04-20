@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_PACKET_PROTOCOLS_H_
-#define ASH_PACKET_PROTOCOLS_H_
+#ifndef LASR_PACKET_PROTOCOLS_H_
+#define LASR_PACKET_PROTOCOLS_H_
 
 #include <limits>
 #include <string>
@@ -86,4 +86,4 @@ class protected_stream_packet_protocol {
 
 }  // namespace ash
 
-#endif  // ASH_PACKET_PROTOCOLS_H_
+#endif  // LASR_PACKET_PROTOCOLS_H_

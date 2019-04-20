@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_FILE_H_
-#define ASH_FILE_H_
+#ifndef LASR_FILE_H_
+#define LASR_FILE_H_
 
 #include <string>
 #include "ash/channel.h"
@@ -40,4 +40,4 @@ channel file(const std::string& path, open_mode mode = open_mode::READ);
 
 }  // namespace ash
 
-#endif  // ASH_FILE_H_
+#endif  // LASR_FILE_H_

@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SERVER_H_
-#define ASH_SERVER_H_
+#ifndef LASR_SERVER_H_
+#define LASR_SERVER_H_
 
 #include <chrono>
 #include <cstddef>
@@ -608,4 +608,4 @@ class server {
 
 }  // namespace ash
 
-#endif  // ASH_SERVER_H_
+#endif  // LASR_SERVER_H_

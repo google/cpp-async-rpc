@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_OBJECT_NAME_H_
-#define ASH_OBJECT_NAME_H_
+#ifndef LASR_OBJECT_NAME_H_
+#define LASR_OBJECT_NAME_H_
 
 #include <string>
 #include <utility>
@@ -39,4 +39,4 @@ std::string object_name(Arg&& arg) {
 
 }  // namespace ash
 
-#endif  // ASH_OBJECT_NAME_H_
+#endif  // LASR_OBJECT_NAME_H_

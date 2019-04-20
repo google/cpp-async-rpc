@@ -27,7 +27,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include "ash.h"
 #include "ash/address_resolver.h"
 #include "ash/client.h"
 #include "ash/connection.h"
@@ -51,7 +50,7 @@
 #include "ash/type_hash.h"
 
 // clang-format off
-ASH_INTERFACE(
+LASR_INTERFACE(
     Reader, (),
     (
         // Get the value of a variable.
@@ -59,7 +58,7 @@ ASH_INTERFACE(
     )
 );
 
-ASH_INTERFACE(
+LASR_INTERFACE(
     Writer, ((Reader)),
     (
         // Set the value of a variable.
@@ -79,22 +78,22 @@ struct K : ash::serializable<K<R>> {
   R x = 1, y = 2;
   std::string z = "pasta";
 
-  ASH_OWN_TYPE(K<R>);
+  LASR_OWN_TYPE(K<R>);
 
-  ASH_FIELDS(x, y, z);
+  LASR_FIELDS(x, y, z);
 };
 
 struct V : ash::dynamic<V> {
   int a = 64;
 
-  ASH_FIELDS(a);
+  LASR_FIELDS(a);
 };
-ASH_REGISTER(V);
+LASR_REGISTER(V);
 
 struct V2 : ash::dynamic<V2> {
   int a = 64;
 
-  ASH_FIELDS(a);
+  LASR_FIELDS(a);
 
   template <typename S>
   void save(S&) const {}
@@ -102,34 +101,34 @@ struct V2 : ash::dynamic<V2> {
   template <typename S>
   void load(S&) {}
 
-  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+  LASR_CUSTOM_SERIALIZATION_VERSION(1);
 };
-ASH_REGISTER(V2);
+LASR_REGISTER(V2);
 
 struct X : ash::dynamic<X, V> {
   int x[10] = {1}, y = 2;
   std::string z = "pasta";
 
-  ASH_FIELDS(x, y, z);
+  LASR_FIELDS(x, y, z);
 };
-ASH_REGISTER(X);
+LASR_REGISTER(X);
 
 struct Y : ash::serializable<Y> {
   int u = 32;
 
-  ASH_FIELDS(u);
+  LASR_FIELDS(u);
 };
-// ASH_REGISTER(Y);
+// LASR_REGISTER(Y);
 
 namespace z {
 struct Z : ash::dynamic<Z, X> {
   std::shared_ptr<Z> z2;
   std::shared_ptr<int> z3;
 
-  ASH_FIELDS(z2, z3);
+  LASR_FIELDS(z2, z3);
 };
 }  // namespace z
-ASH_REGISTER(z::Z);
+LASR_REGISTER(z::Z);
 
 template <typename T>
 void f() {
@@ -145,7 +144,7 @@ struct kk {
   static constexpr int roro = 1;
 };
 
-ASH_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
+LASR_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
 void xxd(const std::string& data) {
   std::size_t i = 0;

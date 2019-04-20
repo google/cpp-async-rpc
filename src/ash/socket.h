@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SOCKET_H_
-#define ASH_SOCKET_H_
+#ifndef LASR_SOCKET_H_
+#define LASR_SOCKET_H_
 
 #include <vector>
 #include "ash/address.h"
@@ -49,4 +49,4 @@ class listener {
 
 }  // namespace ash
 
-#endif  // ASH_SOCKET_H_
+#endif  // LASR_SOCKET_H_

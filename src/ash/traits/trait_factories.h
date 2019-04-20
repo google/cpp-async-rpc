@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_TRAITS_TRAIT_FACTORIES_H_
-#define ASH_TRAITS_TRAIT_FACTORIES_H_
+#ifndef LASR_TRAITS_TRAIT_FACTORIES_H_
+#define LASR_TRAITS_TRAIT_FACTORIES_H_
 
 #include <type_traits>
 #include "ash/traits/type_traits.h"
@@ -40,7 +40,7 @@ namespace traits {
 ///
 /// \param CHECKER_NAME Name of the generated template `struct`.
 /// \param METHOD Name of the (non-`const`) method to check for.
-#define ASH_MAKE_METHOD_CHECKER(CHECKER_NAME, METHOD)                         \
+#define LASR_MAKE_METHOD_CHECKER(CHECKER_NAME, METHOD)                         \
   template <typename, typename T>                                             \
   struct CHECKER_NAME {                                                       \
     static_assert(std::integral_constant<T, false>::value,                    \
@@ -73,7 +73,7 @@ namespace traits {
 ///
 /// \param CHECKER_NAME Name of the generated template `struct`.
 /// \param METHOD Name of the (`const`) method to check for.
-#define ASH_MAKE_CONST_METHOD_CHECKER(CHECKER_NAME, METHOD)                   \
+#define LASR_MAKE_CONST_METHOD_CHECKER(CHECKER_NAME, METHOD)                   \
   template <typename, typename T>                                             \
   struct CHECKER_NAME {                                                       \
     static_assert(std::integral_constant<T, false>::value,                    \
@@ -104,7 +104,7 @@ namespace traits {
 ///
 /// \param CHECKER_NAME Name of the generated template `struct`.
 /// \param TYPE_NAME Name of the nested type to check for.
-#define ASH_MAKE_NESTED_TYPE_CHECKER(CHECKER_NAME, TYPE_NAME)                 \
+#define LASR_MAKE_NESTED_TYPE_CHECKER(CHECKER_NAME, TYPE_NAME)                 \
   template <typename T, typename Enable = void>                               \
   struct CHECKER_NAME : public std::false_type {};                            \
   template <typename T>                                                       \
@@ -122,7 +122,7 @@ namespace traits {
 ///
 /// \param CHECKER_NAME Name of the generated template `struct`.
 /// \param CONSTANT_NAME Name of the nested constant to check for.
-#define ASH_MAKE_NESTED_CONSTANT_CHECKER(CHECKER_NAME, CONSTANT_NAME)         \
+#define LASR_MAKE_NESTED_CONSTANT_CHECKER(CHECKER_NAME, CONSTANT_NAME)         \
   template <typename T, typename VT, typename Enable = void>                  \
   struct CHECKER_NAME : public std::false_type {};                            \
   template <typename T, typename VT>                                          \
@@ -137,4 +137,4 @@ namespace traits {
 
 }  // namespace ash
 
-#endif  // ASH_TRAITS_TRAIT_FACTORIES_H_
+#endif  // LASR_TRAITS_TRAIT_FACTORIES_H_

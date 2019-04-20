@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_MESSAGE_DEFS_H_
-#define ASH_MESSAGE_DEFS_H_
+#ifndef LASR_MESSAGE_DEFS_H_
+#define LASR_MESSAGE_DEFS_H_
 
 #include <cstdint>
 
@@ -38,4 +38,4 @@ enum class message_type : std::uint8_t {
 }  // namespace rpc_defs
 }  // namespace ash
 
-#endif  // ASH_MESSAGE_DEFS_H_
+#endif  // LASR_MESSAGE_DEFS_H_

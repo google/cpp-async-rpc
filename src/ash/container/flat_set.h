@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CONTAINER_FLAT_SET_H_
-#define ASH_CONTAINER_FLAT_SET_H_
+#ifndef LASR_CONTAINER_FLAT_SET_H_
+#define LASR_CONTAINER_FLAT_SET_H_
 
 #include <functional>
 #include <memory>
@@ -62,4 +62,4 @@ class flat_multiset
 
 }  // namespace ash
 
-#endif  // ASH_CONTAINER_FLAT_SET_H_
+#endif  // LASR_CONTAINER_FLAT_SET_H_

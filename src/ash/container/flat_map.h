@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CONTAINER_FLAT_MAP_H_
-#define ASH_CONTAINER_FLAT_MAP_H_
+#ifndef LASR_CONTAINER_FLAT_MAP_H_
+#define LASR_CONTAINER_FLAT_MAP_H_
 
 #include <functional>
 #include <memory>
@@ -106,4 +106,4 @@ class flat_multimap : public detail::flat_tree<Key, true, std::pair<Key, T>,
 
 }  // namespace ash
 
-#endif  // ASH_CONTAINER_FLAT_MAP_H_
+#endif  // LASR_CONTAINER_FLAT_MAP_H_

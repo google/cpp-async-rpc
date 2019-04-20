@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CONFIG_H_
-#define ASH_CONFIG_H_
+#ifndef LASR_CONFIG_H_
+#define LASR_CONFIG_H_
 
 #include "ash/binary_codecs.h"
 #include "ash/mpt.h"
@@ -38,4 +38,4 @@ using all_decoders = mpt::pack<ash::big_endian_binary_decoder,
 }  // namespace config
 }  // namespace ash
 
-#endif  // ASH_CONFIG_H_
+#endif  // LASR_CONFIG_H_

@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_IOSTREAM_ADAPTERS_H_
-#define ASH_IOSTREAM_ADAPTERS_H_
+#ifndef LASR_IOSTREAM_ADAPTERS_H_
+#define LASR_IOSTREAM_ADAPTERS_H_
 
 #include <cstddef>
 #include <istream>
@@ -59,4 +59,4 @@ class ostream_output_stream : public output_stream {
 
 }  // namespace ash
 
-#endif  // ASH_IOSTREAM_ADAPTERS_H_
+#endif  // LASR_IOSTREAM_ADAPTERS_H_

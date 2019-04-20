@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_FLAG_H_
-#define ASH_FLAG_H_
+#ifndef LASR_FLAG_H_
+#define LASR_FLAG_H_
 
 #include <mutex>
 #include "ash/awaitable.h"
@@ -46,4 +46,4 @@ class flag {
 
 }  // namespace ash
 
-#endif  // ASH_FLAG_H_
+#endif  // LASR_FLAG_H_

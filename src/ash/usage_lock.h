@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_USAGE_LOCK_H_
-#define ASH_USAGE_LOCK_H_
+#ifndef LASR_USAGE_LOCK_H_
+#define LASR_USAGE_LOCK_H_
 
 #include <condition_variable>
 #include <memory>
@@ -83,4 +83,4 @@ class usage_lock {
 
 }  // namespace ash
 
-#endif  // ASH_USAGE_LOCK_H_
+#endif  // LASR_USAGE_LOCK_H_

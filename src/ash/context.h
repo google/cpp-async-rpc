@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CONTEXT_H_
-#define ASH_CONTEXT_H_
+#ifndef LASR_CONTEXT_H_
+#define LASR_CONTEXT_H_
 
 #include <algorithm>
 #include <chrono>
@@ -44,7 +44,7 @@ namespace ash {
 
 class context : public serializable<context> {
  public:
-  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+  LASR_CUSTOM_SERIALIZATION_VERSION(1);
 
   template <typename E>
   void save(E& e) const {
@@ -169,4 +169,4 @@ class context : public serializable<context> {
 
 }  // namespace ash
 
-#endif  // ASH_CONTEXT_H_
+#endif  // LASR_CONTEXT_H_

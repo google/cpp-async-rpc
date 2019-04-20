@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_FUTURE_H_
-#define ASH_FUTURE_H_
+#ifndef LASR_FUTURE_H_
+#define LASR_FUTURE_H_
 
 #include <exception>
 #include <memory>
@@ -368,4 +368,4 @@ class promise<void> {
 
 }  // namespace ash
 
-#endif  // ASH_FUTURE_H_
+#endif  // LASR_FUTURE_H_

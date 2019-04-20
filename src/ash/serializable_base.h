@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SERIALIZABLE_BASE_H_
-#define ASH_SERIALIZABLE_BASE_H_
+#ifndef LASR_SERIALIZABLE_BASE_H_
+#define LASR_SERIALIZABLE_BASE_H_
 
 #include <array>
 #include <cstdint>
@@ -103,33 +103,33 @@ using dynamic = std::conditional_t<
     serializable<OwnType, ::ash::dynamic_base_class, Bases...>>;
 
 /// Define a `field_descriptor` type for a member field named `NAME`.
-#define ASH_FIELD(NAME) ::ash::field_descriptor<&own_type::NAME>
-#define ASH_FIELD_SEP() ,
-#define ASH_FIELD_NAME(NAME) #NAME
-#define ASH_FIELD_NAME_SEP() ,
+#define LASR_FIELD(NAME) ::ash::field_descriptor<&own_type::NAME>
+#define LASR_FIELD_SEP() ,
+#define LASR_FIELD_NAME(NAME) #NAME
+#define LASR_FIELD_NAME_SEP() ,
 
 /// Needed to find our own type in template classes, as the base class is
 /// dependent.
-#define ASH_OWN_TYPE(...) using own_type = __VA_ARGS__
+#define LASR_OWN_TYPE(...) using own_type = __VA_ARGS__
 
 /// Define the list of `field_descriptor` elements for the current class.
-#define ASH_FIELDS(...)                                                        \
+#define LASR_FIELDS(...)                                                        \
   using field_descriptors =                                                    \
-      ::ash::mpt::pack<ASH_FOREACH(ASH_FIELD, ASH_FIELD_SEP, __VA_ARGS__)>;    \
+      ::ash::mpt::pack<LASR_FOREACH(LASR_FIELD, LASR_FIELD_SEP, __VA_ARGS__)>;    \
   static const std::array<const char*, ::ash::mpt::size_v<field_descriptors>>& \
   field_names() {                                                              \
     static const std::array<const char*,                                       \
                             ::ash::mpt::size_v<field_descriptors>>             \
-        names{ASH_FOREACH(ASH_FIELD_NAME, ASH_FIELD_NAME_SEP, __VA_ARGS__)};   \
+        names{LASR_FOREACH(LASR_FIELD_NAME, LASR_FIELD_NAME_SEP, __VA_ARGS__)};   \
     return names;                                                              \
   }
 
 /// Version of the load/save methods.
-#define ASH_CUSTOM_SERIALIZATION_VERSION(VERSION)                  \
+#define LASR_CUSTOM_SERIALIZATION_VERSION(VERSION)                  \
   static_assert(VERSION != 0,                                      \
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION
 
 }  // namespace ash
 
-#endif  // ASH_SERIALIZABLE_BASE_H_
+#endif  // LASR_SERIALIZABLE_BASE_H_

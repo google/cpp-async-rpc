@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_RESULT_HOLDER_H_
-#define ASH_RESULT_HOLDER_H_
+#ifndef LASR_RESULT_HOLDER_H_
+#define LASR_RESULT_HOLDER_H_
 
 #include <algorithm>
 #include <exception>
@@ -35,7 +35,7 @@ namespace ash {
 template <typename T>
 class result_holder : public serializable<result_holder<T>> {
  public:
-  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+  LASR_CUSTOM_SERIALIZATION_VERSION(1);
 
   template <typename E>
   void save(E& e) const {
@@ -182,7 +182,7 @@ class result_holder : public serializable<result_holder<T>> {
 template <>
 class result_holder<void> : public serializable<result_holder<void>> {
  public:
-  ASH_CUSTOM_SERIALIZATION_VERSION(1);
+  LASR_CUSTOM_SERIALIZATION_VERSION(1);
 
   template <typename E>
   void save(E& e) const {
@@ -286,4 +286,4 @@ class result_holder<void> : public serializable<result_holder<void>> {
 
 }  // namespace ash
 
-#endif  // ASH_RESULT_HOLDER_H_
+#endif  // LASR_RESULT_HOLDER_H_

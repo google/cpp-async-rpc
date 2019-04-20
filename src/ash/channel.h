@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CHANNEL_H_
-#define ASH_CHANNEL_H_
+#ifndef LASR_CHANNEL_H_
+#define LASR_CHANNEL_H_
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -82,4 +82,4 @@ class channel {
 
 }  // namespace ash
 
-#endif  // ASH_CHANNEL_H_
+#endif  // LASR_CHANNEL_H_

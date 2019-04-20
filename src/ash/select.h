@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SELECT_H_
-#define ASH_SELECT_H_
+#ifndef LASR_SELECT_H_
+#define LASR_SELECT_H_
 
 #include <poll.h>
 #include <algorithm>
@@ -295,4 +295,4 @@ auto select(Args&&... args) {
 
 }  // namespace ash
 
-#endif  // ASH_SELECT_H_
+#endif  // LASR_SELECT_H_

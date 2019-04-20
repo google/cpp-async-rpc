@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SERIALIZABLE_H_
-#define ASH_SERIALIZABLE_H_
+#ifndef LASR_SERIALIZABLE_H_
+#define LASR_SERIALIZABLE_H_
 
 #include "ash/config.h"
 #include "ash/dynamic_base_class.h"
@@ -30,7 +30,7 @@
 namespace ash {
 
 /// Register a dynamic class into the class factories.
-#define ASH_REGISTER(...)                                               \
+#define LASR_REGISTER(...)                                               \
   template <>                                                           \
   std::string_view                                                      \
       ash::detail::dynamic_class_descriptor<__VA_ARGS__>::class_name =  \
@@ -39,7 +39,7 @@ namespace ash {
                               ::ash::config::all_decoders>(#__VA_ARGS__)
 
 /// Register a dynamic class into the class factories under a custom name.
-#define ASH_REGISTER_WITH_NAME(NAME, ...)                               \
+#define LASR_REGISTER_WITH_NAME(NAME, ...)                               \
   template <>                                                           \
   std::string_view                                                      \
       ash::detail::dynamic_class_descriptor<__VA_ARGS__>::class_name =  \
@@ -49,4 +49,4 @@ namespace ash {
 
 }  // namespace ash
 
-#endif  // ASH_SERIALIZABLE_H_
+#endif  // LASR_SERIALIZABLE_H_

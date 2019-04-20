@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_MUTEX_H_
-#define ASH_MUTEX_H_
+#ifndef LASR_MUTEX_H_
+#define LASR_MUTEX_H_
 
 #include "ash/awaitable.h"
 #include "ash/channel.h"
@@ -44,4 +44,4 @@ class mutex {
 
 }  // namespace ash
 
-#endif  // ASH_MUTEX_H_
+#endif  // LASR_MUTEX_H_

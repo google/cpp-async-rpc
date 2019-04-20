@@ -45,12 +45,12 @@ struct D {
   double i_c() const;
 };
 
-ASH_MAKE_METHOD_CHECKER(has_s_v, s_v);
+LASR_MAKE_METHOD_CHECKER(has_s_v, s_v);
 template <typename T, bool v>
 using check_has_s_v =
     ash::testing::check_value<bool, has_s_v<T, void()>::value, v>;
 
-ASH_MAKE_METHOD_CHECKER(has_i, i);
+LASR_MAKE_METHOD_CHECKER(has_i, i);
 template <typename T, bool v>
 using check_has_i = ash::testing::check_value<bool, has_i<T, int()>::value, v>;
 
@@ -66,12 +66,12 @@ TEST_CASE("method_checker") {
   check_has_i<D, false>();
 }
 
-ASH_MAKE_METHOD_CHECKER(has_s_v_c, s_v);
+LASR_MAKE_METHOD_CHECKER(has_s_v_c, s_v);
 template <typename T, bool v>
 using check_has_s_v_c =
     ash::testing::check_value<bool, has_s_v_c<T, void()>::value, v>;
 
-ASH_MAKE_CONST_METHOD_CHECKER(has_i_c, i_c);
+LASR_MAKE_CONST_METHOD_CHECKER(has_i_c, i_c);
 template <typename T, bool v>
 using check_has_i_c =
     ash::testing::check_value<bool, has_i_c<T, int()>::value, v>;
@@ -88,7 +88,7 @@ TEST_CASE("const_method_checker") {
   check_has_i_c<D, false>();
 }
 
-ASH_MAKE_NESTED_CONSTANT_CHECKER(has_x, x);
+LASR_MAKE_NESTED_CONSTANT_CHECKER(has_x, x);
 template <typename T, bool v>
 using check_has_x = ash::testing::check_value<bool, has_x<T, int>::value, v>;
 
@@ -99,7 +99,7 @@ TEST_CASE("nested_constant_checker") {
   check_has_x<D, false>();
 }
 
-ASH_MAKE_NESTED_TYPE_CHECKER(has_t, t);
+LASR_MAKE_NESTED_TYPE_CHECKER(has_t, t);
 template <typename T, bool v>
 using check_has_t = ash::testing::check_value<bool, has_t<T>::value, v>;
 

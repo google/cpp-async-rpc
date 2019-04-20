@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_SINGLETON_H_
-#define ASH_SINGLETON_H_
+#ifndef LASR_SINGLETON_H_
+#define LASR_SINGLETON_H_
 
 namespace ash {
 
@@ -35,4 +35,4 @@ struct singleton {
 
 }  // namespace ash
 
-#endif  // ASH_SINGLETON_H_
+#endif  // LASR_SINGLETON_H_

@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_TRAITS_CONTAINER_TRAITS_H_
-#define ASH_TRAITS_CONTAINER_TRAITS_H_
+#ifndef LASR_TRAITS_CONTAINER_TRAITS_H_
+#define LASR_TRAITS_CONTAINER_TRAITS_H_
 
 #include <array>
 #include <iterator>
@@ -70,7 +70,7 @@ inline constexpr bool is_const_iterable_v = is_const_iterable<T>::value;
 /// \brief Check if `T` is an associative container.
 ///
 /// This implementation just checks for a nested `T::key_type` type.
-ASH_MAKE_NESTED_TYPE_CHECKER(is_associative, key_type);
+LASR_MAKE_NESTED_TYPE_CHECKER(is_associative, key_type);
 
 namespace detail {
 template <typename T>
@@ -101,7 +101,7 @@ inline constexpr bool is_contiguous_sequence_v =
     is_contiguous_sequence<T>::value;
 
 namespace detail {
-ASH_MAKE_METHOD_CHECKER(has_reserve, reserve);
+LASR_MAKE_METHOD_CHECKER(has_reserve, reserve);
 }  // namespace detail
 
 /// \brief Check whether a container allows for capacity resizing.
@@ -120,7 +120,7 @@ template <typename T>
 inline constexpr bool can_reserve_capacity_v = can_reserve_capacity<T>::value;
 
 namespace detail {
-ASH_MAKE_METHOD_CHECKER(has_resize, resize);
+LASR_MAKE_METHOD_CHECKER(has_resize, resize);
 }  // namespace detail
 
 /// \brief Check whether a container supports resizing.
@@ -179,4 +179,4 @@ inline constexpr std::size_t static_size_v = static_size<T>::value;
 
 }  // namespace ash
 
-#endif  // ASH_TRAITS_CONTAINER_TRAITS_H_
+#endif  // LASR_TRAITS_CONTAINER_TRAITS_H_

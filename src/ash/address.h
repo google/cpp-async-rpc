@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_ADDRESS_H_
-#define ASH_ADDRESS_H_
+#ifndef LASR_ADDRESS_H_
+#define LASR_ADDRESS_H_
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -189,4 +189,4 @@ struct iterator_traits<::ash::address_list::const_iterator> {
 };
 
 }  // namespace std
-#endif  // ASH_ADDRESS_H_
+#endif  // LASR_ADDRESS_H_

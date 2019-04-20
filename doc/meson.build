@@ -1,4 +1,4 @@
-# *** Meson build configuration for the ASH Doxygen documentation.
+# *** Meson build configuration for the LASR Doxygen documentation.
 #
 # Copyright 2019 by Google LLC. All Rights Reserved.
 #

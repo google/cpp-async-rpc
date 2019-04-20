@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CLIENT_H_
-#define ASH_CLIENT_H_
+#ifndef LASR_CLIENT_H_
+#define LASR_CLIENT_H_
 
 #include <algorithm>
 #include <chrono>
@@ -400,4 +400,4 @@ class client_connection {
 
 }  // namespace ash
 
-#endif  // ASH_CLIENT_H_
+#endif  // LASR_CLIENT_H_

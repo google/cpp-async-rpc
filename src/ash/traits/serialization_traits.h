@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_TRAITS_SERIALIZATION_TRAITS_H_
-#define ASH_TRAITS_SERIALIZATION_TRAITS_H_
+#ifndef LASR_TRAITS_SERIALIZATION_TRAITS_H_
+#define LASR_TRAITS_SERIALIZATION_TRAITS_H_
 
 #include <cstdint>
 #include <type_traits>
@@ -39,7 +39,7 @@ namespace traits {
 /// serialization.
 ///
 /// The implementation checks for a nested type `T::field_descriptors`.
-ASH_MAKE_NESTED_TYPE_CHECKER(has_field_descriptors, field_descriptors);
+LASR_MAKE_NESTED_TYPE_CHECKER(has_field_descriptors, field_descriptors);
 
 /// \brief Retrieve the field pointers for a type `T`.
 template <typename T, typename Enable = void>
@@ -72,7 +72,7 @@ using get_field_descriptors_t = typename get_field_descriptors<T>::type;
 /// non-virtual classes.
 ///
 /// The implementation checks for a nested type `T::base_classes`.
-ASH_MAKE_NESTED_TYPE_CHECKER(has_base_classes, base_classes);
+LASR_MAKE_NESTED_TYPE_CHECKER(has_base_classes, base_classes);
 
 /// \brief Retrieve the base classes for a type `T`.
 template <typename T, typename Enable = void>
@@ -102,7 +102,7 @@ using get_base_classes_t = typename get_base_classes<T>::type;
 using custom_serialization_version_type = std::uint32_t;
 
 namespace detail {
-ASH_MAKE_NESTED_CONSTANT_CHECKER(has_custom_serialization_version,
+LASR_MAKE_NESTED_CONSTANT_CHECKER(has_custom_serialization_version,
                                  custom_serialization_version);
 }  // namespace detail
 
@@ -163,4 +163,4 @@ inline constexpr bool can_be_serialized_v = can_be_serialized<T>::value;
 
 }  // namespace ash
 
-#endif  // ASH_TRAITS_SERIALIZATION_TRAITS_H_
+#endif  // LASR_TRAITS_SERIALIZATION_TRAITS_H_

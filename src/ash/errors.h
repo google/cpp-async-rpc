@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_ERRORS_H_
-#define ASH_ERRORS_H_
+#ifndef LASR_ERRORS_H_
+#define LASR_ERRORS_H_
 
 #include <cerrno>
 #include <exception>
@@ -135,4 +135,4 @@ void throw_io_error(const std::string& message, int code);
 
 }  // namespace ash
 
-#endif  // ASH_ERRORS_H_
+#endif  // LASR_ERRORS_H_

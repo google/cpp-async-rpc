@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_MPT_H_
-#define ASH_MPT_H_
+#ifndef LASR_MPT_H_
+#define LASR_MPT_H_
 
 #include <algorithm>
 #include <cstddef>
@@ -41,7 +41,7 @@ namespace mpt {
 /// in terms of the `NAME` and the operation (`OP`).
 /// \param CREATE_BINARY_OPERATOR Macro to be used for defining a binary
 /// operator in terms of the `NAME` and the operation (`OP`).
-#define ASH_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR,  \
+#define LASR_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR,  \
                                       CREATE_BINARY_OPERATOR) \
   CREATE_UNARY_OPERATOR(negate, -);                           \
   CREATE_UNARY_OPERATOR(logical_not, !);                      \
@@ -77,13 +77,13 @@ namespace mpt {
 /// in terms of the `NAME` and the operation (`OP`).
 /// \param CREATE_BINARY_OPERATOR Macro to be used for defining a binary
 /// operator in terms of the `NAME` and the operation (`OP`).
-#define ASH_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(CREATE_UNARY_OPERATOR,     \
+#define LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(CREATE_UNARY_OPERATOR,     \
                                                     CREATE_BINARY_OPERATOR)    \
-  ASH_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR, CREATE_BINARY_OPERATOR) \
+  LASR_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR, CREATE_BINARY_OPERATOR) \
   CREATE_UNARY_OPERATOR(identity, /**/);
 
 /// Define unary arithmetic operation functors on arbitrary types.
-#define ASH_CREATE_UNARY_OPERATOR(NAME, OP) \
+#define LASR_CREATE_UNARY_OPERATOR(NAME, OP) \
   struct NAME {                             \
     template <typename T>                   \
     constexpr auto operator()(T v) {        \
@@ -91,7 +91,7 @@ namespace mpt {
     }                                       \
   };
 /// Define binary arithmetic operation functors on arbitrary types.
-#define ASH_CREATE_BINARY_OPERATOR(NAME, OP) \
+#define LASR_CREATE_BINARY_OPERATOR(NAME, OP) \
   struct NAME {                              \
     template <typename T, typename U>        \
     constexpr auto operator()(T v, U w) {    \
@@ -99,8 +99,8 @@ namespace mpt {
     }                                        \
   };
 /// Create a complete set of arithmetic operation functors on arbitrary types.
-ASH_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(ASH_CREATE_UNARY_OPERATOR,
-                                            ASH_CREATE_BINARY_OPERATOR);
+LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(LASR_CREATE_UNARY_OPERATOR,
+                                            LASR_CREATE_BINARY_OPERATOR);
 
 /// \brief Types representing sequences of homogeneously typed integers.
 /// An `integer_sequence<T, ints...>` type represents a compile-time sequence of
@@ -137,31 +137,31 @@ struct integer_sequence {
 
  public:
 /// Type-based unary operator generator macro.
-#define ASH_INT_SEQ_TYPE_UNARY_OP(NAME, OP)    \
+#define LASR_INT_SEQ_TYPE_UNARY_OP(NAME, OP)    \
   struct NAME : unary_op<::ash::mpt::NAME> {}; \
   using NAME##_t = typename NAME::type;
 /// Type-based binary operator generator macro.
-#define ASH_INT_SEQ_TYPE_BINARY_OP(NAME, OP)       \
+#define LASR_INT_SEQ_TYPE_BINARY_OP(NAME, OP)       \
   template <typename U>                            \
   struct NAME : binary_op<U, ::ash::mpt::NAME> {}; \
   template <typename U>                            \
   using NAME##_t = typename NAME<U>::type;
   /// Type-based operator hierarchy.
-  ASH_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(ASH_INT_SEQ_TYPE_UNARY_OP,
-                                              ASH_INT_SEQ_TYPE_BINARY_OP);
+  LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(LASR_INT_SEQ_TYPE_UNARY_OP,
+                                              LASR_INT_SEQ_TYPE_BINARY_OP);
 
 /// Value-based unary operator generator macro.
-#define ASH_INT_SEQ_VALUE_UNARY_OP(NAME, OP) \
+#define LASR_INT_SEQ_VALUE_UNARY_OP(NAME, OP) \
   constexpr NAME##_t operator OP() { return {}; }
 /// Value-based binary operator generator macro.
-#define ASH_INT_SEQ_VALUE_BINARY_OP(NAME, OP) \
+#define LASR_INT_SEQ_VALUE_BINARY_OP(NAME, OP) \
   template <typename U>                       \
   constexpr NAME##_t<U> operator OP(U) {      \
     return {};                                \
   }
   // Value-based operator hierarchy.
-  ASH_CREATE_OPERATOR_HIERARCHY(ASH_INT_SEQ_VALUE_UNARY_OP,
-                                ASH_INT_SEQ_VALUE_BINARY_OP);
+  LASR_CREATE_OPERATOR_HIERARCHY(LASR_INT_SEQ_VALUE_UNARY_OP,
+                                LASR_INT_SEQ_VALUE_BINARY_OP);
 };
 
 namespace detail {
@@ -925,4 +925,4 @@ using insert_value_into_t = typename insert_value_into<v, S>::type;
 
 }  // namespace ash
 
-#endif  // ASH_MPT_H_
+#endif  // LASR_MPT_H_

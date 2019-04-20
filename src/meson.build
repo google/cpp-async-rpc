@@ -1,4 +1,4 @@
-# *** Meson build configuration for ASH main sources.
+# *** Meson build configuration for LASR main sources.
 #
 # Copyright 2019 by Google LLC. All Rights Reserved.
 #
@@ -48,4 +48,4 @@ endforeach
 find_sources_output = run_command(find_program_path.path(), meson.current_source_dir(), '-name', '*.cpp', '-printf', '%P\n')
 sources_list = find_sources_output.stdout().strip().split('\n')
 
-ash_library = static_library('ash', sources_list, include_directories : all_src_includes)
+lasr_library = static_library('lasr', sources_list, include_directories : all_src_includes)

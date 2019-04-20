@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_PACKET_CODECS_H_
-#define ASH_PACKET_CODECS_H_
+#ifndef LASR_PACKET_CODECS_H_
+#define LASR_PACKET_CODECS_H_
 
 #include <cstdint>
 #include <string>
@@ -70,4 +70,4 @@ class cobs_codec : public packet_codec {
 };
 }  // namespace ash
 
-#endif  // ASH_PACKET_CODECS_H_
+#endif  // LASR_PACKET_CODECS_H_

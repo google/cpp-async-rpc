@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_AWAITABLE_H_
-#define ASH_AWAITABLE_H_
+#ifndef LASR_AWAITABLE_H_
+#define LASR_AWAITABLE_H_
 
 #include <chrono>
 #include <type_traits>
@@ -130,4 +130,4 @@ awaitable<void> deadline(const std::chrono::time_point<Clock, Duration>& when) {
 
 }  // namespace ash
 
-#endif  // ASH_AWAITABLE_H_
+#endif  // LASR_AWAITABLE_H_

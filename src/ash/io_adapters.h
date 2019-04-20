@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_IO_ADAPTERS_H_
-#define ASH_IO_ADAPTERS_H_
+#ifndef LASR_IO_ADAPTERS_H_
+#define LASR_IO_ADAPTERS_H_
 
 #include <cstddef>
 #include "ash/errors.h"
@@ -107,4 +107,4 @@ class output_sizer {
 
 }  // namespace ash
 
-#endif  // ASH_IO_ADAPTERS_H_
+#endif  // LASR_IO_ADAPTERS_H_

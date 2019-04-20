@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_EXECUTOR_H_
-#define ASH_EXECUTOR_H_
+#ifndef LASR_EXECUTOR_H_
+#define LASR_EXECUTOR_H_
 
 #include <utility>
 #include <vector>
@@ -58,4 +58,4 @@ class thread_pool {
 
 }  // namespace ash
 
-#endif  // ASH_EXECUTOR_H_
+#endif  // LASR_EXECUTOR_H_

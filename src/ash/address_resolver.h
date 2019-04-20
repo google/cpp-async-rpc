@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_ADDRESS_RESOLVER_H_
-#define ASH_ADDRESS_RESOLVER_H_
+#ifndef LASR_ADDRESS_RESOLVER_H_
+#define LASR_ADDRESS_RESOLVER_H_
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -58,4 +58,4 @@ class address_resolver : public singleton<address_resolver> {
 
 }  // namespace ash
 
-#endif  // ASH_ADDRESS_RESOLVER_H_
+#endif  // LASR_ADDRESS_RESOLVER_H_

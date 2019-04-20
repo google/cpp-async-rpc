@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_BINARY_CODECS_H_
-#define ASH_BINARY_CODECS_H_
+#ifndef LASR_BINARY_CODECS_H_
+#define LASR_BINARY_CODECS_H_
 
 #include <chrono>
 #include <cstddef>
@@ -831,4 +831,4 @@ using big_endian_binary_decoder =
 
 }  // namespace ash
 
-#endif  // ASH_BINARY_CODECS_H_
+#endif  // LASR_BINARY_CODECS_H_

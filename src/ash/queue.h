@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_QUEUE_H_
-#define ASH_QUEUE_H_
+#ifndef LASR_QUEUE_H_
+#define LASR_QUEUE_H_
 
 #include <limits>
 #include <mutex>
@@ -182,4 +182,4 @@ class queue<void> {
 
 }  // namespace ash
 
-#endif  // ASH_QUEUE_H_
+#endif  // LASR_QUEUE_H_

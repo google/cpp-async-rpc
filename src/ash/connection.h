@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef ASH_CONNECTION_H_
-#define ASH_CONNECTION_H_
+#ifndef LASR_CONNECTION_H_
+#define LASR_CONNECTION_H_
 
 #include <condition_variable>
 #include <functional>
@@ -209,4 +209,4 @@ class client_socket_connection : public channel_connection {
 
 }  // namespace ash
 
-#endif  // ASH_CONNECTION_H_
+#endif  // LASR_CONNECTION_H_

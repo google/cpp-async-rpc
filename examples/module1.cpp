@@ -20,10 +20,10 @@
 ///   under the License.
 
 #include "module1.h"
-#include <ash/channel.h>
-#include <ash/select.h>
 #include <chrono>
 #include <iostream>
+#include "ash/channel.h"
+#include "ash/select.h"
 
 void run_module1() {
   ash::channel in(0);

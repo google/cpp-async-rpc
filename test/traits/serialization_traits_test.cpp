@@ -30,16 +30,16 @@
 
 struct A : ash::serializable<A> {
   int x;
-  ASH_FIELDS(x);
+  LASR_FIELDS(x);
 };
 
 struct B : ash::serializable<B, A> {
   int y;
-  ASH_FIELDS(y);
+  LASR_FIELDS(y);
 };
 
 struct C : ash::serializable<C> {
-  ASH_CUSTOM_SERIALIZATION_VERSION(33);
+  LASR_CUSTOM_SERIALIZATION_VERSION(33);
 };
 
 struct D {};

@@ -1,4 +1,4 @@
-# *** Meson build configuration for the ASH examples.
+# *** Meson build configuration for the LASR examples.
 #
 # Copyright 2019 by Google LLC. All Rights Reserved.
 #
@@ -22,10 +22,10 @@ main = executable('main',
                   'main.cpp',
                   include_directories : all_examples_includes,
                   link_args : '-lpthread',
-                  link_with : ash_library)
+                  link_with : lasr_library)
                   
 modules = executable('modules',
                      'modules.cpp', 'module1.cpp', 'module2.cpp',
                      include_directories : all_examples_includes,
                      link_args : '-lpthread',
-                     link_with : ash_library)
+                     link_with : lasr_library)
