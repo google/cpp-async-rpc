@@ -1,4 +1,4 @@
-# *** Meson build configuration for ASH tests.
+# *** Meson build configuration for LASR tests.
 #
 # Copyright 2019 by Google LLC. All Rights Reserved.
 #
@@ -30,7 +30,7 @@ foreach test_source : tests_list
     include_directories : all_test_includes,
     cpp_args: [cpp_catch2_config_main_flag],
     link_args : '-lpthread',
-    link_with: ash_library
+    link_with: lasr_library
   )
   test(test_binary_name, test_executable)
 endforeach
