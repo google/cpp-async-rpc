@@ -5,6 +5,11 @@ network programming, binary serialization and RPC.
 
 ## What does lasr look like?
 
+### RPC server and client
+
+Here a single small binary includes an interface definition, the server and the
+client.
+
 ```c++
 #include <iostream>
 #include <string>
@@ -29,7 +34,8 @@ int main(int argc, char* argv[]) {
   // Create a server-side implementation object.
   lasr::server_object<GreeterImpl> greeter;
 
-  // Set up and the server on port 9999 and register the "greeter" object in it.
+  // Set up the server on TCP port 9999 and register the object in it with under
+  // the "greeter" name.
   lasr::server server({/* default options */}, lasr::endpoint().port(9999));
   server.register_object("greeter", greeter);
 
@@ -49,23 +55,85 @@ int main(int argc, char* argv[]) {
 }
 ```
 
+### Asynchronous networking
+
+This examples sends an HTTP get request and prints out the response in an
+asynchronous manner, and using a local context to set a timeout of 10 seconds
+for the whole set of calls.
+
+```c++
+#include <chrono>
+#include <exception>
+#include <iostream>
+#include <string>
+#include "lasr/awaitable.h"
+#include "lasr/context.h"
+#include "lasr/errors.h"
+#include "lasr/select.h"
+#include "lasr/socket.h"
+
+int main(int argc, char* argv[]) {
+  try {
+    lasr::context ctx;
+    ctx.set_timeout(std::chrono::seconds(10));
+
+    auto s =
+        lasr::dial(lasr::endpoint().name("www.kernel.org").service("http"));
+
+    std::string request = "GET / HTTP/1.0\r\nHost: www.kernel.org\r\n\r\n";
+    char buf[256];
+
+    while (true) {
+      auto [sent, received] = lasr::select(
+          request.size() ? s.async_write(request.data(), request.size())
+                         : lasr::never().then([]() { return std::size_t{0}; }),
+          s.async_read(buf, sizeof(buf)));
+
+      if (sent) {
+        std::cout << "S(" << *sent << ")" << std::endl;
+        // Remove the bytes we already sent.
+        request.erase(0, *sent);
+      }
+
+      if (received) {
+        std::cout << "R(" << *received << ")" << std::endl
+                  << std::string(buf, buf + *received) << std::endl;
+      }
+    }
+
+    return 0;
+  } catch (const lasr::errors::base_error& e) {
+    std::cerr << "Exception of type " << e.portable_error_class_name()
+              << " with message: " << e.what() << std::endl;
+    return 1;
+  } catch (...) {
+    std::cerr << "Some other exception." << std::endl;
+    return 1;
+  }
+}
+```
+
 ## Why lasr?
 
-I wanted to communicate two microcontrollers without having to write the code
-to actually put the data on the serial line. Eventually the project grew up to
-be a fully fledged serialization library, using template meta-programming
-techniques to simplify usage and resolve as much as possible at compile time.
+For my hobby DIY robot, I wanted to split the processing into two
+microcontrollers, one for communications and another for real-time control.
+
+Obviously I had to write a generic serialization framework that could run over a
+TTL-level serial port. :-)
+
+Eventually the project completed a fully fledged binary serialization library,
+using template meta-programming techniques to simplify usage and resolve as much
+as possible at compile time.
 
 At that point, building on top of the serialization capabilities to create a
-fully fledged RPC service became tempting, so I needed the networking support...
-and of course it would be bad to use a "thread per connection" model in an
-embedded environment, so we needed some asynchronous mechanisms too (there's
-some tuning for running in embedded systems).
+RPC facility became tempting, so I needed the networking support too...
+and the "thread per connection" model is boring, and likely not so suitable for
+an embedded environment, so we needed some asynchronous mechanisms too.
 
-Albeit lasr originally targeted C++11, eventually the fixes in later versions
-made everything simpler and more powerful, thus justifying moving to C++17.
+In the meantime, the library moved from C++11, to C++17 which simplified a
+number of things and made some syntax way more natural.
 
-At this point the library supports POSIX environments (it's developed on Linux),
+At of today, the library supports POSIX environments (it's developed on Linux),
 but the plan is to eventually make it work for Espressif's
 [ESP-IDF](https://github.com/espressif/esp-idf1) environment, so that RPC
 servers can be implemented in the
@@ -112,7 +180,7 @@ platform.
 
 ## What's still missing?
 
- * Bug fixes (at this point it's alpha quality and unstable).
+ * Discover and fix all the bugs.
 
  * An actual port to the ESP32 (which will likely involve some
    [VFS](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/storage/vfs.html).
@@ -131,10 +199,9 @@ platform.
    provided inspiration on how to process sequences of types or data at compile
    time (for example for iterating on struct fields).
    
- * [The Go language](https://golang.org/). While marred by some early design
-   decissions (the lack of generics and exceptions, in particular), other areas
-   of the language like the event multiplexing primitives or the design of its
-   networking libraries really do shine.
+ * [The Go language](https://golang.org/). The cancellable contexts, the channel
+   multiplexing and the clean networking libraries have inspired some of the
+   work in lasr.
  
 ## Dependencies
  

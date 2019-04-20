@@ -30,8 +30,5 @@ modules = executable('modules',
                      link_args : '-lpthread',
                      link_with : lasr_library)
 
-rpc_basic = executable('rpc_basic',
-                       'rpc_basic/rpc_basic.cpp',
-                       include_directories : all_examples_includes,
-                       link_args : '-lpthread',
-                       link_with : lasr_library)
+subdir('async_basic')
+subdir('rpc_basic')

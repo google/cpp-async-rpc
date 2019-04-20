@@ -42,7 +42,8 @@ int main(int argc, char* argv[]) {
   // Create a server-side implementation object.
   lasr::server_object<GreeterImpl> greeter;
 
-  // Set up and the server on port 9999 and register the "greeter" object in it.
+  // Set up the server on TCP port 9999 and register the object in it with under
+  // the "greeter" name.
   lasr::server server({/* default options */}, lasr::endpoint().port(9999));
   server.register_object("greeter", greeter);
 
