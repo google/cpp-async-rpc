@@ -601,12 +601,12 @@ class server {
   std::mutex objects_mu_;
   object_map objects_;
   ConnectionProducer acceptor_;
-  thread_pool pool_;
   connection_key next_connection_key_ = 0;
   connection_map connections_;
   std::mutex requests_mu_;
   request_map requests_;
   daemon_thread reactor_;
+  thread_pool pool_;
 };
 
 }  // namespace lasr
