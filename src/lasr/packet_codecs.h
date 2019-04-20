@@ -68,6 +68,6 @@ class cobs_codec : public packet_codec {
 
   void decode(std::string& data) override;
 };
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_PACKET_CODECS_H_

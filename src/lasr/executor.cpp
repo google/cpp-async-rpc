@@ -49,4 +49,4 @@ thread_pool::~thread_pool() {
   }
 }
 
-}  // namespace ash
+}  // namespace lasr

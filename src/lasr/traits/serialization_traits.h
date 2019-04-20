@@ -162,6 +162,6 @@ template <typename T>
 inline constexpr bool can_be_serialized_v = can_be_serialized<T>::value;
 }  // namespace traits
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_TRAITS_SERIALIZATION_TRAITS_H_

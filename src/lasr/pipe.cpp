@@ -32,4 +32,4 @@ void pipe(channel fds[2]) {
   fds[1].reset(fd[1]);
 }
 
-}  // namespace ash
+}  // namespace lasr

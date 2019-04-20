@@ -135,4 +135,4 @@ void cobs_codec::decode(std::string& data) {
   }
   data.resize((dst - data.begin()) - 1);
 }
-}  // namespace ash
+}  // namespace lasr

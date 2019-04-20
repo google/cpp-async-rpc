@@ -56,4 +56,4 @@ flag::operator bool() const { return is_set(); }
 
 awaitable<void> flag::wait_set() { return pipe_[0].can_read(); }
 
-}  // namespace ash
+}  // namespace lasr

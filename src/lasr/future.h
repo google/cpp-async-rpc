@@ -367,6 +367,6 @@ class promise<void> {
   future<value_type> future_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_FUTURE_H_

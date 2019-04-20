@@ -399,6 +399,6 @@ class client_connection {
   daemon_thread timeout_and_cancellation_handler_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CLIENT_H_

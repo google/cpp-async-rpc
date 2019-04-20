@@ -285,6 +285,6 @@ class result_holder<void> : public serializable<result_holder<void>> {
   std::exception_ptr exception_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_RESULT_HOLDER_H_

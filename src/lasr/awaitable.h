@@ -128,6 +128,6 @@ awaitable<void> deadline(const std::chrono::time_point<Clock, Duration>& when) {
   return awaitable<void>(std::max(std::chrono::milliseconds::zero(), delta));
 }
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_AWAITABLE_H_

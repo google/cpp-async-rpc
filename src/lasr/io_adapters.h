@@ -106,6 +106,6 @@ class output_sizer {
   std::size_t size_ = 0;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_IO_ADAPTERS_H_

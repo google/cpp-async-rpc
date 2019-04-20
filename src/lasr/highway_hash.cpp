@@ -276,4 +276,4 @@ void highway_hash::process_all(const std::uint8_t* data, std::size_t size) {
   if ((size & 31) != 0) update_remainder(data + i, size & 31);
 }
 
-}  // namespace ash
+}  // namespace lasr

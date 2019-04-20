@@ -923,6 +923,6 @@ using insert_value_into_t = typename insert_value_into<v, S>::type;
 
 }  // namespace mpt
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_MPT_H_

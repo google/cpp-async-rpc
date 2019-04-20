@@ -607,6 +607,6 @@ class server {
   daemon_thread reactor_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SERVER_H_

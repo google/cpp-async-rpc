@@ -236,6 +236,6 @@ struct async_interface : virtual Extends::async... {
    private:                                                                    \
     O obj_;                                                                    \
   }
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_INTERFACE_H_

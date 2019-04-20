@@ -60,6 +60,6 @@ class flat_multiset
   using detail::flat_tree<Key, true, Key, Compare, Allocator>::flat_tree;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CONTAINER_FLAT_SET_H_

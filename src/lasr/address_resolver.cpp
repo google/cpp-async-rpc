@@ -79,4 +79,4 @@ lasr::future<address_list> address_resolver::async_resolve(endpoint&& req) {
 address_list address_resolver::resolve(endpoint&& req) {
   return async_resolve(std::move(req)).get();
 }
-}  // namespace ash
+}  // namespace lasr

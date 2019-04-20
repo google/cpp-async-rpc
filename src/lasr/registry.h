@@ -216,6 +216,6 @@ std::enable_if_t<is_dynamic_v<T>, bool> check_dynamic_compatibility(void* obj) {
 
 }  // namespace registry
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_REGISTRY_H_

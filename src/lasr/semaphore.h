@@ -29,6 +29,6 @@ namespace lasr {
 /// A semaphore is just a queue<void>.
 using semaphore = queue<void>;
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SEMAPHORE_H_

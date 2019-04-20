@@ -36,6 +36,6 @@ using all_decoders = mpt::pack<lasr::big_endian_binary_decoder,
                                lasr::little_endian_binary_decoder>;
 
 }  // namespace config
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CONFIG_H_

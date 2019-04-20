@@ -48,6 +48,6 @@ class listener {
   std::vector<awaitable<channel>> acceptors_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SOCKET_H_

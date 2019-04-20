@@ -74,4 +74,4 @@ void throw_io_error(const std::string& message) {
   throw_io_error(message, errno);
 }
 
-}  // namespace ash
+}  // namespace lasr

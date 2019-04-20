@@ -38,6 +38,6 @@ struct check_type {
 };
 
 }  // namespace testing
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_TESTING_STATIC_CHECKS_H_

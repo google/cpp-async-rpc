@@ -324,6 +324,6 @@ class flat_tree : protected std::vector<Value, Allocator> {
 };
 
 }  // namespace detail
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CONTAINER_DETAIL_FLAT_TREE_H_

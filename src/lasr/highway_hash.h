@@ -99,6 +99,6 @@ class highway_hash {
   std::uint8_t packet_[32];
   std::size_t buffered_bytes_;
 };
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_HIGHWAY_HLASR_H_

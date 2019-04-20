@@ -136,6 +136,6 @@ namespace traits {
 
 }  // namespace traits
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_TRAITS_TRAIT_FACTORIES_H_

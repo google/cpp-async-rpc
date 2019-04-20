@@ -65,6 +65,6 @@ std::string_view portable_class_name() {
   return detail::dynamic_class_descriptor<T>::class_name;
 }
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_DYNAMIC_BASE_CLASS_H_

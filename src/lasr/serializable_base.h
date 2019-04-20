@@ -131,6 +131,6 @@ using dynamic = std::conditional_t<
                 "Custom serialization version must be non-zero."); \
   static constexpr std::uint32_t custom_serialization_version = VERSION
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SERIALIZABLE_BASE_H_

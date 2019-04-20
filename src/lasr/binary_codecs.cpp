@@ -30,4 +30,4 @@ std::size_t binary_sizer::size() { return out_.size(); }
 
 void binary_sizer::reset() { out_.reset(); }
 
-}  // namespace ash
+}  // namespace lasr

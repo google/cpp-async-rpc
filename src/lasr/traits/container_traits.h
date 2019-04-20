@@ -178,6 +178,6 @@ inline constexpr std::size_t static_size_v = static_size<T>::value;
 
 };  // namespace traits
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_TRAITS_CONTAINER_TRAITS_H_

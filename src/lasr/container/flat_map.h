@@ -104,6 +104,6 @@ class flat_multimap : public detail::flat_tree<Key, true, std::pair<Key, T>,
                           Allocator>::flat_tree;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CONTAINER_FLAT_MAP_H_

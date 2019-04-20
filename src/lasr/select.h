@@ -293,6 +293,6 @@ auto select(Args&&... args) {
   } while (true);
 }
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SELECT_H_

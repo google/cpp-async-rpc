@@ -45,6 +45,6 @@ class flag {
   channel pipe_[2];
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_FLAG_H_

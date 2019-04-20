@@ -193,7 +193,7 @@ class channel_connection : public connection {
   std::mutex mu_;
   channel channel_;
   flag closing_;
-};  // namespace ash
+};  // namespace lasr
 
 class char_dev_connection : public channel_connection {
  public:
@@ -208,6 +208,6 @@ class client_socket_connection : public channel_connection {
   explicit client_socket_connection(endpoint name);
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CONNECTION_H_

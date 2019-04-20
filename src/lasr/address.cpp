@@ -242,4 +242,4 @@ const address_list::value_type* address_list::const_iterator::operator->() const
 address_list::const_iterator::const_iterator(
     const address_list::value_type* ptr)
     : ptr_(ptr) {}
-}  // namespace ash
+}  // namespace lasr

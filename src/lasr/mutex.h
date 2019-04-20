@@ -42,6 +42,6 @@ class mutex {
   channel pipe_[2];
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_MUTEX_H_

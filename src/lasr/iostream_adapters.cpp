@@ -55,4 +55,4 @@ void ostream_output_stream::putc(char c) {
 
 void ostream_output_stream::flush() { os_.flush(); }
 
-}  // namespace ash
+}  // namespace lasr

@@ -247,4 +247,4 @@ address channel::peer_addr() const {
   return res;
 }
 
-}  // namespace ash
+}  // namespace lasr

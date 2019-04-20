@@ -134,6 +134,6 @@ void throw_with_errno(const std::string& message) {
 void throw_io_error(const std::string& message);
 void throw_io_error(const std::string& message, int code);
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_ERRORS_H_

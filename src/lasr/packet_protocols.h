@@ -85,6 +85,6 @@ class protected_stream_packet_protocol {
   }
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_PACKET_PROTOCOLS_H_

@@ -168,6 +168,6 @@ class context : public serializable<context> {
   static thread_local context* current_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CONTEXT_H_

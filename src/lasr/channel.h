@@ -81,6 +81,6 @@ class channel {
   int fd_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_CHANNEL_H_

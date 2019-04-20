@@ -42,4 +42,4 @@ channel file(const std::string& path, open_mode mode) {
   return res;
 }
 
-}  // namespace ash
+}  // namespace lasr

@@ -57,6 +57,6 @@ class thread_pool {
   std::vector<daemon_thread> threads_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_EXECUTOR_H_

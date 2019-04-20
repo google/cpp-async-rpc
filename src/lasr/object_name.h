@@ -38,6 +38,6 @@ std::string object_name(Arg&& arg) {
   return result;
 }
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_OBJECT_NAME_H_

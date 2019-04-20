@@ -88,4 +88,4 @@ void output_sizer::write(const char* p, std::size_t l) { size_ += l; }
 
 void output_sizer::putc(char c) { size_++; }
 
-}  // namespace ash
+}  // namespace lasr

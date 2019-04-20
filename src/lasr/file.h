@@ -39,6 +39,6 @@ enum class open_mode : int {
 
 channel file(const std::string& path, open_mode mode = open_mode::READ);
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_FILE_H_

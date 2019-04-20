@@ -830,6 +830,6 @@ using big_endian_binary_decoder =
     std::conditional_t<traits::target_is_big_endian, native_binary_decoder,
                        reversing_binary_decoder>;
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_BINARY_CODECS_H_

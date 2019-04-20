@@ -181,6 +181,6 @@ class queue<void> {
   flag can_get_, can_put_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_QUEUE_H_

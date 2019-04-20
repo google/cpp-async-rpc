@@ -335,6 +335,6 @@ template <typename T>
 inline constexpr type_hash_t type_hash_v = type_hash<T>::value;
 }  // namespace traits
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_TYPE_HLASR_H_

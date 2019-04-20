@@ -36,6 +36,6 @@ enum class message_type : std::uint8_t {
 };
 
 }  // namespace rpc_defs
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_MESSAGE_DEFS_H_

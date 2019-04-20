@@ -29,4 +29,4 @@ std::string_view dynamic_base_class::portable_class_name() const {
 
 dynamic_base_class::~dynamic_base_class() {}
 
-}  // namespace ash
+}  // namespace lasr

@@ -63,6 +63,6 @@ class string_output_stream : public output_stream {
   std::string& os_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_STRING_ADAPTERS_H_

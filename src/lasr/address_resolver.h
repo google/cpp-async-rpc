@@ -56,6 +56,6 @@ class address_resolver : public singleton<address_resolver> {
   lasr::daemon_thread resolver_thread_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_ADDRESS_RESOLVER_H_

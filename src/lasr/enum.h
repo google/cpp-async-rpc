@@ -74,6 +74,6 @@ struct enum_names {
       lasr::enum_names<NAME>::entries[] = {LASR_FOREACH(                         \
           LASR_ENUM_ENTRY_IN_ARRAY, LASR_ENUM_ENTRY_SEP, __VA_ARGS__)}
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_ENUM_H_

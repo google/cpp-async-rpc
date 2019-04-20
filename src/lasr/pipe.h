@@ -28,6 +28,6 @@ namespace lasr {
 
 void pipe(channel fds[2]);
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_PIPE_H_

@@ -33,6 +33,6 @@ struct singleton {
   }
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SINGLETON_H_

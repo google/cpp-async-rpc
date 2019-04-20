@@ -77,6 +77,6 @@ class base_thread : public std::thread {
 using thread = base_thread<false>;
 using daemon_thread = base_thread<true>;
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_THREAD_H_

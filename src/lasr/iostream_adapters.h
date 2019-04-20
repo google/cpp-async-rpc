@@ -58,6 +58,6 @@ class ostream_output_stream : public output_stream {
   std::ostream& os_;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_IOSTREAM_ADAPTERS_H_

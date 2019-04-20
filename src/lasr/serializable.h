@@ -47,6 +47,6 @@ namespace lasr {
               .register_class<__VA_ARGS__, ::lasr::config::all_encoders, \
                               ::lasr::config::all_decoders>(NAME)
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_SERIALIZABLE_H_

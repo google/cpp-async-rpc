@@ -149,6 +149,6 @@ struct member_function_pointer_traits<mptr> {
 
 }  // namespace traits
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_TRAITS_TYPE_TRAITS_H_

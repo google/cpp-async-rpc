@@ -82,6 +82,6 @@ class usage_lock {
   bool done_ = true;
 };
 
-}  // namespace ash
+}  // namespace lasr
 
 #endif  // LASR_USAGE_LOCK_H_

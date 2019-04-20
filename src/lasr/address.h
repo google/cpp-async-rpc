@@ -167,7 +167,7 @@ static_assert(
     sizeof(address) == sizeof(struct addrinfo),
     "lasr::address has to remain data-compatible with struct addrinfo");
 
-}  // namespace ash
+}  // namespace lasr
 
 namespace std {
 template <>

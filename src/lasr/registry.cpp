@@ -35,4 +35,4 @@ dynamic_object_factory::info dynamic_object_factory::operator[](
 
 }  // namespace registry
 
-}  // namespace ash
+}  // namespace lasr

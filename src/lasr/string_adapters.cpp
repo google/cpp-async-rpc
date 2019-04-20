@@ -60,4 +60,4 @@ void string_output_stream::putc(char c) { os_.push_back(c); }
 
 void string_output_stream::flush() {}
 
-}  // namespace ash
+}  // namespace lasr
