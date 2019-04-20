@@ -55,6 +55,46 @@ int main(int argc, char* argv[]) {
 }
 ```
 
+### Serialization of custom structures
+
+While lasr is able to serialize and deserialize most standard library classes
+and others implementing compatible interfaces out of the box, preparing your
+own data structures for serialization (or their use as RPC arguments) is easy:
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+#include "lasr/binary_codecs.h"
+#include "lasr/iostream_adapters.h"
+#include "lasr/serializable.h"
+
+// To be serializable, MyClass must inherit lasr::serializable<MyClass> or
+// lasr::dynamic<MyClass> if run-time polymorphism is required.
+struct MyClass : lasr::serializable<MyClass> {
+  int x;
+  double y;
+  std::vector<std::string> z;
+
+  // Enumerate the fields that must be serialized.
+  LASR_FIELDS(x, y, z);
+};
+
+int main(int argc, char* argv[]) {
+  // Create an instance of my data structure.
+  MyClass data{{/* base class init */}, 4, 5.5, {"first", "second", "third"}};
+
+  // Create a binary encoder outputting to stdout.
+  lasr::ostream_output_stream oos(std::cout);
+  lasr::little_endian_binary_encoder encoder(oos);
+
+  // Write the binary data. Try piping the output of this program to xxd.
+  encoder(data);
+
+  return 0;
+}
+```
+
 ### Asynchronous networking
 
 This examples sends an HTTP get request and prints out the response in an

@@ -33,3 +33,4 @@ modules = executable('modules',
 subdir('async_basic')
 subdir('async_events')
 subdir('rpc_basic')
+subdir('serializable_basic')
