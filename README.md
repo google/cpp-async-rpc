@@ -190,9 +190,13 @@ platform.
 
  * Documentation.
  
+ * Some missing features:
+ 
+   * "catch" support for `awaitable` and `future` behaviour.
+ 
 ## Inspiration
 
- * [cereal](http://uscilab.github.io/cereal/): A C++11 library for
+ * [Cereal](http://uscilab.github.io/cereal/): A C++11 library for
    serialization. This was the original source of inspiration for lasr.
    
  * [Boost](https://www.boost.org/) MPL, Fusion and Hana libraries. These
@@ -202,6 +206,10 @@ platform.
  * [The Go language](https://golang.org/). The cancellable contexts, the channel
    multiplexing and the clean networking libraries have inspired some of the
    work in lasr.
+   
+ * [JavaScript Promises](https://developer.mozilla.org/es/docs/Web/JavaScript/Referencia/Objetos_globales/Promise)
+   as the chosen way to encapsulate behaviour to be run once asynchronous
+   conditions are met.
  
 ## Dependencies
  

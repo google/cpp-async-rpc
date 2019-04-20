@@ -31,4 +31,5 @@ modules = executable('modules',
                      link_with : lasr_library)
 
 subdir('async_basic')
+subdir('async_events')
 subdir('rpc_basic')

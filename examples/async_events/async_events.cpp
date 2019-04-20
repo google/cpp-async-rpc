@@ -1,5 +1,5 @@
 /// \file
-/// \brief Async network primitives basic demo.
+/// \brief Lambda-based async network primitives test.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -40,22 +40,30 @@ int main(int argc, char* argv[]) {
     std::string request = "GET / HTTP/1.0\r\nHost: www.kernel.org\r\n\r\n";
     char buf[256];
 
+    auto send = [&]() {
+      if (request.size()) {
+        return s.async_write(request.data(), request.size())
+            .then([&](std::size_t sent) {
+              std::cout << "S(" << sent << ")" << std::endl;
+              // Remove the bytes we already sent.
+              request.erase(0, sent);
+            });
+      } else {
+        return lasr::never();
+      }
+    };
+
+    auto receive = [&]() {
+      return s.async_read(buf, sizeof(buf)).then([&](std::size_t received) {
+        std::cout << "R(" << received << ")" << std::endl
+                  << std::string(buf, buf + received) << std::endl;
+      });
+    };
+
     while (true) {
-      auto [sent, received] = lasr::select(
-          request.size() ? s.async_write(request.data(), request.size())
-                         : lasr::never().then([]() { return std::size_t{0}; }),
-          s.async_read(buf, sizeof(buf)));
-
-      if (sent) {
-        std::cout << "S(" << *sent << ")" << std::endl;
-        // Remove the bytes we already sent.
-        request.erase(0, *sent);
-      }
-
-      if (received) {
-        std::cout << "R(" << *received << ")" << std::endl
-                  << std::string(buf, buf + *received) << std::endl;
-      }
+      auto [sent, received] = lasr::select(send(), receive());
+      if (sent) *sent;          // Throw if needed.
+      if (received) *received;  // Throw if needed.
     }
 
     return 0;
