@@ -19,9 +19,10 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
+#include "lasr/address.h"
 #include <cassert>
 #include <cstring>
-#include "lasr/address.h"
+#include <string>
 #include "lasr/errors.h"
 
 namespace lasr {
@@ -163,6 +164,7 @@ address_list::address_list(struct addrinfo* result)
 void address_list::free_result(address* result) { freeaddrinfo(result); }
 
 std::string address::as_string() const {
+#ifndef ESP_PLATFORM
   char hostbuf[65];
   char portbuf[6];
   int res = getnameinfo(ai_addr, ai_addrlen, hostbuf, sizeof(hostbuf), portbuf,
@@ -174,6 +176,34 @@ std::string address::as_string() const {
   } else {
     return std::string(hostbuf) + ":" + std::string(portbuf);
   }
+#else   // ESP_PLATFORM
+  char hostbuf[65];
+  switch (ai_addr->sa_family) {
+    case AF_INET: {
+      const auto* sin = reinterpret_cast<const sockaddr_in*>(ai_addr);
+      in_port_t port = ntohs(sin->sin_port);
+      ip4_addr addr;
+      inet_addr_to_ip4addr(&addr, &(sin->sin_addr));
+      if (!ip4addr_ntoa_r(&addr, hostbuf, sizeof(hostbuf))) {
+        throw errors::internal_error("Buffer too small");
+      }
+      return std::string(hostbuf) + ":" + std::to_string(port);
+    } break;
+    case AF_INET6: {
+      const auto* sin6 = reinterpret_cast<const sockaddr_in6*>(ai_addr);
+      in_port_t port = ntohs(sin6->sin6_port);
+      ip6_addr addr;
+      inet6_addr_to_ip6addr(&addr, &(sin6->sin6_addr));
+      if (!ip6addr_ntoa_r(&addr, hostbuf, sizeof(hostbuf))) {
+        throw errors::internal_error("Buffer too small");
+      }
+      return "[" + std::string(hostbuf) + "]:" + std::to_string(port);
+    } break;
+    default:
+      // We don't know how to handle this family.
+      return "<unknown-address-family>";
+  }
+#endif  // ESP_PLATFORM
 }
 
 address_list::iterator::iterator() noexcept : ptr_(nullptr) {}

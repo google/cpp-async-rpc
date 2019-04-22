@@ -22,7 +22,11 @@
 #ifndef LASR_SELECT_H_
 #define LASR_SELECT_H_
 
+#ifndef ESP_PLATFORM
 #include <poll.h>
+#else  // ESP_PLATFORM
+#include <sys/poll.h>
+#endif  // ESP_PLATFORM
 #include <algorithm>
 #include <array>
 #include <chrono>

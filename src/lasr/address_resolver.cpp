@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include <exception>
 #include "lasr/address_resolver.h"
+#include <exception>
 #include "lasr/errors.h"
 #include "lasr/select.h"
 
@@ -35,7 +35,13 @@ address_resolver::address_resolver()
 
             struct addrinfo hints = {
                 AI_ADDRCONFIG | AI_V4MAPPED | (req.passive_ ? AI_PASSIVE : 0),
-                req.family_, req.sock_type_, 0};
+                req.family_,
+                req.sock_type_,
+                0,
+                0,
+                nullptr,
+                nullptr,
+                nullptr};
             struct addrinfo* result;
 
             int res = getaddrinfo(
@@ -58,7 +64,8 @@ address_resolver::~address_resolver() {
   resolver_thread_.join();
 }
 
-lasr::future<address_list> address_resolver::async_resolve(const endpoint& req) {
+lasr::future<address_list> address_resolver::async_resolve(
+    const endpoint& req) {
   auto req_pair = std::pair(req, promise<address_list>{});
   auto fut = req_pair.second.get_future();
   requests_.put(std::move(req_pair));

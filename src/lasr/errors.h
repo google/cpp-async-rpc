@@ -97,6 +97,7 @@ ERROR_CLASS(cancelled);
 ERROR_CLASS(data_mismatch);
 ERROR_CLASS(deadline_exceeded);
 ERROR_CLASS(eof);
+ERROR_CLASS(internal_error);
 ERROR_CLASS(invalid_argument);
 ERROR_CLASS(invalid_state);
 ERROR_CLASS(io_error);

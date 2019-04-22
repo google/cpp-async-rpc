@@ -207,6 +207,14 @@ struct WriterImpl : public Writer {
 };
 
 int main() {
+  {
+    lasr::listener l(lasr::endpoint().port(13133));
+    for (int i = 0; i < 4; i++) {
+      auto s = l.accept();
+      std::cerr << "Got connection from " << s.peer_addr().as_string()
+                << " into " << s.own_addr().as_string() << std::endl;
+    }
+  }
   try {
     using namespace std::literals;
 
@@ -215,7 +223,8 @@ int main() {
     server.register_object("test", writer);
     server.start();
 
-    lasr::client_connection conn(lasr::endpoint().name("localhost").port(12121));
+    lasr::client_connection conn(
+        lasr::endpoint().name("localhost").port(12121));
     auto obj = conn.get_proxy<Writer>("test");
     auto result = obj.get("patata");
     std::cerr << "RESULT: " << result << std::endl;
@@ -375,14 +384,6 @@ int main() {
     auto s = dial(lasr::endpoint().name("www.google.com").service("https"));
   }
   {
-    lasr::listener l(lasr::endpoint().port(13133));
-    for (int i = 0; i < 4; i++) {
-      auto s = l.accept();
-      std::cerr << "Got connection from " << s.peer_addr().as_string()
-                << " into " << s.own_addr().as_string() << std::endl;
-    }
-  }
-  {
     lasr::thread t1([]() {
       std::cerr << "CI " << &lasr::context::current() << std::endl;
       lasr::select(lasr::context::current().wait_cancelled());
@@ -428,8 +429,8 @@ int main() {
       pi.set_value(std::make_unique<int>(33));
     });
 
-    auto [val, to] = lasr::select(fi.async_get(),
-                                 lasr::timeout(std::chrono::milliseconds(3000)));
+    auto [val, to] = lasr::select(
+        fi.async_get(), lasr::timeout(std::chrono::milliseconds(3000)));
     if (val) {
       std::cerr << "VAL: " << **val << std::endl;
     }
@@ -469,8 +470,8 @@ int main() {
   std::cerr << *(q.get()) << " DONE!" << std::endl;
 
   lasr::channel in(0);
-  auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
+  auto [read, timeout] = lasr::select(
+      in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
   std::cerr << !!read << !!timeout << std::endl;
   in.release();
 
@@ -563,7 +564,7 @@ int main() {
   lasr::istream_input_stream xsi(xs);
   lasr::ostream_output_stream xso(xs);
   lasr::protected_stream_packet_protocol<lasr::big_endian_binary_encoder,
-                                        lasr::big_endian_binary_decoder>
+                                         lasr::big_endian_binary_decoder>
       pspp;
   xxd(data);
   pspp.send(xso, data);
