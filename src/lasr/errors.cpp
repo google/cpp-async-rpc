@@ -67,7 +67,7 @@ void throw_io_error(const std::string& message, int code) {
   if (code == EAGAIN || code == EWOULDBLOCK) {
     throw errors::try_again("Try again");
   }
-  throw errors::io_error(message + std::string(": ") + std::to_string(errno));
+  throw errors::io_error(message + std::string(": ") + std::to_string(code));
 }
 
 void throw_io_error(const std::string& message) {

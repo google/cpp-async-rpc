@@ -33,8 +33,8 @@
 
 namespace lasr {
 
-namespace {
 #ifdef ESP_PLATFORM
+namespace {
 #if LWIP_IPV4
 struct sockaddr_in loopback_ip_address = {
     sizeof(struct sockaddr_in), AF_INET, htons(0), htonl(INADDR_LOOPBACK), {0}};
@@ -52,8 +52,8 @@ struct addrinfo loopback {
       sizeof(loopback_ip_address),
       reinterpret_cast<sockaddr*>(&loopback_ip_address), nullptr, nullptr
 };
-#endif  // ESP_PLATFORM
 }  // namespace
+#endif  // ESP_PLATFORM
 
 void pipe(channel fds[2]) {
 #ifndef ESP_PLATFORM

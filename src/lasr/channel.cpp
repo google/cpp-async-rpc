@@ -21,18 +21,27 @@
 
 #include "lasr/channel.h"
 #include <fcntl.h>
+#include <signal.h>
+#include <unistd.h>
+#include <utility>
 #ifndef ESP_PLATFORM
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #else  // ESP_PLATFORM
 #include <sys/socket.h>
 #endif  // ESP_PLATFORM
-#include <unistd.h>
-#include <utility>
 #include "lasr/errors.h"
 #include "lasr/select.h"
 
 namespace lasr {
+
+#ifndef ESP_PLATFORM
+namespace {
+struct ignore_sigpipe {
+  ignore_sigpipe() { signal(SIGPIPE, SIG_IGN); }
+} ignore_sigpipe_instance;
+}  // namespace
+#endif  // ESP_PLATFORM
 
 channel::channel() noexcept : fd_(-1) {}
 
@@ -74,24 +83,30 @@ channel::operator bool() const noexcept { return (fd_ >= 0); }
 void channel::close() noexcept { reset(); }
 
 std::size_t channel::read(void* buf, std::size_t len) {
-  auto num = ::read(fd_, buf, len);
-  if (num < 0) throw_io_error("Error reading");
-  if (num == 0) throw errors::eof("End of channel");
-  return num;
+  auto [num] = select(async_read(buf, len));
+  return *num;
 }
 
 awaitable<std::size_t> channel::async_read(void* buf, std::size_t len) {
-  return can_read().then([this, buf, len]() { return read(buf, len); });
+  return can_read().then([this, buf, len]() {
+    auto num = ::read(fd_, buf, len);
+    if (num < 0) throw_io_error("Error reading");
+    if (num == 0) throw errors::eof("End of channel");
+    return static_cast<std::size_t>(num);
+  });
 }
 
 std::size_t channel::write(const void* buf, std::size_t len) {
-  auto num = ::write(fd_, buf, len);
-  if (num < 0) throw_io_error("Error writing");
-  return num;
+  auto [num] = select(async_write(buf, len));
+  return *num;
 }
 
 awaitable<std::size_t> channel::async_write(const void* buf, std::size_t len) {
-  return can_write().then([this, buf, len]() { return write(buf, len); });
+  return can_write().then([this, buf, len]() {
+    auto num = ::write(fd_, buf, len);
+    if (num < 0) throw_io_error("Error writing");
+    return static_cast<std::size_t>(num);
+  });
 }
 
 channel& channel::make_non_blocking(bool non_blocking) {
@@ -140,7 +155,8 @@ awaitable<void> channel::async_connect(const address& addr) {
 }
 
 channel& channel::connect(const address& addr) {
-  select(async_connect(addr));
+  auto [res] = select(async_connect(addr));
+  *res;
   return *this;
 }
 

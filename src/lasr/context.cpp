@@ -58,18 +58,17 @@ context::context(root)
       deadline_(std::nullopt) {}
 
 context::~context() {
-  if (set_current_) current_ = previous_;
-
   if (parent_) parent_->remove_child(this);
+  if (set_current_) current_ = previous_;
 
   cancel();
 
-  std::unique_lock lock(mu_);
+  std::unique_lock lock(children_mu_);
   child_detached_.wait(lock, [this]() { return children_.empty(); });
 }
 
 void context::add_child(context* child) {
-  std::scoped_lock lock(mu_);
+  std::scoped_lock lock(children_mu_);
   children_.insert(child);
   if (cancelled_) {
     child->cancel();
@@ -78,19 +77,19 @@ void context::add_child(context* child) {
 
 void context::remove_child(context* child) {
   {
-    std::scoped_lock lock(mu_);
+    std::scoped_lock lock(children_mu_);
     children_.erase(child);
   }
   child_detached_.notify_one();
 }
 
 std::optional<context::time_point> context::deadline() const {
-  std::scoped_lock lock(mu_);
+  std::scoped_lock lock(data_mu_);
   return deadline_;
 }
 
 std::optional<context::duration> context::deadline_left() const {
-  std::scoped_lock lock(mu_);
+  std::scoped_lock lock(data_mu_);
   if (deadline_) {
     return std::chrono::duration_cast<duration>(
         *deadline_ - std::chrono::system_clock::now());
@@ -100,26 +99,22 @@ std::optional<context::duration> context::deadline_left() const {
 }
 
 void context::cancel() {
-  std::scoped_lock lock(mu_);
-  cancelled_.set();
+  std::scoped_lock lock(children_mu_);
   for (auto* child : children_) {
     child->cancel();
   }
+  cancelled_.set();
 }
 
-bool context::is_cancelled() const {
-  std::scoped_lock lock(mu_);
-  return cancelled_.is_set();
-}
+bool context::is_cancelled() const { return cancelled_.is_set(); }
 
 awaitable<void> context::wait_cancelled() {
-  std::scoped_lock lock(mu_);
   return cancelled_.wait_set().then(
       []() { throw errors::cancelled("Context is cancelled"); });
 }
 
 awaitable<void> context::wait_deadline() {
-  std::scoped_lock lock(mu_);
+  std::scoped_lock lock(data_mu_);
   if (deadline_) {
     return lasr::deadline(*deadline_).then([]() {
       throw errors::deadline_exceeded("Deadline exceeded");
@@ -130,7 +125,7 @@ awaitable<void> context::wait_deadline() {
 }
 
 void context::set_deadline(time_point when) {
-  std::scoped_lock lock(mu_);
+  std::scoped_lock lock(data_mu_);
   if (!deadline_ || *deadline_ > when) {
     deadline_ = when;
   }
@@ -142,7 +137,7 @@ void context::set_timeout(duration timeout) {
 }
 
 void context::reset_all() {
-  std::scoped_lock lock(mu_);
+  std::scoped_lock lock(data_mu_);
   data_.clear();
 }
 
@@ -150,7 +145,7 @@ std::vector<std::shared_ptr<const dynamic_base_class>> context::data() const {
   std::vector<std::shared_ptr<const dynamic_base_class>> res;
   res.reserve(data_.size());
   {
-    std::scoped_lock lock(mu_);
+    std::scoped_lock lock(data_mu_);
     for (auto it : data_) {
       res.push_back(it.second);
     }

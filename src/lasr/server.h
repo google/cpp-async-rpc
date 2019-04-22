@@ -28,6 +28,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -245,7 +246,7 @@ class server {
 
     awaitable<void> remove() {
       return can_remove_.wait_set().then([this]() {
-        server_.acceptor_.return_connection(std::move(connection_));
+        server_.acceptor_->return_connection(std::move(connection_));
         server_.connections_.erase(key_);
       });
     }
@@ -513,14 +514,15 @@ class server {
   }
 
   awaitable<void> get_new_connection() {
-    return acceptor_.get_connection().then([this](std::unique_ptr<connection_type> new_connection) {
-      while (connections_.count(++next_connection_key_) > 0) {
-        // Ensure we prevent connection counter cycle collisions.
-      }
-      connections_.insert(
-          {next_connection_key_, std::make_unique<connection_wrapper>(*this, next_connection_key_,
-                                                                      std::move(new_connection))});
-    });
+    return acceptor_->get_connection().then(
+        [this](std::unique_ptr<connection_type> new_connection) {
+          while (connections_.count(++next_connection_key_) > 0) {
+            // Ensure we prevent connection counter cycle collisions.
+          }
+          connections_.insert(
+              {next_connection_key_, std::make_unique<connection_wrapper>(
+                                         *this, next_connection_key_, std::move(new_connection))});
+        });
   }
 
   void react() {
@@ -558,7 +560,11 @@ class server {
  public:
   template <typename... Args>
   explicit server(const server_options& options, Args&&... args)
-      : options_(options), acceptor_(std::forward<Args>(args)...) {}
+      : options_(options),
+        acceptor_factory_([args_tuple = std::make_tuple(std::forward<Args>(args)...), this]() {
+          return std::apply([this](const auto&... args) { acceptor_.emplace(args...); },
+                            args_tuple);
+        }) {}
 
   ~server() { stop(); }
 
@@ -597,22 +603,32 @@ class server {
   void start() {
     std::scoped_lock lock(mu_);
 
+    if (!acceptor_) {
+      acceptor_factory_();
+    }
+
     if (!reactor_.joinable()) {
       reactor_ = daemon_thread(&server::react, this);
     }
 
-    acceptor_.start();
+    acceptor_->start();
   }
 
   void stop() {
     std::scoped_lock lock(mu_);
 
-    acceptor_.stop();
+    if (acceptor_) {
+      acceptor_->stop();
+    }
 
     if (reactor_.joinable()) {
       reactor_.get_context().cancel();
       reactor_.join();
     }
+
+    connections_.clear();
+
+    acceptor_.reset();
   }
 
  private:
@@ -620,7 +636,8 @@ class server {
   std::mutex mu_;
   std::mutex objects_mu_;
   object_map objects_;
-  ConnectionProducer acceptor_;
+  std::optional<ConnectionProducer> acceptor_;
+  std::function<void()> acceptor_factory_;
   connection_key next_connection_key_ = 0;
   connection_map connections_;
   std::mutex requests_mu_;

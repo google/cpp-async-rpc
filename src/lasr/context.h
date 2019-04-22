@@ -102,13 +102,13 @@ class context : public serializable<context> {
 
   template <typename... V>
   void set(V&&... v) {
-    std::scoped_lock lock(mu_);
+    std::scoped_lock lock(data_mu_);
     (..., set_one(std::forward<V>(v)));
   }
 
   template <typename... V>
   void reset() {
-    std::scoped_lock lock(mu_);
+    std::scoped_lock lock(data_mu_);
     (..., reset_one<V>());
   }
 
@@ -116,7 +116,7 @@ class context : public serializable<context> {
 
   template <typename T>
   const T& get() const {
-    std::scoped_lock lock(mu_);
+    std::scoped_lock lock(data_mu_);
     auto it = data_.find(portable_class_name<T>());
     if (it != data_.end()) {
       return static_cast<const T&>(*it->second);
@@ -155,7 +155,8 @@ class context : public serializable<context> {
   template <bool daemon>
   friend class base_thread;
 
-  mutable std::mutex mu_;
+  mutable std::mutex data_mu_;
+  mutable std::mutex children_mu_;
   std::condition_variable child_detached_;
   bool set_current_;
   context* parent_;
