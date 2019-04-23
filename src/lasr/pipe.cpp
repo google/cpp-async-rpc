@@ -24,11 +24,10 @@
 #ifndef ESP_PLATFORM
 #include <unistd.h>
 #else  // ESP_PLATFORM
-#include <lasr/address.h>
-#include <lasr/socket.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include "lasr/socket.h"
 #endif  // ESP_PLATFORM
 
 namespace lasr {
@@ -36,40 +35,52 @@ namespace lasr {
 #ifdef ESP_PLATFORM
 namespace {
 #if LWIP_IPV4
-struct sockaddr_in loopback_ip_address = {
+const struct sockaddr_in loopback_ip_address = {
     sizeof(struct sockaddr_in), AF_INET, htons(0), htonl(INADDR_LOOPBACK), {0}};
 constexpr auto loopback_family = AF_INET;
 #elif LWIP_IPV6
-struct sockaddr_in6 loopback_ip_address = {sizeof(struct sockaddr_in6),
-                                           AF_INET6, 0, in6addr_loopback};
+const struct sockaddr_in6 loopback_ip_address = {sizeof(struct sockaddr_in6),
+                                                 AF_INET6, 0, in6addr_loopback};
 constexpr auto loopback_family = AF_INET6;
 #else  // LWIP_IPV4 || LWIP_IPV6
 #error "Neither LWIP_IPV4 or LWIP_IPV6 defined!"
 #endif  // LWIP_IPV4 || LWIP_IPV6
-
-struct addrinfo loopback {
-  AI_ADDRCONFIG | AI_V4MAPPED, loopback_family, SOCK_DGRAM, 0,
-      sizeof(loopback_ip_address),
-      reinterpret_cast<sockaddr*>(&loopback_ip_address), nullptr, nullptr
-};
 }  // namespace
 #endif  // ESP_PLATFORM
 
 void pipe(channel fds[2]) {
 #ifndef ESP_PLATFORM
-  int fd[2];
+  int fd[2] = {-1, -1};
   if (::pipe(fd)) throw_io_error("Error creating pipe pair");
   fds[0].reset(fd[0]);
   fds[1].reset(fd[1]);
 #else   // ESP_PLATFORM
-  const auto& addr = reinterpret_cast<address&>(loopback);
-  fds[0] = socket(addr);
-  fds[1] = socket(addr);
-  fds[0].bind(addr);
-  fds[1].bind(addr);
-  fds[0].make_non_blocking(true);
-  fds[1].make_non_blocking(true);
-  fds[1].connect(fds[0].own_addr());
+  channel fd[2];
+  fd[0] = socket(loopback_family, SOCK_DGRAM, 0);
+  fd[1] = socket(loopback_family, SOCK_DGRAM, 0);
+  // Everything else is done using the native socket API to prevent dependency
+  // cycles (async calls depend on the context's cancellation flag in select)
+  // and the synchronous calls are implemented in terms of the asynchronous
+  // ones.
+  if (::bind(fd[0].get(),
+             reinterpret_cast<const sockaddr*>(&loopback_ip_address),
+             sizeof(loopback_ip_address)))
+    throw_io_error("Failed to bind pipe socket");
+  if (::bind(fd[1].get(),
+             reinterpret_cast<const sockaddr*>(&loopback_ip_address),
+             sizeof(loopback_ip_address)))
+    throw_io_error("Failed to bind pipe socket");
+  struct sockaddr_storage own_addr;
+  socklen_t own_addr_len = sizeof(own_addr);
+  if (::getsockname(fd[0].get(), reinterpret_cast<sockaddr*>(&own_addr),
+                    &own_addr_len))
+    throw_io_error("Can't get pipe socket port");
+  if (::connect(fd[1].get(), reinterpret_cast<const sockaddr*>(&own_addr),
+                own_addr_len))
+    throw_io_error("Can't connect pipe socket back");
+
+  fds[0].swap(fd[0]);
+  fds[1].swap(fd[1]);
 #endif  // ESP_PLATFORM
 }
 
