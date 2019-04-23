@@ -42,25 +42,25 @@ namespace mpt {
 /// \param CREATE_BINARY_OPERATOR Macro to be used for defining a binary
 /// operator in terms of the `NAME` and the operation (`OP`).
 #define LASR_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR,  \
-                                      CREATE_BINARY_OPERATOR) \
-  CREATE_UNARY_OPERATOR(negate, -);                           \
-  CREATE_UNARY_OPERATOR(logical_not, !);                      \
-  CREATE_UNARY_OPERATOR(bit_not, ~);                          \
-  CREATE_BINARY_OPERATOR(plus, +);                            \
-  CREATE_BINARY_OPERATOR(minus, -);                           \
-  CREATE_BINARY_OPERATOR(multiplies, *);                      \
-  CREATE_BINARY_OPERATOR(divides, /);                         \
-  CREATE_BINARY_OPERATOR(modulus, %);                         \
-  CREATE_BINARY_OPERATOR(equal_to, ==);                       \
-  CREATE_BINARY_OPERATOR(not_equal_to, !=);                   \
-  CREATE_BINARY_OPERATOR(greater, >);                         \
-  CREATE_BINARY_OPERATOR(less, <);                            \
-  CREATE_BINARY_OPERATOR(greater_equal, >=);                  \
-  CREATE_BINARY_OPERATOR(less_equal, <=);                     \
-  CREATE_BINARY_OPERATOR(logical_and, &&);                    \
-  CREATE_BINARY_OPERATOR(logical_or, ||);                     \
-  CREATE_BINARY_OPERATOR(bit_and, &);                         \
-  CREATE_BINARY_OPERATOR(bit_or, |);                          \
+                                       CREATE_BINARY_OPERATOR) \
+  CREATE_UNARY_OPERATOR(negate, -);                            \
+  CREATE_UNARY_OPERATOR(logical_not, !);                       \
+  CREATE_UNARY_OPERATOR(bit_not, ~);                           \
+  CREATE_BINARY_OPERATOR(plus, +);                             \
+  CREATE_BINARY_OPERATOR(minus, -);                            \
+  CREATE_BINARY_OPERATOR(multiplies, *);                       \
+  CREATE_BINARY_OPERATOR(divides, /);                          \
+  CREATE_BINARY_OPERATOR(modulus, %);                          \
+  CREATE_BINARY_OPERATOR(equal_to, ==);                        \
+  CREATE_BINARY_OPERATOR(not_equal_to, !=);                    \
+  CREATE_BINARY_OPERATOR(greater, >);                          \
+  CREATE_BINARY_OPERATOR(less, <);                             \
+  CREATE_BINARY_OPERATOR(greater_equal, >=);                   \
+  CREATE_BINARY_OPERATOR(less_equal, <=);                      \
+  CREATE_BINARY_OPERATOR(logical_and, &&);                     \
+  CREATE_BINARY_OPERATOR(logical_or, ||);                      \
+  CREATE_BINARY_OPERATOR(bit_and, &);                          \
+  CREATE_BINARY_OPERATOR(bit_or, |);                           \
   CREATE_BINARY_OPERATOR(bit_xor, ^);
 
 /// \brief Define a whole set of arithmetic operators plus the identity.
@@ -77,30 +77,31 @@ namespace mpt {
 /// in terms of the `NAME` and the operation (`OP`).
 /// \param CREATE_BINARY_OPERATOR Macro to be used for defining a binary
 /// operator in terms of the `NAME` and the operation (`OP`).
-#define LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(CREATE_UNARY_OPERATOR,     \
-                                                    CREATE_BINARY_OPERATOR)    \
-  LASR_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR, CREATE_BINARY_OPERATOR) \
+#define LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(CREATE_UNARY_OPERATOR,  \
+                                                     CREATE_BINARY_OPERATOR) \
+  LASR_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR,                      \
+                                 CREATE_BINARY_OPERATOR)                     \
   CREATE_UNARY_OPERATOR(identity, /**/);
 
 /// Define unary arithmetic operation functors on arbitrary types.
 #define LASR_CREATE_UNARY_OPERATOR(NAME, OP) \
-  struct NAME {                             \
-    template <typename T>                   \
-    constexpr auto operator()(T v) {        \
-      return OP v;                          \
-    }                                       \
+  struct NAME {                              \
+    template <typename T>                    \
+    constexpr auto operator()(T v) {         \
+      return OP v;                           \
+    }                                        \
   };
 /// Define binary arithmetic operation functors on arbitrary types.
 #define LASR_CREATE_BINARY_OPERATOR(NAME, OP) \
-  struct NAME {                              \
-    template <typename T, typename U>        \
-    constexpr auto operator()(T v, U w) {    \
-      return v OP w;                         \
-    }                                        \
+  struct NAME {                               \
+    template <typename T, typename U>         \
+    constexpr auto operator()(T v, U w) {     \
+      return v OP w;                          \
+    }                                         \
   };
 /// Create a complete set of arithmetic operation functors on arbitrary types.
 LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(LASR_CREATE_UNARY_OPERATOR,
-                                            LASR_CREATE_BINARY_OPERATOR);
+                                             LASR_CREATE_BINARY_OPERATOR);
 
 /// \brief Types representing sequences of homogeneously typed integers.
 /// An `integer_sequence<T, ints...>` type represents a compile-time sequence of
@@ -142,26 +143,26 @@ struct integer_sequence {
   using NAME##_t = typename NAME::type;
 /// Type-based binary operator generator macro.
 #define LASR_INT_SEQ_TYPE_BINARY_OP(NAME, OP)       \
-  template <typename U>                            \
+  template <typename U>                             \
   struct NAME : binary_op<U, ::lasr::mpt::NAME> {}; \
-  template <typename U>                            \
+  template <typename U>                             \
   using NAME##_t = typename NAME<U>::type;
   /// Type-based operator hierarchy.
   LASR_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(LASR_INT_SEQ_TYPE_UNARY_OP,
-                                              LASR_INT_SEQ_TYPE_BINARY_OP);
+                                               LASR_INT_SEQ_TYPE_BINARY_OP);
 
 /// Value-based unary operator generator macro.
 #define LASR_INT_SEQ_VALUE_UNARY_OP(NAME, OP) \
   constexpr NAME##_t operator OP() { return {}; }
 /// Value-based binary operator generator macro.
 #define LASR_INT_SEQ_VALUE_BINARY_OP(NAME, OP) \
-  template <typename U>                       \
-  constexpr NAME##_t<U> operator OP(U) {      \
-    return {};                                \
+  template <typename U>                        \
+  constexpr NAME##_t<U> operator OP(U) {       \
+    return {};                                 \
   }
   // Value-based operator hierarchy.
   LASR_CREATE_OPERATOR_HIERARCHY(LASR_INT_SEQ_VALUE_UNARY_OP,
-                                LASR_INT_SEQ_VALUE_BINARY_OP);
+                                 LASR_INT_SEQ_VALUE_BINARY_OP);
 };
 
 namespace detail {
@@ -472,11 +473,13 @@ constexpr value_pack<ints...> as_value_pack(integer_sequence<T, ints...>) {
 namespace detail {
 template <typename T, typename F, std::size_t... ints, typename... Args>
 constexpr void for_each(T&& v, index_sequence<ints...>, F f, Args&&... a) {
+  (void)f;
   (void)(..., void(f(at<ints>(std::forward<T>(v)), a...)));
 }
 
 template <typename T, typename F, std::size_t... ints, typename... Args>
 constexpr auto transform(T&& v, index_sequence<ints...>, F f, Args&&... a) {
+  (void)f;
   return std::make_tuple(f(at<ints>(std::forward<T>(v)), a...)...);
 }
 }  // namespace detail
