@@ -22,6 +22,7 @@
 #ifndef LASR_EXECUTOR_H_
 #define LASR_EXECUTOR_H_
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include "function2/function2.hpp"
@@ -40,9 +41,9 @@ class synchronous_executor {
 
 class thread_pool {
  public:
-  explicit thread_pool(
-      unsigned int num_worker_threads = thread::hardware_concurrency(),
-      int queue_size = -1);
+  explicit thread_pool(unsigned int num_worker_threads =
+                           std::max(thread::hardware_concurrency(), 1U),
+                       int queue_size = -1);
   ~thread_pool();
 
   template <typename F>
