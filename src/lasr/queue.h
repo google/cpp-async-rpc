@@ -74,7 +74,8 @@ class queue {
   }
   template <typename U>
   void put(U&& u) {
-    select(async_put(std::forward<U>(u)));
+    auto [res] = select(async_put(std::forward<U>(u)));
+    *res;
   }
   value_type get() {
     auto [res] = select(async_get());
@@ -147,8 +148,14 @@ class queue<void> {
     size_--;
     update_flags();
   }
-  void put() { select(async_put()); }
-  void get() { select(async_get()); }
+  void put() {
+    auto [res] = select(async_put());
+    *res;
+  }
+  void get() {
+    auto [res] = select(async_get());
+    *res;
+  }
 
   awaitable<void> async_put() {
     return std::move(
