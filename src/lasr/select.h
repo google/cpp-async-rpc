@@ -242,7 +242,7 @@ auto make_select_pollfds(const std::tuple<Args...>& awaitables) {
 }  // namespace detail
 
 template <typename... Args>
-auto select(Args&&... args) {
+[[nodiscard]] auto select(Args&&... args) {
   auto& current_context = context::current();
 
   constexpr std::size_t n = sizeof...(Args) + 2;

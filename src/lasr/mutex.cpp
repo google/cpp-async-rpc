@@ -34,7 +34,10 @@ mutex::mutex() {
   pipe_[1].write("*", 1);
 }
 
-void mutex::lock() { select(async_lock()); }
+void mutex::lock() {
+  auto [res] = select(async_lock());
+  *res;
+}
 
 void mutex::maybe_lock() {
   char c;
@@ -54,7 +57,7 @@ void mutex::unlock() { pipe_[1].write("*", 1); }
 
 awaitable<void> mutex::can_lock() { return pipe_[0].can_read(); }
 awaitable<void> mutex::async_lock() {
-  return std::move(can_lock().then(std::move([this]() { maybe_lock(); })));
+  return can_lock().then([this]() { maybe_lock(); });
 }
 
 }  // namespace lasr

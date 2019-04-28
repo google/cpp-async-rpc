@@ -306,7 +306,8 @@ int main() {
       });
     }
 
-    lasr::select(lasr::timeout(std::chrono::seconds(2)));
+    auto [res] = lasr::select(lasr::timeout(std::chrono::seconds(2)));
+    *res;
   }
   {
     lasr::context ctx;
@@ -386,7 +387,8 @@ int main() {
   {
     lasr::thread t1([]() {
       std::cerr << "CI " << &lasr::context::current() << std::endl;
-      lasr::select(lasr::context::current().wait_cancelled());
+      auto [res] = lasr::select(lasr::context::current().wait_cancelled());
+      *res;
       std::cerr << "DONE!" << std::endl;
     });
     std::cerr << "CO " << &t1.get_context() << std::endl;
@@ -407,7 +409,7 @@ int main() {
                 << std::endl;
 
       try {
-        lasr::select();
+        (void)(lasr::select());
       } catch (const lasr::errors::cancelled&) {
         std::cerr << "CANCELLED!" << std::endl;
       } catch (const lasr::errors::deadline_exceeded&) {

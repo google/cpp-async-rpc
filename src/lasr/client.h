@@ -309,46 +309,47 @@ class client_connection {
   void receive() {
     while (true) {
       // Wait until we actually need to receive something.
-      select(ready_.wait_set());
+      auto [res] = select(ready_.wait_set());
+      if (res) {
+        try {
+          while (true) {
+            // Read the next packet.
+            auto response = connection_.receive();
+            string_input_stream response_is(response);
 
-      try {
-        while (true) {
-          // Read the next packet.
-          auto response = connection_.receive();
-          string_input_stream response_is(response);
+            // A decoder for the header.
+            Decoder header_decoder(response_is);
+            // Decode the message type.
+            rpc_defs::message_type message_type;
+            header_decoder(message_type);
 
-          // A decoder for the header.
-          Decoder header_decoder(response_is);
-          // Decode the message type.
-          rpc_defs::message_type message_type;
-          header_decoder(message_type);
+            switch (message_type) {
+              case rpc_defs::message_type::RESPONSE:
+                // Decode the request id.
+                rpc_defs::request_id_type req_id;
+                header_decoder(req_id);
 
-          switch (message_type) {
-            case rpc_defs::message_type::RESPONSE:
-              // Decode the request id.
-              rpc_defs::request_id_type req_id;
-              header_decoder(req_id);
-
-              response.erase(0, response_is.pos());
-              set_response(req_id, std::move(response));
-              break;
-            default:
-              // Unknown message received.
-              throw errors::data_mismatch("Received unknown message type");
-              break;
+                response.erase(0, response_is.pos());
+                set_response(req_id, std::move(response));
+                break;
+              default:
+                // Unknown message received.
+                throw errors::data_mismatch("Received unknown message type");
+                break;
+            }
           }
+        } catch (...) {
+          // Prevent sending more requests while we disconnect.
+          std::scoped_lock lock(sending_mu_);
+
+          // Disconnect the connection.
+          ready_.reset();
+          connection_.disconnect();
+
+          // Broadcast the exception to all the pending requests.
+          auto exc = std::current_exception();
+          broadcast_exception(exc);
         }
-      } catch (...) {
-        // Prevent sending more requests while we disconnect.
-        std::scoped_lock lock(sending_mu_);
-
-        // Disconnect the connection.
-        ready_.reset();
-        connection_.disconnect();
-
-        // Broadcast the exception to all the pending requests.
-        auto exc = std::current_exception();
-        broadcast_exception(exc);
       }
     }
   }
