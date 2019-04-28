@@ -19,8 +19,8 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#ifndef LASR_TYPE_HLASR_H_
-#define LASR_TYPE_HLASR_H_
+#ifndef LASR_TYPE_HASH_H_
+#define LASR_TYPE_HASH_H_
 
 #include <array>
 #include <chrono>
@@ -51,6 +51,7 @@ namespace detail {
 
 enum class type_family : std::uint8_t {
   VOID = 0,
+  CHARACTER,
   INTEGER,
   FLOAT,
   ENUM,
@@ -133,9 +134,18 @@ struct type_hash<void, Seen, base,
 template <typename T, typename Seen, type_hash_t base>
 struct type_hash<
     T, Seen, base,
-    std::enable_if_t<std::is_integral_v<T> && !mpt::is_type_in_v<T, Seen>>> {
+    std::enable_if_t<!std::is_same_v<T, char> && std::is_integral_v<T> &&
+                     !mpt::is_type_in_v<T, Seen>>> {
   static constexpr type_hash_t value = detail::type_hash_add(
       base, detail::type_family::INTEGER, std::is_signed_v<T>, sizeof(T));
+};
+
+// Special-case char, which can differ in signedness across architectures.
+template <typename Seen, type_hash_t base>
+struct type_hash<char, Seen, base,
+                 std::enable_if_t<!mpt::is_type_in_v<char, Seen>>> {
+  static constexpr type_hash_t value =
+      detail::type_hash_add(base, detail::type_family::CHARACTER, false, 1);
 };
 
 template <typename T, typename Seen, type_hash_t base>
@@ -324,10 +334,10 @@ struct type_hash<R(A...), Seen, base,
 
 template <typename R, typename... A, typename Seen, type_hash_t base>
 struct type_hash<R(A...) const, Seen, base,
-                 std::enable_if_t<!mpt::is_type_in_v<R(A...), Seen>>> {
+                 std::enable_if_t<!mpt::is_type_in_v<R(A...) const, Seen>>> {
   static constexpr type_hash_t value = detail::compose_with_types<
       detail::type_hash_add(base, detail::type_family::FUNCTION, true, 0),
-      mpt::insert_type_into_t<R(A...), Seen>, R, A...>::value;
+      mpt::insert_type_into_t<R(A...) const, Seen>, R, A...>::value;
 };
 
 template <typename T>
@@ -336,4 +346,4 @@ inline constexpr type_hash_t type_hash_v = type_hash<T>::value;
 
 }  // namespace lasr
 
-#endif  // LASR_TYPE_HLASR_H_
+#endif  // LASR_TYPE_HASH_H_
