@@ -24,7 +24,7 @@
 namespace lasr {
 
 thread_pool::thread_pool(unsigned int num_worker_threads, int queue_size)
-    : pending_(queue_size < 0 ? num_worker_threads : queue_size) {
+    : pending_(queue_size == 0 ? num_worker_threads : queue_size) {
   threads_.reserve(num_worker_threads);
   for (unsigned int i = 0; i < num_worker_threads; i++) {
     threads_.emplace_back([this]() {

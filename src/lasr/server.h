@@ -22,6 +22,7 @@
 #ifndef LASR_SERVER_H_
 #define LASR_SERVER_H_
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -127,9 +128,10 @@ struct server_options {
   std::optional<std::chrono::milliseconds> request_timeout = std::chrono::hours(1);
 
   // Number of threads in the server's thread pool.
-  unsigned int num_worker_threads = 2 * thread::hardware_concurrency();
+  unsigned int num_worker_threads = 2 * std::max(thread::hardware_concurrency(), 1U);
 
-  // Queue size for the server requests (default negative for unlimited).
+  // Queue size for the server requests (default negative for unlimited, zero for same as
+  // num_worker_threads).
   int queue_size = -1;
 };
 
@@ -564,7 +566,8 @@ class server {
         acceptor_factory_([args_tuple = std::make_tuple(std::forward<Args>(args)...), this]() {
           return std::apply([this](const auto&... args) { acceptor_.emplace(args...); },
                             args_tuple);
-        }) {}
+        }),
+        pool_(options_.num_worker_threads, options_.queue_size) {}
 
   ~server() { stop(); }
 
