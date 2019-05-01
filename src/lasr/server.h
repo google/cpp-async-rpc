@@ -227,8 +227,8 @@ class server {
         return never();
       }
 
-      if (!can_receive_) {
-        return can_receive_.wait_set();
+      if (!can_send_) {
+        return can_send_.wait_set();
       }
 
       return responses_.async_get().then([this](std::string response) {
