@@ -76,7 +76,8 @@ class context : public serializable<context> {
       std::chrono::time_point<std::chrono::system_clock, duration>;
 
   context(context&&) = default;
-  explicit context(context& parent = current(), bool set_current = true);
+  explicit context(context& parent = current(), bool set_current = true,
+                   bool shield = false);
 
   ~context();
 
@@ -167,6 +168,11 @@ class context : public serializable<context> {
   lasr::flat_map<std::string_view, std::shared_ptr<const dynamic_base_class>>
       data_;
   static thread_local context* current_;
+};
+
+class shield : public context {
+ public:
+  shield();
 };
 
 }  // namespace lasr

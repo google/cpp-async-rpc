@@ -37,10 +37,12 @@ context& context::top() {
   return base_context;
 }
 
-context::context(context& parent, bool set_current)
+context::context(context& parent, bool set_current, bool shield)
     : set_current_(set_current), parent_(&parent), deadline_(std::nullopt) {
   if (parent_) {
-    parent_->add_child(this);
+    if (!shield) {
+      parent_->add_child(this);
+    }
     deadline_ = parent_->deadline_;
     data_ = parent_->data_;
   }
@@ -161,5 +163,7 @@ void context::set_data(
         std::static_pointer_cast<const dynamic_base_class>(std::move(it));
   }
 }
+
+shield::shield() : context(current(), true, true) {}
 
 }  // namespace lasr
