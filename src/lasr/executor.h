@@ -23,9 +23,13 @@
 #define LASR_EXECUTOR_H_
 
 #include <algorithm>
+#include <deque>
+#include <mutex>
 #include <utility>
 #include <vector>
 #include "function2/function2.hpp"
+#include "lasr/errors.h"
+#include "lasr/future.h"
 #include "lasr/queue.h"
 #include "lasr/thread.h"
 
@@ -48,12 +52,35 @@ class thread_pool {
 
   template <typename F>
   void run(F&& f) {
-    pending_.put(std::move(fn_type(std::forward<F>(f))));
+    while (true) {
+      auto [have_slot, have_pending_space] =
+          select(slots_.can_get(), pending_.can_put());
+      try {
+        std::scoped_lock lock(mu_);
+        if (have_slot) {
+          *have_slot;
+          slots_.maybe_get().set_value(std::move(fn_type(std::forward<F>(f))));
+          return;
+        }
+        if (have_pending_space) {
+          *have_pending_space;
+          pending_.maybe_put(std::move(fn_type(std::forward<F>(f))));
+          return;
+        }
+      } catch (const errors::try_again&) {
+        // Just try again.
+      }
+    }
   }
 
  private:
   using fn_type = fu2::unique_function<void()>;
+
+  void request_work(promise<fn_type> slot);
+
+  std::mutex mu_;
   queue<fn_type> pending_;
+  queue<promise<fn_type>> slots_;
   std::vector<daemon_thread> threads_;
 };
 
