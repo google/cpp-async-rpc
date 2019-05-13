@@ -3,6 +3,8 @@
 This is lasr, a C++17 library supporting template meta-programming, asynchronous
 network programming, binary serialization and RPC.
 
+**Disclaimer:** This is not a Google supported product.
+
 ## What does lasr look like?
 
 ### RPC server and client
