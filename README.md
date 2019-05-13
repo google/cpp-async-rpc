@@ -1,7 +1,7 @@
 # cpp-async-rpc: Library for Asynchronicity, Serialization and Remoting
 
-This is arpc, a C++17 library supporting template meta-programming, asynchronous
-network programming, binary serialization and RPC.
+This is cpp-async-rpc, a C++17 library supporting template meta-programming,
+asynchronous network programming, binary serialization and RPC.
 
 **Disclaimer:** This is not a Google supported product.
 
