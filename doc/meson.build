@@ -1,4 +1,4 @@
-# *** Meson build configuration for the lasr Doxygen documentation.
+# *** Meson build configuration for the cpp-async-rpc Doxygen documentation.
 #
 # Copyright 2019 by Google LLC.
 #

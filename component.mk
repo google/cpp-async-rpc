@@ -1,4 +1,4 @@
-# *** component.mk file for the use of lasr as an ESP-IDF component.
+# *** component.mk file for the use of arpc as an ESP-IDF component.
 #
 # Copyright 2019 by Google LLC.
 #
@@ -14,6 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-COMPONENT_SRCDIRS := src src/lasr src/lasr/traits src/lasr/testing src/lasr/container src/lasr/container/detail
+COMPONENT_SRCDIRS := src src/arpc src/arpc/traits src/arpc/testing src/arpc/container src/arpc/container/detail
 COMPONENT_ADD_INCLUDEDIRS := src third_party/function2/include
 CXXFLAGS += -std=c++17

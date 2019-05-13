@@ -21,15 +21,15 @@
 
 #include <chrono>
 #include <iostream>
-#include "lasr/channel.h"
-#include "lasr/select.h"
+#include "arpc/channel.h"
+#include "arpc/select.h"
 #include "module1.h"
 #include "module2.h"
 
 int main() {
-  lasr::channel in(0);
+  arpc::channel in(0);
   auto [read, timeout] =
-      lasr::select(in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
+      arpc::select(in.can_read(), arpc::timeout(std::chrono::milliseconds(3000)));
   std::cerr << !!read << !!timeout << std::endl;
   in.release();
 

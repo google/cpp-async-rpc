@@ -1,4 +1,4 @@
-# *** Meson build configuration for lasr tests.
+# *** Meson build configuration for cpp-async-rpc tests.
 #
 # Copyright 2019 by Google LLC.
 #
@@ -30,7 +30,7 @@ foreach test_source : tests_list
     include_directories : all_test_includes,
     cpp_args: [cpp_catch2_config_main_flag],
     link_args : '-lpthread',
-    link_with: lasr_library
+    link_with: arpc_library
   )
   test(test_binary_name, test_executable)
 endforeach

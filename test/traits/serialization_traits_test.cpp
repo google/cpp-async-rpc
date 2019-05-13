@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `lasr/serialization_traits.h` header.
+/// \brief Test for the `arpc/serialization_traits.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -19,34 +19,34 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "lasr/traits/serialization_traits.h"
+#include "arpc/traits/serialization_traits.h"
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include "catch2/catch.hpp"
-#include "lasr/serializable.h"
-#include "lasr/testing/static_checks.h"
+#include "arpc/serializable.h"
+#include "arpc/testing/static_checks.h"
 
-struct A : lasr::serializable<A> {
+struct A : arpc::serializable<A> {
   int x;
-  LASR_FIELDS(x);
+  ARPC_FIELDS(x);
 };
 
-struct B : lasr::serializable<B, A> {
+struct B : arpc::serializable<B, A> {
   int y;
-  LASR_FIELDS(y);
+  ARPC_FIELDS(y);
 };
 
-struct C : lasr::serializable<C> {
-  LASR_CUSTOM_SERIALIZATION_VERSION(33);
+struct C : arpc::serializable<C> {
+  ARPC_CUSTOM_SERIALIZATION_VERSION(33);
 };
 
 struct D {};
 
 template <typename T, bool v>
 using check_can_be_serialized =
-    lasr::testing::check_value<bool, lasr::traits::can_be_serialized<T>::value,
+    arpc::testing::check_value<bool, arpc::traits::can_be_serialized<T>::value,
                                v>;
 
 TEST_CASE("can_be_serialized") {
@@ -58,20 +58,20 @@ TEST_CASE("can_be_serialized") {
 
 template <typename T1, typename T2>
 using check_get_base_classes =
-    lasr::testing::check_type<typename lasr::traits::get_base_classes<T1>::type,
+    arpc::testing::check_type<typename arpc::traits::get_base_classes<T1>::type,
                               T2>;
 
 TEST_CASE("get_base_classes") {
-  check_get_base_classes<A, lasr::mpt::pack<>>();
-  check_get_base_classes<B, lasr::mpt::pack<A>>();
-  check_get_base_classes<C, lasr::mpt::pack<>>();
-  check_get_base_classes<D, lasr::mpt::pack<>>();
+  check_get_base_classes<A, arpc::mpt::pack<>>();
+  check_get_base_classes<B, arpc::mpt::pack<A>>();
+  check_get_base_classes<C, arpc::mpt::pack<>>();
+  check_get_base_classes<D, arpc::mpt::pack<>>();
 }
 
-template <typename T, lasr::traits::custom_serialization_version_type v>
-using check_get_custom_serialization_version = lasr::testing::check_value<
-    lasr::traits::custom_serialization_version_type,
-    lasr::traits::get_custom_serialization_version<T>::value, v>;
+template <typename T, arpc::traits::custom_serialization_version_type v>
+using check_get_custom_serialization_version = arpc::testing::check_value<
+    arpc::traits::custom_serialization_version_type,
+    arpc::traits::get_custom_serialization_version<T>::value, v>;
 
 TEST_CASE("get_custom_serialization_version") {
   check_get_custom_serialization_version<A, 0>();
@@ -81,21 +81,21 @@ TEST_CASE("get_custom_serialization_version") {
 }
 
 template <typename T1, typename T2>
-using check_get_field_descriptors = lasr::testing::check_type<
-    typename lasr::traits::get_field_descriptors<T1>::type, T2>;
+using check_get_field_descriptors = arpc::testing::check_type<
+    typename arpc::traits::get_field_descriptors<T1>::type, T2>;
 
 TEST_CASE("get_field_descriptors") {
   check_get_field_descriptors<A,
-                              lasr::mpt::pack<lasr::field_descriptor<&A::x>>>();
+                              arpc::mpt::pack<arpc::field_descriptor<&A::x>>>();
   check_get_field_descriptors<B,
-                              lasr::mpt::pack<lasr::field_descriptor<&B::y>>>();
-  check_get_field_descriptors<C, lasr::mpt::pack<>>();
-  check_get_field_descriptors<D, lasr::mpt::pack<>>();
+                              arpc::mpt::pack<arpc::field_descriptor<&B::y>>>();
+  check_get_field_descriptors<C, arpc::mpt::pack<>>();
+  check_get_field_descriptors<D, arpc::mpt::pack<>>();
 }
 
 template <typename T, bool v>
 using check_has_base_classes =
-    lasr::testing::check_value<bool, lasr::traits::has_base_classes<T>::value,
+    arpc::testing::check_value<bool, arpc::traits::has_base_classes<T>::value,
                                v>;
 
 TEST_CASE("has_base_classes") {
@@ -106,8 +106,8 @@ TEST_CASE("has_base_classes") {
 }
 
 template <typename T, bool v>
-using check_has_custom_serialization = lasr::testing::check_value<
-    bool, lasr::traits::has_custom_serialization<T>::value, v>;
+using check_has_custom_serialization = arpc::testing::check_value<
+    bool, arpc::traits::has_custom_serialization<T>::value, v>;
 
 TEST_CASE("has_custom_serialization") {
   check_has_custom_serialization<A, false>();
@@ -117,8 +117,8 @@ TEST_CASE("has_custom_serialization") {
 }
 
 template <typename T, bool v>
-using check_has_field_descriptors = lasr::testing::check_value<
-    bool, lasr::traits::has_field_descriptors<T>::value, v>;
+using check_has_field_descriptors = arpc::testing::check_value<
+    bool, arpc::traits::has_field_descriptors<T>::value, v>;
 
 TEST_CASE("has_field_descriptors") {
   check_has_field_descriptors<A, true>();

@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `lasr/trait_factories.h` header.
+/// \brief Test for the `arpc/trait_factories.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -19,9 +19,9 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "lasr/traits/trait_factories.h"
+#include "arpc/traits/trait_factories.h"
 #include "catch2/catch.hpp"
-#include "lasr/testing/static_checks.h"
+#include "arpc/testing/static_checks.h"
 
 struct A {
   static constexpr int x = 1;
@@ -45,14 +45,14 @@ struct D {
   double i_c() const;
 };
 
-LASR_MAKE_METHOD_CHECKER(has_s_v, s_v);
+ARPC_MAKE_METHOD_CHECKER(has_s_v, s_v);
 template <typename T, bool v>
 using check_has_s_v =
-    lasr::testing::check_value<bool, has_s_v<T, void()>::value, v>;
+    arpc::testing::check_value<bool, has_s_v<T, void()>::value, v>;
 
-LASR_MAKE_METHOD_CHECKER(has_i, i);
+ARPC_MAKE_METHOD_CHECKER(has_i, i);
 template <typename T, bool v>
-using check_has_i = lasr::testing::check_value<bool, has_i<T, int()>::value, v>;
+using check_has_i = arpc::testing::check_value<bool, has_i<T, int()>::value, v>;
 
 TEST_CASE("method_checker") {
   check_has_s_v<A, true>();
@@ -66,15 +66,15 @@ TEST_CASE("method_checker") {
   check_has_i<D, false>();
 }
 
-LASR_MAKE_METHOD_CHECKER(has_s_v_c, s_v);
+ARPC_MAKE_METHOD_CHECKER(has_s_v_c, s_v);
 template <typename T, bool v>
 using check_has_s_v_c =
-    lasr::testing::check_value<bool, has_s_v_c<T, void()>::value, v>;
+    arpc::testing::check_value<bool, has_s_v_c<T, void()>::value, v>;
 
-LASR_MAKE_CONST_METHOD_CHECKER(has_i_c, i_c);
+ARPC_MAKE_CONST_METHOD_CHECKER(has_i_c, i_c);
 template <typename T, bool v>
 using check_has_i_c =
-    lasr::testing::check_value<bool, has_i_c<T, int()>::value, v>;
+    arpc::testing::check_value<bool, has_i_c<T, int()>::value, v>;
 
 TEST_CASE("const_method_checker") {
   check_has_s_v_c<A, true>();
@@ -88,9 +88,9 @@ TEST_CASE("const_method_checker") {
   check_has_i_c<D, false>();
 }
 
-LASR_MAKE_NESTED_CONSTANT_CHECKER(has_x, x);
+ARPC_MAKE_NESTED_CONSTANT_CHECKER(has_x, x);
 template <typename T, bool v>
-using check_has_x = lasr::testing::check_value<bool, has_x<T, int>::value, v>;
+using check_has_x = arpc::testing::check_value<bool, has_x<T, int>::value, v>;
 
 TEST_CASE("nested_constant_checker") {
   check_has_x<A, true>();
@@ -99,9 +99,9 @@ TEST_CASE("nested_constant_checker") {
   check_has_x<D, false>();
 }
 
-LASR_MAKE_NESTED_TYPE_CHECKER(has_t, t);
+ARPC_MAKE_NESTED_TYPE_CHECKER(has_t, t);
 template <typename T, bool v>
-using check_has_t = lasr::testing::check_value<bool, has_t<T>::value, v>;
+using check_has_t = arpc::testing::check_value<bool, has_t<T>::value, v>;
 
 TEST_CASE("nested_type_checker") {
   check_has_t<A, true>();

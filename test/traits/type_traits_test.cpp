@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `lasr/container_traits.h` header.
+/// \brief Test for the `arpc/container_traits.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -19,17 +19,17 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "lasr/traits/type_traits.h"
+#include "arpc/traits/type_traits.h"
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include "catch2/catch.hpp"
-#include "lasr/testing/static_checks.h"
+#include "arpc/testing/static_checks.h"
 
 template <typename T, bool v>
-using check_is_bit_transferrable_scalar = lasr::testing::check_value<
-    bool, lasr::traits::is_bit_transferrable_scalar_v<T>, v>;
+using check_is_bit_transferrable_scalar = arpc::testing::check_value<
+    bool, arpc::traits::is_bit_transferrable_scalar_v<T>, v>;
 
 TEST_CASE("is_bit_transferrable_scalar") {
   check_is_bit_transferrable_scalar<std::string, false>();
@@ -56,7 +56,7 @@ TEST_CASE("is_bit_transferrable_scalar") {
 
 template <typename T1, typename T2>
 using check_writable_value_type =
-    lasr::testing::check_type<typename lasr::traits::writable_value_type_t<T1>,
+    arpc::testing::check_type<typename arpc::traits::writable_value_type_t<T1>,
                               T2>;
 
 TEST_CASE("writable_value_type") {

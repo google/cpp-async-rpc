@@ -22,10 +22,10 @@
 #include <utility>
 #include <vector>
 #include "catch2/catch.hpp"
-#include "lasr/container/flat_map.h"
+#include "arpc/container/flat_map.h"
 
 TEST_CASE("flat_multimap tests") {
-  using map = lasr::flat_multimap<int, int>;
+  using map = arpc::flat_multimap<int, int>;
   using vector = std::vector<std::pair<int, int>>;
 
   map s1;

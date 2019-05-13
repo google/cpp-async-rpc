@@ -19,13 +19,13 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "lasr/container/flat_map.h"
+#include "arpc/container/flat_map.h"
 #include <utility>
 #include <vector>
 #include "catch2/catch.hpp"
 
 TEST_CASE("flat_map tests") {
-  using map = lasr::flat_map<int, int>;
+  using map = arpc::flat_map<int, int>;
   using vector = std::vector<std::pair<int, int>>;
 
   map s1;

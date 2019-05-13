@@ -1,4 +1,4 @@
-# *** Meson build configuration for the lasr examples.
+# *** Meson build configuration for the cpp-async-rpc examples.
 #
 # Copyright 2019 by Google LLC.
 #
@@ -22,13 +22,13 @@ main = executable('main',
                   'main.cpp',
                   include_directories : all_examples_includes,
                   link_args : '-lpthread',
-                  link_with : lasr_library)
+                  link_with : arpc_library)
                   
 modules = executable('modules',
                      'modules.cpp', 'module1.cpp', 'module2.cpp',
                      include_directories : all_examples_includes,
                      link_args : '-lpthread',
-                     link_with : lasr_library)
+                     link_with : arpc_library)
 
 subdir('async_basic')
 subdir('async_events')

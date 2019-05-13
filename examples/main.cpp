@@ -27,30 +27,30 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include "lasr/address_resolver.h"
-#include "lasr/client.h"
-#include "lasr/connection.h"
-#include "lasr/context.h"
-#include "lasr/errors.h"
-#include "lasr/executor.h"
-#include "lasr/future.h"
-#include "lasr/highway_hash.h"
-#include "lasr/interface.h"
-#include "lasr/iostream_adapters.h"
-#include "lasr/mpt.h"
-#include "lasr/packet_codecs.h"
-#include "lasr/packet_protocols.h"
-#include "lasr/queue.h"
-#include "lasr/select.h"
-#include "lasr/serializable.h"
-#include "lasr/server.h"
-#include "lasr/socket.h"
-#include "lasr/string_adapters.h"
-#include "lasr/thread.h"
-#include "lasr/type_hash.h"
+#include "arpc/address_resolver.h"
+#include "arpc/client.h"
+#include "arpc/connection.h"
+#include "arpc/context.h"
+#include "arpc/errors.h"
+#include "arpc/executor.h"
+#include "arpc/future.h"
+#include "arpc/highway_hash.h"
+#include "arpc/interface.h"
+#include "arpc/iostream_adapters.h"
+#include "arpc/mpt.h"
+#include "arpc/packet_codecs.h"
+#include "arpc/packet_protocols.h"
+#include "arpc/queue.h"
+#include "arpc/select.h"
+#include "arpc/serializable.h"
+#include "arpc/server.h"
+#include "arpc/socket.h"
+#include "arpc/string_adapters.h"
+#include "arpc/thread.h"
+#include "arpc/type_hash.h"
 
 // clang-format off
-LASR_INTERFACE(
+ARPC_INTERFACE(
     Reader, (),
     (
         // Get the value of a variable.
@@ -58,7 +58,7 @@ LASR_INTERFACE(
     )
 );
 
-LASR_INTERFACE(
+ARPC_INTERFACE(
     Writer, ((Reader)),
     (
         // Set the value of a variable.
@@ -74,26 +74,26 @@ LASR_INTERFACE(
 // clang-format on
 
 template <typename R>
-struct K : lasr::serializable<K<R>> {
+struct K : arpc::serializable<K<R>> {
   R x = 1, y = 2;
   std::string z = "pasta";
 
-  LASR_OWN_TYPE(K<R>);
+  ARPC_OWN_TYPE(K<R>);
 
-  LASR_FIELDS(x, y, z);
+  ARPC_FIELDS(x, y, z);
 };
 
-struct V : lasr::dynamic<V> {
+struct V : arpc::dynamic<V> {
   int a = 64;
 
-  LASR_FIELDS(a);
+  ARPC_FIELDS(a);
 };
-LASR_REGISTER(V);
+ARPC_REGISTER(V);
 
-struct V2 : lasr::dynamic<V2> {
+struct V2 : arpc::dynamic<V2> {
   int a = 64;
 
-  LASR_FIELDS(a);
+  ARPC_FIELDS(a);
 
   template <typename S>
   void save(S&) const {}
@@ -101,34 +101,34 @@ struct V2 : lasr::dynamic<V2> {
   template <typename S>
   void load(S&) {}
 
-  LASR_CUSTOM_SERIALIZATION_VERSION(1);
+  ARPC_CUSTOM_SERIALIZATION_VERSION(1);
 };
-LASR_REGISTER(V2);
+ARPC_REGISTER(V2);
 
-struct X : lasr::dynamic<X, V> {
+struct X : arpc::dynamic<X, V> {
   int x[10] = {1}, y = 2;
   std::string z = "pasta";
 
-  LASR_FIELDS(x, y, z);
+  ARPC_FIELDS(x, y, z);
 };
-LASR_REGISTER(X);
+ARPC_REGISTER(X);
 
-struct Y : lasr::serializable<Y> {
+struct Y : arpc::serializable<Y> {
   int u = 32;
 
-  LASR_FIELDS(u);
+  ARPC_FIELDS(u);
 };
-// LASR_REGISTER(Y);
+// ARPC_REGISTER(Y);
 
 namespace z {
-struct Z : lasr::dynamic<Z, X> {
+struct Z : arpc::dynamic<Z, X> {
   std::shared_ptr<Z> z2;
   std::shared_ptr<int> z3;
 
-  LASR_FIELDS(z2, z3);
+  ARPC_FIELDS(z2, z3);
 };
 }  // namespace z
-LASR_REGISTER(z::Z);
+ARPC_REGISTER(z::Z);
 
 template <typename T>
 void f() {
@@ -144,7 +144,7 @@ struct kk {
   static constexpr int roro = 1;
 };
 
-LASR_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
+ARPC_MAKE_NESTED_CONSTANT_CHECKER(has_roro, roro);
 
 void xxd(const std::string& data) {
   std::size_t i = 0;
@@ -182,8 +182,8 @@ void xxd(const std::string& data) {
 struct bad_connection {
   template <auto mfp, typename... Args>
   auto call(Args&&... args) ->
-      typename lasr::traits::member_function_pointer_traits<mfp>::return_type {
-    return (static_cast<typename lasr::traits::member_function_pointer_traits<
+      typename arpc::traits::member_function_pointer_traits<mfp>::return_type {
+    return (static_cast<typename arpc::traits::member_function_pointer_traits<
                 mfp>::class_type*>(nullptr)
                 ->*mfp)(std::forward<Args>(args)...);
   }
@@ -201,14 +201,14 @@ struct WriterImpl : public Writer {
   }
 
   void clear() {
-    throw lasr::errors::invalid_argument("I don't like you!");
+    throw arpc::errors::invalid_argument("I don't like you!");
     std::cerr << "Clearing..." << std::endl;
   }
 };
 
 int main() {
   {
-    lasr::listener l(lasr::endpoint().port(13133));
+    arpc::listener l(arpc::endpoint().port(13133));
     for (int i = 0; i < 4; i++) {
       auto s = l.accept();
       std::cerr << "Got connection from " << s.peer_addr().as_string()
@@ -218,13 +218,13 @@ int main() {
   try {
     using namespace std::literals;
 
-    lasr::server_object<WriterImpl> writer;
-    lasr::server server({}, lasr::endpoint().port(12121));
+    arpc::server_object<WriterImpl> writer;
+    arpc::server server({}, arpc::endpoint().port(12121));
     server.register_object("test", writer);
     server.start();
 
-    lasr::client_connection conn(
-        lasr::endpoint().name("localhost").port(12121));
+    arpc::client_connection conn(
+        arpc::endpoint().name("localhost").port(12121));
     auto obj = conn.get_proxy<Writer>("test");
     auto result = obj.get("patata");
     std::cerr << "RESULT: " << result << std::endl;
@@ -233,7 +233,7 @@ int main() {
 
     server.stop();
     return 0;
-  } catch (const lasr::errors::base_error& e) {
+  } catch (const arpc::errors::base_error& e) {
     std::cerr << e.portable_error_class_name() << ": " << e.what() << std::endl;
     return 0;
   } catch (int x) {
@@ -243,18 +243,18 @@ int main() {
   {
     std::cerr
         << "ms: "
-        << lasr::traits::type_hash_v<std::chrono::milliseconds> << std::endl;
+        << arpc::traits::type_hash_v<std::chrono::milliseconds> << std::endl;
     std::cerr << "m: "
-              << lasr::traits::type_hash_v<std::chrono::minutes> << std::endl;
+              << arpc::traits::type_hash_v<std::chrono::minutes> << std::endl;
     std::cerr << "sys: "
-              << lasr::traits::type_hash_v<
+              << arpc::traits::type_hash_v<
                      std::chrono::system_clock::time_point> << std::endl;
     std::cerr << "steady: "
-              << lasr::traits::type_hash_v<
+              << arpc::traits::type_hash_v<
                      std::chrono::steady_clock::time_point> << std::endl;
     std::cerr
         << "high-res: "
-        << lasr::traits::type_hash_v<
+        << arpc::traits::type_hash_v<
                std::chrono::high_resolution_clock::time_point> << std::endl;
   }
   {
@@ -270,14 +270,14 @@ int main() {
     f<decltype(&Writer::async::set)>();
   }
   {
-    lasr::promise<void> p1;
+    arpc::promise<void> p1;
     auto f1 =
         p1.get_future().then([]() { std::cerr << "Was done!" << std::endl; });
     p1.set_value();
     f1.get();
   }
   {
-    lasr::promise<int> p1;
+    arpc::promise<int> p1;
     auto f1 = p1.get_future().then([](int i) {
       std::cerr << "Was done!" << std::endl;
       return i + 1;
@@ -286,7 +286,7 @@ int main() {
     std::cerr << "GOT: " << f1.get() << std::endl;
   }
   {
-    lasr::synchronous_executor x;
+    arpc::synchronous_executor x;
     for (int i = 0; i < 10; i++) {
       x.run([]() {
         std::cerr << "Hello "
@@ -296,21 +296,21 @@ int main() {
     }
   }
   {
-    lasr::thread_pool x;
+    arpc::thread_pool x;
     for (int i = 0; i < 10; i++) {
       x.run([]() {
         std::cerr << "Hello "
                   << "world "
-                  << "2/" << lasr::thread::hardware_concurrency() << " "
+                  << "2/" << arpc::thread::hardware_concurrency() << " "
                   << std::this_thread::get_id() << std::endl;
       });
     }
 
-    auto [res] = lasr::select(lasr::timeout(std::chrono::seconds(2)));
+    auto [res] = arpc::select(arpc::timeout(std::chrono::seconds(2)));
     *res;
   }
   {
-    lasr::context ctx;
+    arpc::context ctx;
 
     V v;
     v.a = 33;
@@ -326,14 +326,14 @@ int main() {
     std::cerr << "X: " << ctx.get<X>().y << ", " << ctx.get<X>().z << std::endl;
 
     std::ostringstream oss;
-    lasr::ostream_output_stream osa(oss);
-    lasr::native_binary_encoder nbe(osa);
+    arpc::ostream_output_stream osa(oss);
+    arpc::native_binary_encoder nbe(osa);
     nbe(ctx);
     xxd(oss.str());
 
     std::istringstream iss(oss.str());
-    lasr::istream_input_stream isa(iss);
-    lasr::native_binary_decoder nbd(isa);
+    arpc::istream_input_stream isa(iss);
+    arpc::native_binary_decoder nbd(isa);
     nbd(ctx);
 
     std::cerr << "V: " << ctx.get<V>().a << std::endl;
@@ -347,47 +347,47 @@ int main() {
     std::cerr << "X: " << ctx.get<X>().y << ", " << ctx.get<X>().z << std::endl;
   }
   {
-    lasr::promise<void> p1, p2;
+    arpc::promise<void> p1, p2;
     auto f1 = p1.get_future();
     auto f2 = p2.get_future();
     p2.set_value();
-    std::vector<lasr::awaitable<void>> conds;
+    std::vector<arpc::awaitable<void>> conds;
     conds.push_back(f1.can_get());
     conds.push_back(f2.can_get());
-    auto [got_fut, timeout] = lasr::select(
-        std::move(conds), lasr::timeout(std::chrono::milliseconds(2000)));
+    auto [got_fut, timeout] = arpc::select(
+        std::move(conds), arpc::timeout(std::chrono::milliseconds(2000)));
 
     std::cerr << !!timeout << ',' << !!got_fut[0] << ',' << !!got_fut[1]
               << std::endl;
   }
   {
-    lasr::promise<void> p1, p2;
+    arpc::promise<void> p1, p2;
     auto f1 = p1.get_future();
     auto f2 = p2.get_future();
-    std::vector<lasr::awaitable<void>> conds;
+    std::vector<arpc::awaitable<void>> conds;
     conds.push_back(f1.can_get());
     conds.push_back(f2.can_get());
-    auto timeout_a = lasr::timeout(std::chrono::milliseconds(2000));
-    auto [got_fut, timeout] = lasr::select(conds, timeout_a);
+    auto timeout_a = arpc::timeout(std::chrono::milliseconds(2000));
+    auto [got_fut, timeout] = arpc::select(conds, timeout_a);
 
     std::cerr << !!timeout << ',' << !!got_fut[0] << ',' << !!got_fut[1]
               << std::endl;
   }
   {
-    lasr::promise<void> p;
+    arpc::promise<void> p;
     auto f = p.get_future();
     p.set_value();
     f.get();
   }
   {
-    lasr::context ctx;
+    arpc::context ctx;
     ctx.set_timeout(std::chrono::milliseconds(100));
-    auto s = dial(lasr::endpoint().name("www.google.com").service("https"));
+    auto s = dial(arpc::endpoint().name("www.google.com").service("https"));
   }
   {
-    lasr::thread t1([]() {
-      std::cerr << "CI " << &lasr::context::current() << std::endl;
-      auto [res] = lasr::select(lasr::context::current().wait_cancelled());
+    arpc::thread t1([]() {
+      std::cerr << "CI " << &arpc::context::current() << std::endl;
+      auto [res] = arpc::select(arpc::context::current().wait_cancelled());
       *res;
       std::cerr << "DONE!" << std::endl;
     });
@@ -397,42 +397,42 @@ int main() {
   }
 
   {
-    std::cerr << *lasr::context::current().deadline_left() /
+    std::cerr << *arpc::context::current().deadline_left() /
                      std::chrono::milliseconds(1)
               << std::endl;
 
     {
-      lasr::context ctx2;
+      arpc::context ctx2;
       ctx2.set_timeout(std::chrono::milliseconds(44));
-      std::cerr << *lasr::context::current().deadline_left() /
+      std::cerr << *arpc::context::current().deadline_left() /
                        std::chrono::milliseconds(1)
                 << std::endl;
 
       try {
-        (void)(lasr::select());
-      } catch (const lasr::errors::cancelled&) {
+        (void)(arpc::select());
+      } catch (const arpc::errors::cancelled&) {
         std::cerr << "CANCELLED!" << std::endl;
-      } catch (const lasr::errors::deadline_exceeded&) {
+      } catch (const arpc::errors::deadline_exceeded&) {
         std::cerr << "DEADLINE!" << std::endl;
       }
     }
 
-    std::cerr << *lasr::context::current().deadline_left() /
+    std::cerr << *arpc::context::current().deadline_left() /
                      std::chrono::milliseconds(1)
               << std::endl;
   }
 
   {
-    lasr::future<std::unique_ptr<int>> fi;
-    lasr::promise<std::unique_ptr<int>> pi;
+    arpc::future<std::unique_ptr<int>> fi;
+    arpc::promise<std::unique_ptr<int>> pi;
     fi = pi.get_future();
-    lasr::thread th1([&]() {
+    arpc::thread th1([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       pi.set_value(std::make_unique<int>(33));
     });
 
-    auto [val, to] = lasr::select(
-        fi.async_get(), lasr::timeout(std::chrono::milliseconds(3000)));
+    auto [val, to] = arpc::select(
+        fi.async_get(), arpc::timeout(std::chrono::milliseconds(3000)));
     if (val) {
       std::cerr << "VAL: " << **val << std::endl;
     }
@@ -443,12 +443,12 @@ int main() {
     th1.join();
   }
 
-  lasr::queue<std::unique_ptr<int>> q(10);
+  arpc::queue<std::unique_ptr<int>> q(10);
 
   auto tl = [&q]() {
     do {
-      auto [get, timeout] = lasr::select(
-          q.async_get(), lasr::timeout(std::chrono::milliseconds(3000)));
+      auto [get, timeout] = arpc::select(
+          q.async_get(), arpc::timeout(std::chrono::milliseconds(3000)));
       if (get) {
         std::cerr << "Got! Here! " << **get << std::endl;
         q.put(std::make_unique<int>(**get + 1));
@@ -460,10 +460,10 @@ int main() {
     } while (true);
   };
 
-  lasr::thread th1(tl);
-  lasr::thread th2(tl);
+  arpc::thread th1(tl);
+  arpc::thread th2(tl);
 
-  auto [put] = lasr::select(q.async_put(std::make_unique<int>(32)));
+  auto [put] = arpc::select(q.async_put(std::make_unique<int>(32)));
   std::cerr << "DID " << !!put << " DID" << std::endl;
 
   th1.join();
@@ -471,29 +471,29 @@ int main() {
 
   std::cerr << *(q.get()) << " DONE!" << std::endl;
 
-  lasr::channel in(0);
-  auto [read, timeout] = lasr::select(
-      in.can_read(), lasr::timeout(std::chrono::milliseconds(3000)));
+  arpc::channel in(0);
+  auto [read, timeout] = arpc::select(
+      in.can_read(), arpc::timeout(std::chrono::milliseconds(3000)));
   std::cerr << !!read << !!timeout << std::endl;
   in.release();
 
-  f<decltype(lasr::mpt::as_tuple(lasr::mpt::value_pack<33, 'c'>{}))>();
+  f<decltype(arpc::mpt::as_tuple(arpc::mpt::value_pack<33, 'c'>{}))>();
 
   std::cerr
       << "X"
-      << lasr::traits::member_function_pointer_traits<&Reader::get>::is_const
+      << arpc::traits::member_function_pointer_traits<&Reader::get>::is_const
       << "X" << std::endl;
 
   try {
-    lasr::error_factory::get().throw_error("out_of_range", "It's way off!");
-  } catch (const lasr::errors::out_of_range& oor) {
+    arpc::error_factory::get().throw_error("out_of_range", "It's way off!");
+  } catch (const arpc::errors::out_of_range& oor) {
     std::cerr << "CAUGHT! " << oor.portable_error_class_name() << ": "
               << oor.what() << std::endl;
   }
 
-  lasr::char_dev_connection cdc("/dev/tty");
+  arpc::char_dev_connection cdc("/dev/tty");
 
-  lasr::thread t1([&cdc] {
+  arpc::thread t1([&cdc] {
     std::this_thread::sleep_for(std::chrono::seconds(10));
     cdc.disconnect();
   });
@@ -503,7 +503,7 @@ int main() {
     cdc.write(buf.data(), buf.size());
     cdc.read(&buf[0], 3);
     std::cerr << buf << std::endl;
-  } catch (const lasr::errors::base_error& sd) {
+  } catch (const arpc::errors::base_error& sd) {
     std::cerr << "CAUGHT! " << sd.portable_error_class_name() << ": "
               << sd.what() << std::endl;
   }
@@ -512,13 +512,13 @@ int main() {
   t1.join();
 
   /*
-  lasr::packet_connection_impl<lasr::char_dev_connection,
-                              lasr::serial_line_packet_protocol<>>
+  arpc::packet_connection_impl<arpc::char_dev_connection,
+                              arpc::serial_line_packet_protocol<>>
       slpci("/dev/tty");
   slpci.send("hello");
   slpci.disconnect();
 
-  lasr::reconnectable_connection<lasr::char_dev_connection> cdc2("/dev/tty");
+  arpc::reconnectable_connection<arpc::char_dev_connection> cdc2("/dev/tty");
   std::string buf2("hello\n");
   cdc2.connect();
   cdc2.write(buf2.data(), buf2.size());
@@ -527,9 +527,9 @@ int main() {
   cdc2.write(buf2.data(), buf2.size());
   cdc2.disconnect();
 
-  lasr::packet_connection_impl<
-      lasr::reconnectable_connection<lasr::char_dev_connection>,
-      lasr::protected_stream_packet_protocol<>>
+  arpc::packet_connection_impl<
+      arpc::reconnectable_connection<arpc::char_dev_connection>,
+      arpc::protected_stream_packet_protocol<>>
       slpci2("/dev/tty");
   slpci2.connect();
   slpci2.send("hello");
@@ -541,11 +541,11 @@ int main() {
 
   try {
     using namespace std::literals;
-    lasr::client_connection conn(lasr::endpoint().name("localhost").port(9999));
+    arpc::client_connection conn(arpc::endpoint().name("localhost").port(9999));
     auto obj = conn.get_proxy<Reader::async>("default"sv);
-    lasr::future<std::string> res;
+    arpc::future<std::string> res;
     {
-      lasr::context ctx;
+      arpc::context ctx;
       ctx.set_timeout(std::chrono::seconds(10));
       ctx.set(X());
       auto [fut, req_id] = obj.get("variable");
@@ -563,10 +563,10 @@ int main() {
       std::string("Hello") + std::string(2, '\0') + std::string("World");
 
   std::stringstream xs;
-  lasr::istream_input_stream xsi(xs);
-  lasr::ostream_output_stream xso(xs);
-  lasr::protected_stream_packet_protocol<lasr::big_endian_binary_encoder,
-                                         lasr::big_endian_binary_decoder>
+  arpc::istream_input_stream xsi(xs);
+  arpc::ostream_output_stream xso(xs);
+  arpc::protected_stream_packet_protocol<arpc::big_endian_binary_encoder,
+                                         arpc::big_endian_binary_decoder>
       pspp;
   xxd(data);
   pspp.send(xso, data);
@@ -578,21 +578,21 @@ int main() {
   xs.seekg(0);
   xs.seekp(0);
 
-  lasr::serial_line_packet_protocol<> slpp;
+  arpc::serial_line_packet_protocol<> slpp;
   xxd(data);
   slpp.send(xso, data);
   xxd(xs.str());
   data = slpp.receive(xsi);
   xxd(data);
 
-  lasr::mac_codec mac(key);
+  arpc::mac_codec mac(key);
   xxd(data);
   mac.encode(data);
   xxd(data);
   mac.decode(data);
   xxd(data);
 
-  lasr::mac_codec mac2;
+  arpc::mac_codec mac2;
   xxd(data);
   mac2.encode(data);
   xxd(data);
@@ -605,7 +605,7 @@ int main() {
         std::string(254, 'x'), std::string(1, '\0') + std::string(254, 'x'),
         std::string("Hello")}) {
     std::cerr << "TEST " << ++index << std::endl;
-    lasr::cobs_codec cobs;
+    arpc::cobs_codec cobs;
     xxd(s);
     cobs.encode(s);
     xxd(s);
@@ -613,30 +613,30 @@ int main() {
     xxd(s);
   }
 
-  std::cerr << lasr::mpt::element_type_t<
-                   0, lasr::traits::get_field_descriptors_t<z::Z>>::type::name()
+  std::cerr << arpc::mpt::element_type_t<
+                   0, arpc::traits::get_field_descriptors_t<z::Z>>::type::name()
             << std::endl;
-  std::cerr << lasr::mpt::element_type_t<
-                   1, lasr::traits::get_field_descriptors_t<z::Z>>::type::name()
+  std::cerr << arpc::mpt::element_type_t<
+                   1, arpc::traits::get_field_descriptors_t<z::Z>>::type::name()
             << std::endl;
 
   std::cerr
-      << lasr::mpt::element_type_t<0, Writer::method_descriptors>::type::name()
+      << arpc::mpt::element_type_t<0, Writer::method_descriptors>::type::name()
       << std::endl;
   std::cerr
-      << lasr::mpt::element_type_t<1, Writer::method_descriptors>::type::name()
+      << arpc::mpt::element_type_t<1, Writer::method_descriptors>::type::name()
       << std::endl;
 
   try {
     std::string data = "Hello";
     std::cerr << std::hex
-              << lasr::highway_hash::hash64(
+              << arpc::highway_hash::hash64(
                      reinterpret_cast<const uint8_t*>(data.data()), data.size(),
                      key)
               << std::dec << std::endl;
     data = "Hell!";
     std::cerr << std::hex
-              << lasr::highway_hash::hash64(
+              << arpc::highway_hash::hash64(
                      reinterpret_cast<const uint8_t*>(data.data()), data.size(),
                      key)
               << std::dec << std::endl;
@@ -644,27 +644,27 @@ int main() {
     std::cerr << has_roro<kk, int>::value << std::endl;
     std::cerr << has_roro<Y, int>::value << std::endl;
 
-    using A = lasr::mpt::pack<>;
-    using B = lasr::mpt::insert_type_into_t<int, A>;
-    using C = lasr::mpt::insert_type_into_t<int, B>;
-    using D = lasr::mpt::insert_type_into_t<double, C>;
-    using E = lasr::mpt::insert_type_into_t<int, D>;
+    using A = arpc::mpt::pack<>;
+    using B = arpc::mpt::insert_type_into_t<int, A>;
+    using C = arpc::mpt::insert_type_into_t<int, B>;
+    using D = arpc::mpt::insert_type_into_t<double, C>;
+    using E = arpc::mpt::insert_type_into_t<int, D>;
     f<E>();
 
     std::cerr << std::hex;
     std::cerr
-        << lasr::traits::get_custom_serialization_version<signed int>::value
+        << arpc::traits::get_custom_serialization_version<signed int>::value
         << std::endl;
 
-    std::cerr << lasr::traits::type_hash<signed int>::value << std::endl;
-    std::cerr << lasr::traits::type_hash<std::tuple<int>>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<signed int>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<std::tuple<int>>::value << std::endl;
 
-    std::cerr << lasr::traits::type_hash<V>::value << std::endl;
-    std::cerr << lasr::traits::type_hash<V2>::value << std::endl;
-    std::cerr << lasr::traits::type_hash<X>::value << std::endl;
-    std::cerr << lasr::traits::type_hash<Y>::value << std::endl;
-    std::cerr << lasr::traits::type_hash<z::Z>::value << std::endl;
-    std::cerr << lasr::traits::type_hash<std::shared_ptr<z::Z>>::value
+    std::cerr << arpc::traits::type_hash<V>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<V2>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<X>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<Y>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<z::Z>::value << std::endl;
+    std::cerr << arpc::traits::type_hash<std::shared_ptr<z::Z>>::value
               << std::endl;
     std::cerr << std::dec;
 
@@ -681,30 +681,30 @@ int main() {
     z->z2 = z;
     z->z = "rosco";
 
-    lasr::binary_sizer bs;
-    bs(tup, lasr::verify_structure{});
+    arpc::binary_sizer bs;
+    bs(tup, arpc::verify_structure{});
     bs(x);
     bs(v);
     bs(v);
     bs(w);
     bs(y);
-    bs(z, lasr::verify_structure{});
+    bs(z, arpc::verify_structure{});
     std::cerr << "SIZE: " << bs.size() << std::endl;
 
     std::ostringstream oss;
-    lasr::ostream_output_stream osa(oss);
-    lasr::native_binary_encoder nbe(osa);
-    nbe(tup, lasr::verify_structure{});
+    arpc::ostream_output_stream osa(oss);
+    arpc::native_binary_encoder nbe(osa);
+    nbe(tup, arpc::verify_structure{});
     nbe(x);
     nbe(v);
     nbe(v);
     nbe(w);
     nbe(y);
-    nbe(z, lasr::verify_structure{});
+    nbe(z, arpc::verify_structure{});
 
     std::istringstream iss(oss.str());
-    lasr::istream_input_stream isa(iss);
-    lasr::native_binary_decoder nbd(isa);
+    arpc::istream_input_stream isa(iss);
+    arpc::native_binary_decoder nbd(isa);
 
     std::tuple<int, double> tup2;
     std::shared_ptr<X> x2;
@@ -713,13 +713,13 @@ int main() {
     std::unique_ptr<Y> y2;
     std::shared_ptr<z::Z> z2;
 
-    nbd(tup2, lasr::verify_structure{});
+    nbd(tup2, arpc::verify_structure{});
     nbd(x2);
     nbd(v2);
     nbd(v2);
     nbd(w2);
     nbd(y2);
-    nbd(z2, lasr::verify_structure{});
+    nbd(z2, arpc::verify_structure{});
 
     std::cerr << std::get<0>(tup2) << ", " << std::get<1>(tup2) << std::endl;
 
@@ -732,7 +732,7 @@ int main() {
 
     std::cout << oss.str();
 
-    throw lasr::errors::io_error("hello");
+    throw arpc::errors::io_error("hello");
   } catch (const std::runtime_error& e) {
     std::cerr << e.what() << std::endl;
   }

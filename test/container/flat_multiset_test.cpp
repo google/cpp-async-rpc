@@ -22,10 +22,10 @@
 #include <utility>
 #include <vector>
 #include "catch2/catch.hpp"
-#include "lasr/container/flat_set.h"
+#include "arpc/container/flat_set.h"
 
 TEST_CASE("flat_multiset tests") {
-  using set = lasr::flat_multiset<int>;
+  using set = arpc::flat_multiset<int>;
   using vector = std::vector<int>;
 
   set s1;

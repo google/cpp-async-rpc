@@ -1,4 +1,4 @@
-# *** Top-level Meson build configuration for lasr.
+# *** Top-level Meson build configuration for cpp-async-rpc.
 #
 # Copyright 2019 by Google LLC.
 #
@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-project('lasr', 'cpp', default_options : ['cpp_std=c++17'], version : '0.0.1')
+project('arpc', 'cpp', default_options : ['cpp_std=c++17'], version : '0.0.1')
 
 # Third party includes.
 third_party_includes = include_directories('third_party/function2/include')
@@ -44,4 +44,4 @@ subdir('test')
 subdir('doc')
 
 # Declare this project as a dependency for others to use.
-proj_dep = declare_dependency(include_directories : includes, link_with : lasr_library)
+proj_dep = declare_dependency(include_directories : includes, link_with : arpc_library)

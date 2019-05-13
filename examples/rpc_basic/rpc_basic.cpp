@@ -21,12 +21,12 @@
 
 #include <iostream>
 #include <string>
-#include "lasr/client.h"
-#include "lasr/interface.h"
-#include "lasr/server.h"
+#include "arpc/client.h"
+#include "arpc/interface.h"
+#include "arpc/server.h"
 
 /// This is the definition of the Greeter interface.
-LASR_INTERFACE(Greeter, (/* doesn't extend other interfaces */),
+ARPC_INTERFACE(Greeter, (/* doesn't extend other interfaces */),
                (  // Return a salutation..
                    ((std::string), say_hello_to,
                     (((const std::string&), name)))));
@@ -40,18 +40,18 @@ struct GreeterImpl : Greeter {
 
 int main(int argc, char* argv[]) {
   // Create a server-side implementation object.
-  lasr::server_object<GreeterImpl> greeter;
+  arpc::server_object<GreeterImpl> greeter;
 
   // Set up the server on TCP port 9999 and register the object in it with under
   // the "greeter" name.
-  lasr::server server({/* default options */}, lasr::endpoint().port(9999));
+  arpc::server server({/* default options */}, arpc::endpoint().port(9999));
   server.register_object("greeter", greeter);
 
   // Start serving RPCs.
   server.start();
 
   // Create a client connection to the server.
-  lasr::client_connection client(lasr::endpoint().name("localhost").port(9999));
+  arpc::client_connection client(arpc::endpoint().name("localhost").port(9999));
 
   // Get a proxy for the "greeter" remote object.
   auto greeter_proxy = client.get_proxy<Greeter>("greeter");

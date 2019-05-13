@@ -23,19 +23,19 @@
 #include <exception>
 #include <iostream>
 #include <string>
-#include "lasr/awaitable.h"
-#include "lasr/context.h"
-#include "lasr/errors.h"
-#include "lasr/select.h"
-#include "lasr/socket.h"
+#include "arpc/awaitable.h"
+#include "arpc/context.h"
+#include "arpc/errors.h"
+#include "arpc/select.h"
+#include "arpc/socket.h"
 
 int main(int argc, char* argv[]) {
   try {
-    lasr::context ctx;
+    arpc::context ctx;
     ctx.set_timeout(std::chrono::seconds(10));
 
     auto s =
-        lasr::dial(lasr::endpoint().name("www.kernel.org").service("http"));
+        arpc::dial(arpc::endpoint().name("www.kernel.org").service("http"));
 
     std::string request = "GET / HTTP/1.0\r\nHost: www.kernel.org\r\n\r\n";
     char buf[256];
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
               request.erase(0, sent);
             });
       } else {
-        return lasr::never();
+        return arpc::never();
       }
     };
 
@@ -61,13 +61,13 @@ int main(int argc, char* argv[]) {
     };
 
     while (true) {
-      auto [sent, received] = lasr::select(send(), receive());
+      auto [sent, received] = arpc::select(send(), receive());
       if (sent) *sent;          // Throw if needed.
       if (received) *received;  // Throw if needed.
     }
 
     return 0;
-  } catch (const lasr::errors::base_error& e) {
+  } catch (const arpc::errors::base_error& e) {
     std::cerr << "Exception of type " << e.portable_error_class_name()
               << " with message: " << e.what() << std::endl;
     return 1;

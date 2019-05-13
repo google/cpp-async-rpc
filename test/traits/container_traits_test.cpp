@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `lasr/container_traits.h` header.
+/// \brief Test for the `arpc/container_traits.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -19,7 +19,7 @@
 ///   License for the specific language governing permissions and limitations
 ///   under the License.
 
-#include "lasr/traits/container_traits.h"
+#include "arpc/traits/container_traits.h"
 #include <array>
 #include <map>
 #include <set>
@@ -28,11 +28,11 @@
 #include <utility>
 #include <vector>
 #include "catch2/catch.hpp"
-#include "lasr/testing/static_checks.h"
+#include "arpc/testing/static_checks.h"
 
 template <typename T, bool v>
 using check_is_iterable =
-    lasr::testing::check_value<bool, lasr::traits::is_iterable_v<T>, v>;
+    arpc::testing::check_value<bool, arpc::traits::is_iterable_v<T>, v>;
 
 TEST_CASE("is_iterable tests") {
   check_is_iterable<int, false>();
@@ -58,7 +58,7 @@ TEST_CASE("is_iterable tests") {
 
 template <typename T, bool v>
 using check_is_const_iterable =
-    lasr::testing::check_value<bool, lasr::traits::is_const_iterable_v<T>, v>;
+    arpc::testing::check_value<bool, arpc::traits::is_const_iterable_v<T>, v>;
 
 TEST_CASE("is_const_iterable tests") {
   check_is_const_iterable<int, false>();
@@ -84,7 +84,7 @@ TEST_CASE("is_const_iterable tests") {
 
 template <typename T, bool v>
 using check_is_contiguous_sequence =
-    lasr::testing::check_value<bool, lasr::traits::is_contiguous_sequence_v<T>,
+    arpc::testing::check_value<bool, arpc::traits::is_contiguous_sequence_v<T>,
                                v>;
 
 TEST_CASE("is_contiguous_sequence tests") {
@@ -110,7 +110,7 @@ TEST_CASE("is_contiguous_sequence tests") {
 
 template <typename T, bool v>
 using check_can_reserve_capacity =
-    lasr::testing::check_value<bool, lasr::traits::can_reserve_capacity_v<T>,
+    arpc::testing::check_value<bool, arpc::traits::can_reserve_capacity_v<T>,
                                v>;
 
 TEST_CASE("can_reserve_capacity tests") {
@@ -131,7 +131,7 @@ TEST_CASE("can_reserve_capacity tests") {
 
 template <typename T, bool v>
 using check_can_be_resized =
-    lasr::testing::check_value<bool, lasr::traits::can_be_resized_v<T>, v>;
+    arpc::testing::check_value<bool, arpc::traits::can_be_resized_v<T>, v>;
 
 TEST_CASE("can_be_resized tests") {
   check_can_be_resized<int, false>();
@@ -151,7 +151,7 @@ TEST_CASE("can_be_resized tests") {
 
 template <typename T, bool v>
 using check_has_static_size =
-    lasr::testing::check_value<bool, lasr::traits::has_static_size_v<T>, v>;
+    arpc::testing::check_value<bool, arpc::traits::has_static_size_v<T>, v>;
 
 TEST_CASE("has_static_size tests") {
   check_has_static_size<int, false>();
@@ -170,7 +170,7 @@ TEST_CASE("has_static_size tests") {
 
 template <typename T, std::size_t v>
 using check_static_size =
-    lasr::testing::check_value<std::size_t, lasr::traits::static_size_v<T>, v>;
+    arpc::testing::check_value<std::size_t, arpc::traits::static_size_v<T>, v>;
 
 TEST_CASE("static_size tests") {
   check_static_size<int[5], 5>();

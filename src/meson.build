@@ -1,4 +1,4 @@
-# *** Meson build configuration for lasr main sources.
+# *** Meson build configuration for cpp-async-rpc main sources.
 #
 # Copyright 2019 by Google LLC.
 #
@@ -48,4 +48,4 @@ endforeach
 find_sources_output = run_command(find_program_path.path(), meson.current_source_dir(), '-name', '*.cpp', '-printf', '%P\n')
 sources_list = find_sources_output.stdout().strip().split('\n')
 
-lasr_library = static_library('lasr', sources_list, include_directories : all_src_includes)
+arpc_library = static_library('arpc', sources_list, include_directories : all_src_includes)
