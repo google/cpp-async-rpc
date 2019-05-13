@@ -1,4 +1,4 @@
-# *** component.mk file for the use of arpc as an ESP-IDF component.
+# *** component.mk file for the use of cpp-async-rpc as an ESP-IDF component.
 #
 # Copyright 2019 by Google LLC.
 #
