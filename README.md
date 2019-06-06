@@ -185,9 +185,10 @@ platform.
 ## What's in cpp-async-rpc?
 
  * Preprocessor-based code generation (sequences, iteration and conditionals).
-   This is used so that arpc doesn't require an IDL compiler to define its
-   serializable structures or RPC interfaces. Thanks to the preprocessor, these
-   are just defined in C++ native headers (albeit with some syntax contortions).
+   This is used so that cpp-async-rpc doesn't require an IDL compiler to define
+   its serializable structures or RPC interfaces. Thanks to the preprocessor,
+   these are just defined in C++ native headers (albeit with some syntax
+   contortions).
 
  * Meta-programming toolkit: support for compile-time sequences with associated
    compile-time or run-time values. Support compile-time iteration on list of
@@ -239,7 +240,7 @@ platform.
 ## Inspiration
 
  * [Cereal](http://uscilab.github.io/cereal/): A C++11 library for
-   serialization. This was the original source of inspiration for arpc.
+   serialization. This was the original source of inspiration for cpp-async-rpc.
    
  * [Boost](https://www.boost.org/) MPL, Fusion and Hana libraries. These
    provided inspiration on how to process sequences of types or data at compile
@@ -247,7 +248,7 @@ platform.
    
  * [The Go language](https://golang.org/). The cancellable contexts, the channel
    multiplexing and the clean networking libraries have inspired some of the
-   work in arpc.
+   work in cpp-async-rpc.
    
  * [JavaScript Promises](https://developer.mozilla.org/es/docs/Web/JavaScript/Referencia/Objetos_globales/Promise)
    as the chosen way to encapsulate behaviour to be run once asynchronous
