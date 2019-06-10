@@ -58,15 +58,16 @@ int main(int argc, char* argv[]) {
 ```
 
 Yeah, we use the C preprocessor as our IDL compiler, which makes the syntax
-awkward, but on the other hand your interface definition remains valid (even if
-ugly) C++ header source. 
+awkward, but on the other hand your interface definition remains a valid (even
+if ugly) C++ header file. 
 
 ### Serialization of custom structures
 
-While cpp-async-rpc is able to serialize and deserialize most standard library
-classes and others implementing compatible interfaces out of the box, preparing
-your own data structures for serialization (or their use as RPC arguments) is
-easy:
+cpp-async-rpc is able to serialize and deserialize most standard library classes
+out of the box. It also handles custom classes that implement standard
+interfaces, like the `begin()`/`end()` contract for containers. But it wouldn't
+be so useful if you couldn't teach it how to serialize your own data structures
+(for instance for their use as RPC arguments). Doing so is easy:
 
 ```c++
 #include <iostream>
@@ -191,26 +192,28 @@ platform.
    contortions).
 
  * Meta-programming toolkit: support for compile-time sequences with associated
-   compile-time or run-time values. Support compile-time iteration on list of
-   types or values. Compile-time and `constexpr` mapping and aggregation of
-   data sequences. 
+   compile-time or run-time values. The library supports compile-time iteration
+   on lists of types or values, and compile-time and `constexpr` mapping
+   (`transform()`) and aggregation (`accumulate()`) of data sequences. 
 
- * A serialization framework supporting portable binary serialization of most of
-   the standard types in modern C++, including primitive types, strings,
-   sequences and associative containers. Smart pointers (including run-time
-   polymorphism and object graphs) are also supported.
+ * A serialization framework that supports portable binary serialization of most
+   of the standard types in modern C++, including primitive types, strings,
+   sequences and associative containers. cpp-async-rpc can also serialize smart
+   pointers (including run-time polymorphic types and possibly cyclic object
+   graphs).
 
  * Asynchronous primitives for operating on files, sockets and timers, coupled
    with synchronization primitives (mutexes, semaphores, flags, queues, futures)
-   that also support asynchronicity and event composition (via `select`). The
+   that also support asynchronicity and event composition. A `select()` function
+   allows to compose events so that the first one to trigger is notified. The
    synchronization primitives are drop-in replacements for the standard library
-   ones, but they are built on POSIX pipes so that they can be used in `select`
-   or `poll`.
+   ones, but they are built on POSIX pipes so that they can be used in
+   `select()` or `poll()`.
 
- * A superset of `std::thread` with support for stackable execution contexts.
-   The `context` primitive can hold data or deadlines to be propagated across
-   RPC call boundaries. The contexts can also be cancelled triggering exceptions
-   whenever the associated thread attempts any asynchronous or I/O operation.
+ * A subclass of `std::thread` with support for stackable execution contexts.
+   The `context` primitive can hold data or deadlines that are propagated across
+   RPC call boundaries. If a context is cancelled, any I/O operation or
+   asynchronous wait related to it will throw an exception immediately.
 
  * Networking support for resolving domain names and ports, and establishing
    both client and server connections.
@@ -247,8 +250,8 @@ platform.
    time (for example for iterating on struct fields).
    
  * [The Go language](https://golang.org/). The cancellable contexts, the channel
-   multiplexing and the clean networking libraries have inspired some of the
-   work in cpp-async-rpc.
+   multiplexing and the clean networking libraries in Go have inspired some of
+   the work in cpp-async-rpc.
    
  * [JavaScript Promises](https://developer.mozilla.org/es/docs/Web/JavaScript/Referencia/Objetos_globales/Promise)
    as the chosen way to encapsulate behaviour to be run once asynchronous
