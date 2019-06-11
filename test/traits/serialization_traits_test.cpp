@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `arpc/serialization_traits.h` header.
+/// \brief Test for the `arpc/traits/serialization_traits.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -24,9 +24,9 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include "catch2/catch.hpp"
 #include "arpc/serializable.h"
 #include "arpc/testing/static_checks.h"
+#include "catch2/catch.hpp"
 
 struct A : arpc::serializable<A> {
   int x;

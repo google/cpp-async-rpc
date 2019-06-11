@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `arpc/trait_factories.h` header.
+/// \brief Test for the `arpc/traits/trait_factories.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -20,8 +20,8 @@
 ///   under the License.
 
 #include "arpc/traits/trait_factories.h"
-#include "catch2/catch.hpp"
 #include "arpc/testing/static_checks.h"
+#include "catch2/catch.hpp"
 
 struct A {
   static constexpr int x = 1;

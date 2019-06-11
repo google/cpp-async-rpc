@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `arpc/container_traits.h` header.
+/// \brief Test for the `arpc/traits/container_traits.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -24,11 +24,12 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include "catch2/catch.hpp"
 #include "arpc/testing/static_checks.h"
+#include "catch2/catch.hpp"
 
 template <typename T, bool v>
 using check_is_iterable =
@@ -101,6 +102,7 @@ TEST_CASE("is_contiguous_sequence tests") {
   check_is_contiguous_sequence<std::array<char, 10>, true>();
   check_is_contiguous_sequence<std::vector<char>, true>();
   check_is_contiguous_sequence<std::string, true>();
+  check_is_contiguous_sequence<std::string_view, true>();
   check_is_contiguous_sequence<const char(&)[10], true>();
   check_is_contiguous_sequence<const char[10], true>();
   check_is_contiguous_sequence<const std::array<char, 10>, true>();

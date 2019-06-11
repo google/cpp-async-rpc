@@ -25,6 +25,7 @@
 #include <array>
 #include <iterator>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -89,6 +90,11 @@ struct is_contiguous_sequence<std::vector<T, Allocator>>
 template <typename CharT, typename Traits, typename Allocator>
 struct is_contiguous_sequence<std::basic_string<CharT, Traits, Allocator>>
     : public std::true_type {};
+
+template <typename CharT, typename Traits>
+struct is_contiguous_sequence<std::basic_string_view<CharT, Traits>>
+    : public std::true_type {};
+
 }  // namespace detail
 
 /// \brief Check if `T` is a container storing elements contiguously in memory.

@@ -1,5 +1,5 @@
 /// \file
-/// \brief Test for the `arpc/container_traits.h` header.
+/// \brief Test for the `arpc/traits/type_traits.h` header.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -24,8 +24,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include "catch2/catch.hpp"
 #include "arpc/testing/static_checks.h"
+#include "catch2/catch.hpp"
 
 template <typename T, bool v>
 using check_is_bit_transferrable_scalar = arpc::testing::check_value<
