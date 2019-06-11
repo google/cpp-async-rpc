@@ -123,38 +123,38 @@ class flat_tree : protected std::vector<Value, Allocator> {
   using underlying_container = std::vector<Value, Allocator>;
   using key_type = Key;
   using value_type = Value;
-  using typename underlying_container::size_type;
   using typename underlying_container::difference_type;
+  using typename underlying_container::size_type;
   using key_compare = Compare;
   using value_compare = key_value_compare<Key, Value, Compare>;
 
   using typename underlying_container::allocator_type;
-  using typename underlying_container::reference;
-  using typename underlying_container::const_reference;
-  using typename underlying_container::pointer;
-  using typename underlying_container::const_pointer;
-  using typename underlying_container::iterator;
   using typename underlying_container::const_iterator;
-  using typename underlying_container::reverse_iterator;
+  using typename underlying_container::const_pointer;
+  using typename underlying_container::const_reference;
   using typename underlying_container::const_reverse_iterator;
+  using typename underlying_container::iterator;
+  using typename underlying_container::pointer;
+  using typename underlying_container::reference;
+  using typename underlying_container::reverse_iterator;
 
   using underlying_container::begin;
   using underlying_container::cbegin;
-  using underlying_container::end;
   using underlying_container::cend;
-  using underlying_container::rbegin;
   using underlying_container::crbegin;
-  using underlying_container::rend;
   using underlying_container::crend;
+  using underlying_container::end;
+  using underlying_container::rbegin;
+  using underlying_container::rend;
 
   using underlying_container::get_allocator;
 
+  using underlying_container::capacity;
   using underlying_container::empty;
-  using underlying_container::size;
   using underlying_container::max_size;
   using underlying_container::reserve;
-  using underlying_container::capacity;
   using underlying_container::shrink_to_fit;
+  using underlying_container::size;
 
   using underlying_container::clear;
   using underlying_container::swap;
@@ -174,7 +174,7 @@ class flat_tree : protected std::vector<Value, Allocator> {
   flat_tree& operator=(std::initializer_list<value_type> ilist) {
     underlying_container::operator=(ilist);
     std::sort(begin(), end(), comp_);
-    if (!multiple_allowed) {
+    if constexpr (!multiple_allowed) {
       this->erase(std::unique(begin(), end(), eq_), end());
     }
     return *this;
@@ -190,7 +190,7 @@ class flat_tree : protected std::vector<Value, Allocator> {
             const Allocator& alloc = Allocator())
       : underlying_container(first, last, alloc), comp_(comp), eq_(comp) {
     std::sort(begin(), end(), comp_);
-    if (!multiple_allowed) {
+    if constexpr (!multiple_allowed) {
       this->erase(std::unique(begin(), end(), eq_), end());
     }
   }
@@ -210,7 +210,7 @@ class flat_tree : protected std::vector<Value, Allocator> {
             const Allocator& alloc = Allocator())
       : underlying_container(init, alloc), comp_(comp), eq_(comp) {
     std::sort(begin(), end(), comp_);
-    if (!multiple_allowed) {
+    if constexpr (!multiple_allowed) {
       this->erase(std::unique(begin(), end(), eq_), end());
     }
   }
@@ -236,27 +236,47 @@ class flat_tree : protected std::vector<Value, Allocator> {
   }
 
   // insert
-  std::pair<iterator, bool> insert(const value_type& value) {
+  auto insert(const value_type& value) {
     auto it = std::lower_bound(begin(), end(), value, comp_);
-    if (!multiple_allowed && it != end() && eq_(*it, value)) {
-      return {it, false};
+    if constexpr (!multiple_allowed) {
+      if (it != end() && eq_(*it, value)) {
+        return std::pair{it, false};
+      }
     }
     it = underlying_container::insert(it, value);
-    return {it, true};
+    if constexpr (!multiple_allowed) {
+      return std::pair{it, true};
+    } else {
+      return it;
+    }
   }
-  std::pair<iterator, bool> insert(value_type&& value) {
+  auto insert(value_type&& value) {
     auto it = std::lower_bound(begin(), end(), value, comp_);
-    if (!multiple_allowed && it != end() && eq_(*it, value)) {
-      return {it, false};
+    if constexpr (!multiple_allowed) {
+      if (it != end() && eq_(*it, value)) {
+        return std::pair{it, false};
+      }
     }
     it = underlying_container::insert(it, std::forward<value_type>(value));
-    return {it, true};
+    if constexpr (!multiple_allowed) {
+      return std::pair{it, true};
+    } else {
+      return it;
+    }
   }
   iterator insert(const_iterator hint, const value_type& value) {
-    return insert(value).first;
+    if constexpr (!multiple_allowed) {
+      return insert(value).first;
+    } else {
+      return insert(value);
+    }
   }
   iterator insert(const_iterator hint, value_type&& value) {
-    return insert(std::forward<value_type>(value)).first;
+    if constexpr (!multiple_allowed) {
+      return insert(std::forward<value_type>(value)).first;
+    } else {
+      return insert(std::forward<value_type>(value));
+    }
   }
   template <typename InputIt>
   void insert(InputIt first, InputIt last) {
@@ -270,7 +290,7 @@ class flat_tree : protected std::vector<Value, Allocator> {
 
   // emplace
   template <typename... Args>
-  std::pair<iterator, bool> emplace(Args&&... args) {
+  auto emplace(Args&&... args) {
     return insert(std::move(value_type(std::forward<Args>(args)...)));
   }
   template <class... Args>

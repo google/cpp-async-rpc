@@ -21,8 +21,8 @@
 
 #include <utility>
 #include <vector>
-#include "catch2/catch.hpp"
 #include "arpc/container/flat_set.h"
+#include "catch2/catch.hpp"
 
 TEST_CASE("flat_multiset tests") {
   using set = arpc::flat_multiset<int>;
@@ -68,9 +68,9 @@ TEST_CASE("flat_multiset tests") {
   }
 
   SECTION("inserting individual items works") {
-    REQUIRE(s1.insert(3).second);
-    REQUIRE(s2.insert(4).second);
-    REQUIRE(s3.insert(5).second);
+    s1.insert(3);
+    s2.insert(4);
+    s3.insert(5);
 
     REQUIRE(vector(s1.begin(), s1.end()) == (vector{3}));
     REQUIRE(vector(s2.begin(), s2.end()) == (vector{3, 4, 4}));

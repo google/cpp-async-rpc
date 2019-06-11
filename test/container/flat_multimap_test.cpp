@@ -21,8 +21,8 @@
 
 #include <utility>
 #include <vector>
-#include "catch2/catch.hpp"
 #include "arpc/container/flat_map.h"
+#include "catch2/catch.hpp"
 
 TEST_CASE("flat_multimap tests") {
   using map = arpc::flat_multimap<int, int>;
@@ -68,9 +68,9 @@ TEST_CASE("flat_multimap tests") {
   }
 
   SECTION("inserting individual items works") {
-    REQUIRE(s1.insert(std::make_pair(3, 3)).second);
-    REQUIRE(s2.insert(std::make_pair(4, 5)).second);
-    REQUIRE(s3.insert(std::make_pair(5, 6)).second);
+    s1.insert(std::make_pair(3, 3));
+    s2.insert(std::make_pair(4, 5));
+    s3.insert(std::make_pair(5, 6));
 
     REQUIRE(vector(s1.begin(), s1.end()) == (vector{{3, 3}}));
     REQUIRE(vector(s2.begin(), s2.end()) == (vector{{3, 2}, {4, 5}, {4, 1}}));

@@ -30,6 +30,8 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include "arpc/container/flat_map.h"
+#include "arpc/container/flat_set.h"
 #include "arpc/testing/static_checks.h"
 #include "catch2/catch.hpp"
 
@@ -236,11 +238,15 @@ TEST_CASE("is_map tests") {
   check_is_map<const std::array<char, 10>, false>();
   check_is_map<const std::string_view, false>();
   check_is_map<std::set<char>, false>();
+  check_is_map<arpc::flat_set<char>, false>();
   check_is_map<std::multiset<char>, false>();
+  check_is_map<arpc::flat_multiset<char>, false>();
   check_is_map<std::unordered_set<char>, false>();
 
   check_is_map<std::map<int, char>, true>();
+  check_is_map<arpc::flat_map<int, char>, true>();
   check_is_map<std::multimap<int, char>, true>();
+  check_is_map<arpc::flat_multimap<int, char>, true>();
   check_is_map<std::unordered_map<int, char>, true>();
 }
 
@@ -261,11 +267,15 @@ TEST_CASE("is_set tests") {
   check_is_set<const std::array<char, 10>, false>();
   check_is_set<const std::string_view, false>();
   check_is_set<std::map<int, char>, false>();
+  check_is_set<arpc::flat_map<int, char>, false>();
   check_is_set<std::multimap<int, char>, false>();
+  check_is_set<arpc::flat_multimap<int, char>, false>();
   check_is_set<std::unordered_map<int, char>, false>();
 
   check_is_set<std::set<char>, true>();
+  check_is_set<arpc::flat_set<char>, true>();
   check_is_set<std::multiset<char>, true>();
+  check_is_set<arpc::flat_multiset<char>, true>();
   check_is_set<std::unordered_set<char>, true>();
 }
 
@@ -287,10 +297,14 @@ TEST_CASE("is_multi_key_associative tests") {
   check_is_multi_key_associative<const std::array<char, 10>, false>();
   check_is_multi_key_associative<const std::string_view, false>();
   check_is_multi_key_associative<std::set<char>, false>();
-  check_is_multi_key_associative<std::map<int, char>, false>();
   check_is_multi_key_associative<std::unordered_set<char>, false>();
+  check_is_multi_key_associative<arpc::flat_set<char>, false>();
+  check_is_multi_key_associative<std::map<int, char>, false>();
   check_is_multi_key_associative<std::unordered_map<int, char>, false>();
+  check_is_multi_key_associative<arpc::flat_map<int, char>, false>();
 
   check_is_multi_key_associative<std::multiset<char>, true>();
+  check_is_multi_key_associative<arpc::flat_multiset<char>, true>();
   check_is_multi_key_associative<std::multimap<int, char>, true>();
+  check_is_multi_key_associative<arpc::flat_multimap<int, char>, true>();
 }
