@@ -139,14 +139,14 @@ TEST_CASE("sequence type hashing") {
 
 TEST_CASE("associative type hashing") {
   check_type_hash<std::set<std::uint32_t>, 150997544>();
-  check_type_hash<std::multiset<std::uint32_t>, 150997544>();
+  check_type_hash<std::multiset<std::uint32_t>, 2298532776>();
   check_type_hash<std::unordered_set<std::uint32_t>, 150997544>();
   check_type_hash<std::set<std::string>, 16778161>();
   check_type_hash<std::unordered_set<std::string>, 16778161>();
   check_type_hash<std::set<std::pair<std::string, std::uint32_t>>,
                   1209558117>();
   check_type_hash<std::map<std::string, std::uint32_t>, 1259890160>();
-  check_type_hash<std::multimap<std::string, std::uint32_t>, 1259890160>();
+  check_type_hash<std::multimap<std::string, std::uint32_t>, 3407393648>();
   check_type_hash<std::unordered_map<std::string, std::uint32_t>, 1259890160>();
   check_type_hash<std::map<std::string, bool>, 1259888882>();
   check_type_hash<std::unordered_map<std::string, bool>, 1259888882>();

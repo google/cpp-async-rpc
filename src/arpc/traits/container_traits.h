@@ -73,6 +73,44 @@ inline constexpr bool is_const_iterable_v = is_const_iterable<T>::value;
 /// This implementation just checks for a nested `T::key_type` type.
 ARPC_MAKE_NESTED_TYPE_CHECKER(is_associative, key_type);
 
+template <typename T, typename Enable = void>
+struct is_map : public std::false_type {};
+
+template <typename T>
+struct is_map<T, std::enable_if_t<is_associative_v<T> &&
+                                  !std::is_same_v<typename T::key_type,
+                                                  typename T::value_type>>>
+    : public std::true_type {};
+
+template <typename T>
+inline constexpr bool is_map_v = is_map<T>::value;
+
+template <typename T, typename Enable = void>
+struct is_set : public std::false_type {};
+
+template <typename T>
+struct is_set<T, std::enable_if_t<is_associative_v<T> &&
+                                  std::is_same_v<typename T::key_type,
+                                                 typename T::value_type>>>
+    : public std::true_type {};
+
+template <typename T>
+inline constexpr bool is_set_v = is_set<T>::value;
+
+template <typename T, typename Enable = void>
+struct is_multi_key_associative
+    : public std::bool_constant<is_associative_v<T>> {};
+
+template <typename T>
+struct is_multi_key_associative<
+    T, enable_if_type_t<typename decltype(std::declval<T>().insert(
+           std::declval<typename T::value_type>()))::second_type>>
+    : public std::false_type {};
+
+template <typename T>
+inline constexpr bool is_multi_key_associative_v =
+    is_multi_key_associative<T>::value;
+
 namespace detail {
 template <typename T>
 struct is_contiguous_sequence : public std::false_type {};

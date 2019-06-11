@@ -188,26 +188,18 @@ struct new_type_hash<
 };
 
 template <typename T, typename Seen>
-struct new_type_hash<
-    T, Seen,
-    std::enable_if_t<
-        is_const_iterable_v<T> && !has_static_size_v<T> &&
-        is_associative_v<T> &&
-        !std::is_same_v<typename T::key_type, typename T::value_type>>> {
+struct new_type_hash<T, Seen, std::enable_if_t<is_map_v<T>>> {
   static constexpr type_hash_t value =
-      type_hash_add(type_hash_leaf(detail::type_family::MAP, false, 0),
+      type_hash_add(type_hash_leaf(detail::type_family::MAP,
+                                   is_multi_key_associative_v<T>, 0),
                     type_hash_v<writable_value_type_t<typename T::value_type>>);
 };
 
 template <typename T, typename Seen>
-struct new_type_hash<
-    T, Seen,
-    std::enable_if_t<
-        is_const_iterable_v<T> && !has_static_size_v<T> &&
-        is_associative_v<T> &&
-        std::is_same_v<typename T::key_type, typename T::value_type>>> {
+struct new_type_hash<T, Seen, std::enable_if_t<is_set_v<T>>> {
   static constexpr type_hash_t value =
-      type_hash_add(type_hash_leaf(detail::type_family::SET, false, 0),
+      type_hash_add(type_hash_leaf(detail::type_family::SET,
+                                   is_multi_key_associative_v<T>, 0),
                     type_hash_v<writable_value_type_t<typename T::value_type>>);
 };
 
