@@ -73,7 +73,7 @@ TEST_CASE("flag signaling") {
       SECTION("then is_set returns false") { REQUIRE(!fl.is_set()); }
       SECTION("then we can set") {
         REQUIRE_NOTHROW(fl.set());
-        SECTION("and is_set returns trueagain") { REQUIRE(fl.is_set()); }
+        SECTION("and is_set returns true again") { REQUIRE(fl.is_set()); }
       }
     }
     SECTION("async_wait triggers") {
