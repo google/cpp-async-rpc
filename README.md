@@ -105,8 +105,8 @@ int main(int argc, char* argv[]) {
 
 ### Asynchronous networking
 
-This examples sends an HTTP get request and prints out the response in an
-asynchronous manner, and using a local context to set a timeout of 10 seconds
+This example sends an HTTP get request and prints out the response in an
+asynchronous manner. It uses a local context to set a timeout of 10 seconds
 for the whole set of calls.
 
 ```c++
