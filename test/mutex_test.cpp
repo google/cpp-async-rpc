@@ -50,28 +50,27 @@ TEST_CASE("mutex locking") {
       REQUIRE(async_lock);
     }
   }
-  SECTION("with a scope-locked mutex") {
-    std::scoped_lock lock(mu);
-    arpc::context ctx;
-    ctx.set_timeout(std::chrono::milliseconds(10));
+  SECTION("with a locked mutex") {
+    REQUIRE_NOTHROW(mu.lock());
     SECTION("try_lock fails") { REQUIRE(!mu.try_lock()); }
     SECTION("maybe_lock throws") {
       REQUIRE_THROWS_AS(mu.maybe_lock(), arpc::errors::try_again);
     }
-    SECTION("lock times out") {
-      REQUIRE_THROWS_AS(mu.lock(), arpc::errors::deadline_exceeded);
+    SECTION("and a timeout") {
+      arpc::context ctx;
+      ctx.set_timeout(std::chrono::milliseconds(10));
+      SECTION("lock times out") {
+        REQUIRE_THROWS_AS(mu.lock(), arpc::errors::deadline_exceeded);
+      }
+      SECTION("can_lock times out") {
+        REQUIRE_THROWS_AS(arpc::select(mu.can_lock()),
+                          arpc::errors::deadline_exceeded);
+      }
+      SECTION("async_lock times out") {
+        REQUIRE_THROWS_AS(arpc::select(mu.async_lock()),
+                          arpc::errors::deadline_exceeded);
+      }
     }
-    SECTION("can_lock times out") {
-      REQUIRE_THROWS_AS(arpc::select(mu.can_lock()),
-                        arpc::errors::deadline_exceeded);
-    }
-    SECTION("async_lock times out") {
-      REQUIRE_THROWS_AS(arpc::select(mu.async_lock()),
-                        arpc::errors::deadline_exceeded);
-    }
-  }
-  SECTION("with a locked mutex") {
-    REQUIRE_NOTHROW(mu.lock());
     SECTION("unlocking from a different thread lets us progress") {
       arpc::thread th([&mu]() {
         try {
