@@ -309,7 +309,7 @@ class client_connection {
   void receive() {
     while (true) {
       // Wait until we actually need to receive something.
-      auto [res] = select(ready_.wait_set());
+      auto [res] = select(ready_.async_wait());
       if (res) {
         try {
           while (true) {

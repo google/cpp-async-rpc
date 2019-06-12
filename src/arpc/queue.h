@@ -92,8 +92,8 @@ class queue {
     return std::move(
         can_get().then(std::move([this]() { return std::move(maybe_get()); })));
   }
-  awaitable<void> can_put() { return can_put_.wait_set(); }
-  awaitable<void> can_get() { return can_get_.wait_set(); }
+  awaitable<void> can_put() { return can_put_.async_wait(); }
+  awaitable<void> can_get() { return can_get_.async_wait(); }
 
  private:
   void update_flags() {
@@ -164,8 +164,8 @@ class queue<void> {
   awaitable<void> async_get() {
     return std::move(can_get().then(std::move([this]() { maybe_get(); })));
   }
-  awaitable<void> can_put() { return can_put_.wait_set(); }
-  awaitable<void> can_get() { return can_get_.wait_set(); }
+  awaitable<void> can_put() { return can_put_.async_wait(); }
+  awaitable<void> can_get() { return can_get_.async_wait(); }
 
  private:
   void update_flags() {

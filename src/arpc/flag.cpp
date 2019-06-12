@@ -22,6 +22,7 @@
 #include "arpc/flag.h"
 #include "arpc/errors.h"
 #include "arpc/pipe.h"
+#include "arpc/select.h"
 
 namespace arpc {
 
@@ -55,7 +56,12 @@ bool flag::is_set() const {
 
 flag::operator bool() const { return is_set(); }
 
-awaitable<void> flag::wait_set() {
+void flag::wait() {
+  auto [res] = select(async_wait());
+  *res;
+}
+
+awaitable<void> flag::async_wait() {
   return pipe_[0].can_read().then([this]() {
     if (!is_set()) {
       throw errors::try_again("Flag not yet set");

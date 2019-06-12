@@ -61,7 +61,7 @@ void channel_connection::write(const char* data, std::size_t size) {
 
   while (size > 0) {
     auto [written, closing] =
-        select(channel_.async_write(data, size), closing_.wait_set());
+        select(channel_.async_write(data, size), closing_.async_wait());
     if (written) {
       size -= *written;
       data += *written;
@@ -81,7 +81,7 @@ std::size_t channel_connection::read(char* data, std::size_t size) {
   std::size_t total_read = 0;
   while (size > 0) {
     auto [read, closing] =
-        select(channel_.async_read(data, size), closing_.wait_set());
+        select(channel_.async_read(data, size), closing_.async_wait());
     if (read) {
       if (*read == 0) break;
       size -= *read;

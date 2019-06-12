@@ -45,8 +45,8 @@ TEST_CASE("flag signaling") {
     SECTION("and a timeout") {
       arpc::context ctx;
       ctx.set_timeout(std::chrono::milliseconds(10));
-      SECTION("wait_set times out") {
-        REQUIRE_THROWS_AS(arpc::select(fl.wait_set()),
+      SECTION("async_wait times out") {
+        REQUIRE_THROWS_AS(arpc::select(fl.async_wait()),
                           arpc::errors::deadline_exceeded);
       }
     }
@@ -59,8 +59,7 @@ TEST_CASE("flag signaling") {
         }
         fl.set();
       });
-      auto [res] = arpc::select(fl.wait_set());
-      REQUIRE(res);
+      fl.wait();
       th.join();
     }
   }
@@ -68,6 +67,7 @@ TEST_CASE("flag signaling") {
     REQUIRE_NOTHROW(fl.set());
     SECTION("is_set returns true") { REQUIRE(fl.is_set()); }
     SECTION("bool conversion returns true") { REQUIRE(fl); }
+    SECTION("wait succeeds") { REQUIRE_NOTHROW(fl.wait()); }
     SECTION("reset succeeds") {
       REQUIRE_NOTHROW(fl.reset());
       SECTION("then is_set returns false") { REQUIRE(!fl.is_set()); }
@@ -76,8 +76,8 @@ TEST_CASE("flag signaling") {
         SECTION("and is_set returns trueagain") { REQUIRE(fl.is_set()); }
       }
     }
-    SECTION("wait_set triggers") {
-      auto [res] = arpc::select(fl.wait_set());
+    SECTION("async_wait triggers") {
+      auto [res] = arpc::select(fl.async_wait());
       REQUIRE(res);
     }
   }

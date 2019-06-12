@@ -181,7 +181,7 @@ class server {
       }
 
       if (!can_receive_) {
-        return can_receive_.wait_set();
+        return can_receive_.async_wait();
       }
 
       return connection_->data_available().then([this]() {
@@ -228,7 +228,7 @@ class server {
       }
 
       if (!can_send_) {
-        return can_send_.wait_set();
+        return can_send_.async_wait();
       }
 
       return responses_.async_get().then([this](std::string response) {
@@ -247,7 +247,7 @@ class server {
     }
 
     awaitable<void> remove() {
-      return can_remove_.wait_set().then([this]() {
+      return can_remove_.async_wait().then([this]() {
         server_.acceptor_->return_connection(std::move(connection_));
         server_.connections_.erase(key_);
       });

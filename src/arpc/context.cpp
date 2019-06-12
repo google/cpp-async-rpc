@@ -111,7 +111,7 @@ void context::cancel() {
 bool context::is_cancelled() const { return cancelled_.is_set(); }
 
 awaitable<void> context::wait_cancelled() {
-  return cancelled_.wait_set().then(
+  return cancelled_.async_wait().then(
       []() { throw errors::cancelled("Context is cancelled"); });
 }
 

@@ -36,7 +36,8 @@ class flag {
   void reset();
   bool is_set() const;
   explicit operator bool() const;
-  awaitable<void> wait_set();
+  awaitable<void> async_wait();
+  void wait();
 
  private:
   mutable std::mutex mu_;
