@@ -87,13 +87,15 @@ std::size_t channel::read(void* buf, std::size_t len) {
   return *num;
 }
 
+std::size_t channel::maybe_read(void* buf, std::size_t len) {
+  auto num = ::read(fd_, buf, len);
+  if (num < 0) throw_io_error("Error reading");
+  if (num == 0) throw errors::eof("End of channel");
+  return static_cast<std::size_t>(num);
+}
+
 awaitable<std::size_t> channel::async_read(void* buf, std::size_t len) {
-  return can_read().then([this, buf, len]() {
-    auto num = ::read(fd_, buf, len);
-    if (num < 0) throw_io_error("Error reading");
-    if (num == 0) throw errors::eof("End of channel");
-    return static_cast<std::size_t>(num);
-  });
+  return can_read().then([this, buf, len]() { return maybe_read(buf, len); });
 }
 
 std::size_t channel::write(const void* buf, std::size_t len) {
@@ -101,12 +103,14 @@ std::size_t channel::write(const void* buf, std::size_t len) {
   return *num;
 }
 
+std::size_t channel::maybe_write(const void* buf, std::size_t len) {
+  auto num = ::write(fd_, buf, len);
+  if (num < 0) throw_io_error("Error writing");
+  return static_cast<std::size_t>(num);
+}
+
 awaitable<std::size_t> channel::async_write(const void* buf, std::size_t len) {
-  return can_write().then([this, buf, len]() {
-    auto num = ::write(fd_, buf, len);
-    if (num < 0) throw_io_error("Error writing");
-    return static_cast<std::size_t>(num);
-  });
+  return can_write().then([this, buf, len]() { return maybe_write(buf, len); });
 }
 
 channel& channel::make_non_blocking(bool non_blocking) {
@@ -178,11 +182,7 @@ channel& channel::listen(int backlog) {
 }
 
 awaitable<channel> channel::async_accept() {
-  return can_read().then(std::move([this]() {
-    channel c(::accept(fd_, nullptr, nullptr));
-    if (!c) throw_io_error("Accept error");
-    return c;
-  }));
+  return can_read().then(std::move([this]() { return maybe_accept(); }));
 }
 
 channel channel::accept() {
@@ -190,17 +190,26 @@ channel channel::accept() {
   return std::move(*c);
 }
 
+channel channel::maybe_accept() {
+  channel c(::accept(fd_, nullptr, nullptr));
+  if (!c) throw_io_error("Accept error");
+  return c;
+}
+
 awaitable<channel> channel::async_accept(address& addr) {
-  return can_read().then(std::move([this, &addr]() {
-    channel c(::accept(fd_, addr.address_data(), &addr.address_size()));
-    if (!c) throw_io_error("Accept error");
-    return c;
-  }));
+  return can_read().then(
+      std::move([this, &addr]() { return maybe_accept(addr); }));
 }
 
 channel channel::accept(address& addr) {
   auto [c] = select(async_accept(addr));
   return std::move(*c);
+}
+
+channel channel::maybe_accept(address& addr) {
+  channel c(::accept(fd_, addr.address_data(), &addr.address_size()));
+  if (!c) throw_io_error("Accept error");
+  return c;
 }
 
 channel& channel::keep_alive(bool keep_alive) {

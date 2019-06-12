@@ -60,7 +60,7 @@ std::pair<std::string, std::string> error_factory::analyze_exception(
 }
 
 void throw_io_error(const std::string& message, int code) {
-  if (code == EINPROGRESS) {
+  if (code == EINPROGRESS || code == EALREADY || code == EISCONN) {
     // This is just an ongoing non-blocking connection. Nothing to see here.
     return;
   }

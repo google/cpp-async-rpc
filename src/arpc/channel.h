@@ -55,6 +55,8 @@ class channel {
   channel dup() const;
   awaitable<void> can_read();
   awaitable<void> can_write();
+  std::size_t maybe_read(void* buf, std::size_t len);
+  std::size_t maybe_write(const void* buf, std::size_t len);
   awaitable<std::size_t> async_read(void* buf, std::size_t len);
   awaitable<std::size_t> async_write(const void* buf, std::size_t len);
 
@@ -69,8 +71,10 @@ class channel {
   channel& listen(int backlog = default_backlog);
   awaitable<channel> async_accept();
   channel accept();
+  channel maybe_accept();
   awaitable<channel> async_accept(address& addr);
   channel accept(address& addr);
+  channel maybe_accept(address& addr);
   channel& keep_alive(bool keep_alive = true);
   channel& reuse_addr(bool reuse = true);
   channel& reuse_port(bool reuse = true);

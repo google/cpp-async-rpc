@@ -20,7 +20,9 @@
 ///   under the License.
 
 #include "arpc/mutex.h"
+#include <unistd.h>
 #include <utility>
+#include "arpc/context.h"
 #include "arpc/errors.h"
 #include "arpc/pipe.h"
 #include "arpc/select.h"
@@ -41,7 +43,7 @@ void mutex::lock() {
 
 void mutex::maybe_lock() {
   char c;
-  pipe_[0].read(&c, 1);
+  pipe_[0].maybe_read(&c, 1);
 }
 
 bool mutex::try_lock() {
@@ -53,7 +55,10 @@ bool mutex::try_lock() {
   }
 }
 
-void mutex::unlock() { pipe_[1].write("*", 1); }
+void mutex::unlock() {
+  shield shield;
+  pipe_[1].write("*", 1);
+}
 
 awaitable<void> mutex::can_lock() { return pipe_[0].can_read(); }
 awaitable<void> mutex::async_lock() {
