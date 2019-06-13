@@ -28,11 +28,11 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include "function2/function2.hpp"
 #include "arpc/errors.h"
 #include "arpc/flag.h"
 #include "arpc/result_holder.h"
 #include "arpc/select.h"
+#include "function2/function2.hpp"
 
 namespace arpc {
 namespace detail {
@@ -146,17 +146,16 @@ class future {
   future()
       : state_(nullptr,
                [](detail::future_state_base* s) { s->release_reader(); }),
-        get_fn_(std::move([this](detail::future_state_base& s) {
+        get_fn_([this](detail::future_state_base& s) {
           return static_cast<detail::future_state<value_type>&>(s).maybe_get();
-        })) {}
+        }) {}
 
   value_type maybe_get() { return get_fn_(state()); }
 
   awaitable<void> can_get() { return state().can_get(); }
 
   awaitable<value_type> async_get() {
-    return std::move(
-        can_get().then(std::move([this]() { return std::move(maybe_get()); })));
+    return can_get().then([this]() { return maybe_get(); });
   }
 
   value_type get() {
@@ -221,16 +220,16 @@ class future<void> {
   future()
       : state_(nullptr,
                [](detail::future_state_base* s) { s->release_reader(); }),
-        get_fn_(std::move([this](detail::future_state_base& s) {
+        get_fn_([this](detail::future_state_base& s) {
           static_cast<detail::future_state<value_type>&>(s).maybe_get();
-        })) {}
+        }) {}
 
   value_type maybe_get() { get_fn_(state()); }
 
   awaitable<void> can_get() { return state().can_get(); }
 
   awaitable<value_type> async_get() {
-    return std::move(can_get().then(std::move([this]() { maybe_get(); })));
+    return can_get().then([this]() { maybe_get(); });
   }
 
   value_type get() {
@@ -266,9 +265,9 @@ class future<void> {
   explicit future(detail::future_state<value_type>* new_state)
       : state_(new_state,
                [](detail::future_state_base* s) { s->release_reader(); }),
-        get_fn_(std::move([this](detail::future_state_base& s) {
+        get_fn_([this](detail::future_state_base& s) {
           static_cast<detail::future_state<value_type>&>(s).maybe_get();
-        })) {}
+        }) {}
 
   future(pointer_type new_state, get_fn_type new_get_fn)
       : state_(std::move(new_state)), get_fn_(std::move(new_get_fn)) {}
