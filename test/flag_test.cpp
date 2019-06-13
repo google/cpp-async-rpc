@@ -27,6 +27,7 @@
 #include "arpc/errors.h"
 #include "arpc/select.h"
 #include "arpc/thread.h"
+#include "arpc/wait.h"
 #include "catch2/catch.hpp"
 
 TEST_CASE("flag signaling") {
@@ -52,11 +53,7 @@ TEST_CASE("flag signaling") {
     }
     SECTION("setting from a different thread lets us progress") {
       arpc::thread th([&fl]() {
-        try {
-          auto [res] =
-              arpc::select(arpc::timeout(std::chrono::milliseconds(100)));
-        } catch (const arpc::errors::deadline_exceeded&) {
-        }
+        arpc::wait(arpc::timeout(std::chrono::milliseconds(100)));
         fl.set();
       });
       fl.wait();

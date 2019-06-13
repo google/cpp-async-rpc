@@ -27,6 +27,7 @@
 #include "arpc/errors.h"
 #include "arpc/select.h"
 #include "arpc/thread.h"
+#include "arpc/wait.h"
 #include "catch2/catch.hpp"
 
 TEST_CASE("mutex locking") {
@@ -73,11 +74,7 @@ TEST_CASE("mutex locking") {
     }
     SECTION("unlocking from a different thread lets us progress") {
       arpc::thread th([&mu]() {
-        try {
-          auto [res] =
-              arpc::select(arpc::timeout(std::chrono::milliseconds(100)));
-        } catch (const arpc::errors::deadline_exceeded&) {
-        }
+        arpc::wait(arpc::timeout(std::chrono::milliseconds(100)));
         mu.unlock();
       });
       REQUIRE_NOTHROW(mu.lock());
