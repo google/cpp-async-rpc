@@ -229,7 +229,7 @@ platform.
  * Discovering and fixing all the bugs.
 
  * A usable port to the ESP32 (which will likely involve some
-   [VFS](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/storage/vfs.html).
+   [VFS](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/storage/vfs.html)
    component to support vestigial pipes as select-able locks.
  
  * Non-token test coverage.
