@@ -25,6 +25,7 @@
 #include <chrono>
 #include <type_traits>
 #include <utility>
+#include "arpc/function.h"
 #include "function2/function2.hpp"
 
 namespace arpc {
@@ -50,34 +51,29 @@ class awaitable {
 
   ~awaitable() {}
 
+  template <typename E, typename CRF>
+  auto except(CRF&& handler_fn) {
+    auto new_react_fn =
+        compose_catch<E>(std::move(react_fn_), std::move(handler_fn));
+    using new_return_type = std::invoke_result_t<decltype(new_react_fn)>;
+    return awaitable<new_return_type>(std::move(*this),
+                                      std::move(new_react_fn));
+  }
+
   template <typename ORF>
   auto then(ORF&& react_fn) {
-    if constexpr (std::is_same_v<return_type, void>) {
-      using new_return_type = std::invoke_result_t<ORF>;
-      auto new_react_fn = [outer(std::move(react_fn)),
-                           inner(std::move(react_fn_))]() mutable {
-        inner();
-        if constexpr (std::is_same_v<new_return_type, void>) {
-          outer();
-        } else {
-          return outer();
-        }
-      };
-      return awaitable<new_return_type>(std::move(*this),
-                                        std::move(new_react_fn));
-    } else {
-      using new_return_type = std::invoke_result_t<ORF, return_type>;
-      auto new_react_fn = [outer(std::move(react_fn)),
-                           inner(std::move(react_fn_))]() mutable {
-        if constexpr (std::is_same_v<new_return_type, void>) {
-          outer(inner());
-        } else {
-          return outer(inner());
-        }
-      };
-      return awaitable<new_return_type>(std::move(*this),
-                                        std::move(new_react_fn));
-    }
+    auto new_react_fn = compose_pipe(std::move(react_fn_), std::move(react_fn));
+    using new_return_type = std::invoke_result_t<decltype(new_react_fn)>;
+    return awaitable<new_return_type>(std::move(*this),
+                                      std::move(new_react_fn));
+  }
+
+  template <typename ORF>
+  auto decorate(ORF&& react_fn) {
+    auto new_react_fn = compose_wrap(std::move(react_fn_), std::move(react_fn));
+    using new_return_type = std::invoke_result_t<decltype(new_react_fn)>;
+    return awaitable<new_return_type>(std::move(*this),
+                                      std::move(new_react_fn));
   }
 
   react_fn_type& get_react_fn() { return react_fn_; }

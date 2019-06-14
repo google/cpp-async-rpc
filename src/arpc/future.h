@@ -30,6 +30,7 @@
 #include <utility>
 #include "arpc/errors.h"
 #include "arpc/flag.h"
+#include "arpc/function.h"
 #include "arpc/result_holder.h"
 #include "arpc/select.h"
 #include "function2/function2.hpp"
@@ -163,17 +164,30 @@ class future {
     return std::move(*res);
   }
 
+  template <typename E, typename CGF>
+  auto except(CGF&& handler_fn) {
+    auto new_get_fn =
+        compose_catch<E>(std::move(get_fn_), std::move(handler_fn));
+    using new_value_type =
+        std::invoke_result_t<decltype(new_get_fn), detail::future_state_base&>;
+    return future<new_value_type>(std::move(state_), std::move(new_get_fn));
+  }
+
   template <typename OGF>
   auto then(OGF&& get_fn) {
-    using new_value_type = std::invoke_result_t<OGF, value_type>;
-    auto new_get_fn = [outer(std::move(get_fn)), inner(std::move(get_fn_))](
-                          detail::future_state_base& state) mutable {
-      if constexpr (std::is_same_v<new_value_type, void>) {
-        outer(inner(state));
-      } else {
-        return outer(inner(state));
-      }
-    };
+    auto new_get_fn = compose_pipe<detail::future_state_base&>(
+        std::move(get_fn_), std::move(get_fn));
+    using new_value_type =
+        std::invoke_result_t<decltype(new_get_fn), detail::future_state_base&>;
+    return future<new_value_type>(std::move(state_), std::move(new_get_fn));
+  }
+
+  template <typename OWF>
+  auto decorate(OWF&& get_fn) {
+    auto new_get_fn = compose_wrap<detail::future_state_base&>(
+        std::move(get_fn_), std::move(get_fn));
+    using new_value_type =
+        std::invoke_result_t<decltype(new_get_fn), detail::future_state_base&>;
     return future<new_value_type>(std::move(state_), std::move(new_get_fn));
   }
 
@@ -237,18 +251,30 @@ class future<void> {
     *res;
   }
 
+  template <typename E, typename CGF>
+  auto except(CGF&& handler_fn) {
+    auto new_get_fn =
+        compose_catch<E>(std::move(get_fn_), std::move(handler_fn));
+    using new_value_type =
+        std::invoke_result_t<decltype(new_get_fn), detail::future_state_base&>;
+    return future<new_value_type>(std::move(state_), std::move(new_get_fn));
+  }
+
   template <typename OGF>
   auto then(OGF&& get_fn) {
-    using new_value_type = std::invoke_result_t<OGF>;
-    auto new_get_fn = [outer(std::move(get_fn)), inner(std::move(get_fn_))](
-                          detail::future_state_base& state) mutable {
-      inner(state);
-      if constexpr (std::is_same_v<new_value_type, void>) {
-        outer();
-      } else {
-        return outer();
-      }
-    };
+    auto new_get_fn = compose_pipe<detail::future_state_base&>(
+        std::move(get_fn_), std::move(get_fn));
+    using new_value_type =
+        std::invoke_result_t<decltype(new_get_fn), detail::future_state_base&>;
+    return future<new_value_type>(std::move(state_), std::move(new_get_fn));
+  }
+
+  template <typename OWF>
+  auto decorate(OWF&& get_fn) {
+    auto new_get_fn = compose_wrap<detail::future_state_base&>(
+        std::move(get_fn_), std::move(get_fn));
+    using new_value_type =
+        std::invoke_result_t<decltype(new_get_fn), detail::future_state_base&>;
     return future<new_value_type>(std::move(state_), std::move(new_get_fn));
   }
 

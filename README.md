@@ -236,10 +236,6 @@ platform.
 
  * Documentation.
  
- * Implement missing features:
- 
-   * "catch" support for `awaitable` and `future` deferred behaviour.
- 
 ## Inspiration
 
  * [Cereal](http://uscilab.github.io/cereal/): A C++11 library for
