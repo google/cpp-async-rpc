@@ -52,17 +52,6 @@ char input_stream::getc() {
   return c;
 }
 
-input_adapter::input_adapter(input_stream& in)  // NOLINT(runtime/explicit)
-    : in_(in) {}
-
-std::size_t input_adapter::read(char* p, std::size_t l) {
-  return in_.read(p, l);
-}
-
-void input_adapter::read_fully(char* p, std::size_t l) { in_.read_fully(p, l); }
-
-char input_adapter::getc() { return in_.getc(); }
-
 output_stream::~output_stream() {}
 
 void output_stream::write(const char* p, std::size_t l) {
@@ -72,20 +61,5 @@ void output_stream::write(const char* p, std::size_t l) {
 }
 
 void output_stream::putc(char c) { write(&c, 1); }
-
-output_adapter::output_adapter(output_stream& out)  // NOLINT(runtime/explicit)
-    : out_(out) {}
-
-void output_adapter::write(const char* p, std::size_t l) { out_.write(p, l); }
-
-void output_adapter::putc(char c) { out_.putc(c); }
-
-std::size_t output_sizer::size() { return size_; }
-
-void output_sizer::reset() { size_ = 0; }
-
-void output_sizer::write(const char* p, std::size_t l) { size_ += l; }
-
-void output_sizer::putc(char c) { size_++; }
 
 }  // namespace arpc

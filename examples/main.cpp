@@ -681,16 +681,6 @@ int main() {
     z->z2 = z;
     z->z = "rosco";
 
-    arpc::binary_sizer bs;
-    bs(tup, arpc::verify_structure{});
-    bs(x);
-    bs(v);
-    bs(v);
-    bs(w);
-    bs(y);
-    bs(z, arpc::verify_structure{});
-    std::cerr << "SIZE: " << bs.size() << std::endl;
-
     std::ostringstream oss;
     arpc::ostream_output_stream osa(oss);
     arpc::native_binary_encoder nbe(osa);

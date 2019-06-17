@@ -49,10 +49,10 @@ namespace arpc {
 struct verify_structure {};
 
 // Binary encoder.
-template <typename MyClass, typename Adapter, bool reverse_bytes>
+template <typename MyClass, bool reverse_bytes>
 class binary_encoder {
  public:
-  explicit binary_encoder(Adapter out) : out_(out) {}
+  explicit binary_encoder(output_stream& out) : out_(out) {}
 
   // Tag processing variant that'll write a structure hash to the output.
   template <typename T, typename... Tags>
@@ -350,11 +350,11 @@ class binary_encoder {
   arpc::flat_map<const void*, std::size_t> shared_object_map_ = {{nullptr, 0}};
 
  protected:
-  Adapter out_;
+  output_stream& out_;
 };
 
 // Binary decoder.
-template <typename MyClass, typename Adapter, bool reverse_bytes>
+template <typename MyClass, bool reverse_bytes>
 class binary_decoder {
  private:
   class update_pointer {
@@ -381,7 +381,7 @@ class binary_decoder {
   };
 
  public:
-  explicit binary_decoder(Adapter in) : in_(in) {}
+  explicit binary_decoder(input_stream& in) : in_(in) {}
 
   // Tag processing variant that'll read a structure hash to the input and
   // verify it.
@@ -780,30 +780,16 @@ class binary_decoder {
       shared_object_info{nullptr, nullptr}};
 
  protected:
-  Adapter in_;
-};
-
-// Sizing OutputEncoder
-class binary_sizer : public binary_encoder<binary_sizer, output_sizer, false> {
- public:
-  binary_sizer();
-
-  // Get the total number of bytes written so far.
-  std::size_t size();
-
-  // Reset the byte count so that we can reuse the object.
-  void reset();
+  input_stream& in_;
 };
 
 class native_binary_encoder
-    : public binary_encoder<native_binary_encoder, output_adapter, false> {
-  using binary_encoder<native_binary_encoder, output_adapter,
-                       false>::binary_encoder;
+    : public binary_encoder<native_binary_encoder, false> {
+  using binary_encoder<native_binary_encoder, false>::binary_encoder;
 };
 class reversing_binary_encoder
-    : public binary_encoder<reversing_binary_encoder, output_adapter, true> {
-  using binary_encoder<reversing_binary_encoder, output_adapter,
-                       true>::binary_encoder;
+    : public binary_encoder<reversing_binary_encoder, true> {
+  using binary_encoder<reversing_binary_encoder, true>::binary_encoder;
 };
 using little_endian_binary_encoder =
     std::conditional_t<traits::target_is_little_endian, native_binary_encoder,
@@ -813,14 +799,12 @@ using big_endian_binary_encoder =
                        reversing_binary_encoder>;
 
 class native_binary_decoder
-    : public binary_decoder<native_binary_decoder, input_adapter, false> {
-  using binary_decoder<native_binary_decoder, input_adapter,
-                       false>::binary_decoder;
+    : public binary_decoder<native_binary_decoder, false> {
+  using binary_decoder<native_binary_decoder, false>::binary_decoder;
 };
 class reversing_binary_decoder
-    : public binary_decoder<reversing_binary_decoder, input_adapter, true> {
-  using binary_decoder<reversing_binary_decoder, input_adapter,
-                       true>::binary_decoder;
+    : public binary_decoder<reversing_binary_decoder, true> {
+  using binary_decoder<reversing_binary_decoder, true>::binary_decoder;
 };
 using little_endian_binary_decoder =
     std::conditional_t<traits::target_is_little_endian, native_binary_decoder,

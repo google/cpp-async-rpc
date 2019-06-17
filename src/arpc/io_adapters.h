@@ -44,20 +44,6 @@ class input_stream {
   virtual ~input_stream();
 };
 
-class input_adapter {
- public:
-  input_adapter(input_stream& in);  // NOLINT(runtime/explicit)
-
-  std::size_t read(char* p, std::size_t l);
-
-  void read_fully(char* p, std::size_t l);
-
-  char getc();
-
- private:
-  input_stream& in_;
-};
-
 // Output adapter base. Implementations should override at least one of
 // write or putc and delegate the other. Throw exceptions for I/O errors.
 class output_stream {
@@ -72,37 +58,6 @@ class output_stream {
   virtual void flush() = 0;
 
   virtual ~output_stream();
-};
-
-class output_adapter {
- public:
-  output_adapter(output_stream& out);  // NOLINT(runtime/explicit)
-
-  void write(const char* p, std::size_t l);
-
-  void putc(char c);
-
- private:
-  output_stream& out_;
-};
-
-// Output sizer.
-class output_sizer {
- public:
-  // Get the total number of bytes written so far.
-  std::size_t size();
-
-  // Reset the byte count so that we can reuse the object.
-  void reset();
-
-  // Write l chars out.
-  void write(const char* p, std::size_t l);
-
-  // Write c out.
-  void putc(char c);
-
- private:
-  std::size_t size_ = 0;
 };
 
 }  // namespace arpc

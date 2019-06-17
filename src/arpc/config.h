@@ -28,9 +28,8 @@
 namespace arpc {
 namespace config {
 
-using all_encoders =
-    mpt::pack<arpc::binary_sizer, arpc::big_endian_binary_encoder,
-              arpc::little_endian_binary_encoder>;
+using all_encoders = mpt::pack<arpc::big_endian_binary_encoder,
+                               arpc::little_endian_binary_encoder>;
 
 using all_decoders = mpt::pack<arpc::big_endian_binary_decoder,
                                arpc::little_endian_binary_decoder>;
