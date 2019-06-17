@@ -208,6 +208,18 @@ struct WriterImpl : public Writer {
 
 int main() {
   {
+    char x[3];
+    const auto& y(x);
+    struct z {
+      int q[4];
+    } z1;
+
+    f<decltype(x)>();
+    f<decltype(y)>();
+    f<decltype(z1.q)>();
+    f<decltype(z::q)>();
+  }
+  {
     arpc::listener l(arpc::endpoint().port(13133));
     for (int i = 0; i < 4; i++) {
       auto s = l.accept();

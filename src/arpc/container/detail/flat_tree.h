@@ -159,6 +159,8 @@ class flat_tree : protected std::vector<Value, Allocator> {
   using underlying_container::clear;
   using underlying_container::swap;
 
+  using underlying_container::data;
+
   // swap.
   void swap(flat_tree& other) { underlying_container::swap(other); }
 

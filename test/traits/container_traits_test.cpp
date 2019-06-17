@@ -105,6 +105,9 @@ TEST_CASE("is_contiguous_sequence tests") {
   check_is_contiguous_sequence<const std::set<char>, false>();
   check_is_contiguous_sequence<const std::map<int, char>, false>();
   check_is_contiguous_sequence<std::map<int, const char>, false>();
+  check_is_contiguous_sequence<std::unordered_map<int, char>, false>();
+  check_is_contiguous_sequence<std::multiset<char>, false>();
+  check_is_contiguous_sequence<std::multimap<int, char>, false>();
 
   check_is_contiguous_sequence<char[10], true>();
   check_is_contiguous_sequence<std::array<char, 10>, true>();
@@ -117,6 +120,10 @@ TEST_CASE("is_contiguous_sequence tests") {
   check_is_contiguous_sequence<std::array<const char, 10>, true>();
   check_is_contiguous_sequence<const std::string, true>();
   check_is_contiguous_sequence<const std::string_view, true>();
+  check_is_contiguous_sequence<arpc::flat_set<char>, true>();
+  check_is_contiguous_sequence<arpc::flat_map<int, char>, true>();
+  check_is_contiguous_sequence<arpc::flat_multiset<char>, true>();
+  check_is_contiguous_sequence<arpc::flat_multimap<int, char>, true>();
 }
 
 template <typename T, bool v>
@@ -188,6 +195,7 @@ using check_static_size =
 
 TEST_CASE("static_size tests") {
   check_static_size<int[5], 5>();
+  check_static_size<int(&)[5], 5>();
   check_static_size<std::array<int, 5>, 5>();
   check_static_size<std::pair<int, char>, 2>();
   check_static_size<std::tuple<int, char, char *>, 3>();

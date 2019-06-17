@@ -57,7 +57,7 @@ class binary_encoder {
   // Tag processing variant that'll write a structure hash to the output.
   template <typename T, typename... Tags>
   void operator()(const T& o, verify_structure, Tags... tags) {
-    const std::uint32_t type_hash = traits::type_hash_v<T>;
+    const traits::type_hash_t type_hash = traits::type_hash_v<T>;
     (*this)(type_hash);
     return (*this)(o, tags...);
   }
@@ -84,8 +84,7 @@ class binary_encoder {
                    void>
   operator()(const T& sequence) {
     maybe_write_size(sequence);
-    write_sequence(&*std::begin(sequence),
-                   std::end(sequence) - std::begin(sequence));
+    write_sequence(std::data(sequence), std::size(sequence));
   }
 
   // Non-contiguous iterables.
@@ -387,7 +386,7 @@ class binary_decoder {
   // verify it.
   template <typename T, typename... Tags>
   void operator()(T& o, verify_structure, Tags... tags) {
-    std::uint32_t type_hash;
+    traits::type_hash_t type_hash;
     (*this)(type_hash);
     if (type_hash != traits::type_hash_v<T>) {
       throw errors::data_mismatch("Wrong type hash in verified read");
@@ -409,7 +408,7 @@ class binary_decoder {
                        traits::has_static_size_v<T>,
                    void>
   operator()(T& sequence) {
-    read_sequence(&*std::begin(sequence), traits::static_size_v<T>);
+    read_sequence(std::data(sequence), traits::static_size_v<T>);
   }
 
   // Contiguous sequences that can be resized, and contain just scalars.
@@ -427,7 +426,7 @@ class binary_decoder {
     std::size_t l = read_size();
     // No need to reserve as we are setting the size directly.
     sequence.resize(l);
-    read_sequence(&*std::begin(sequence), sequence.size());
+    read_sequence(std::data(sequence), l);
   }
 
   // Containers where we need to read elements one by one and push_back them.

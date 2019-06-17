@@ -112,25 +112,17 @@ inline constexpr bool is_multi_key_associative_v =
     is_multi_key_associative<T>::value;
 
 namespace detail {
-template <typename T>
+template <typename T, typename Enable = void>
 struct is_contiguous_sequence : public std::false_type {};
 
 template <typename T, std::size_t size>
 struct is_contiguous_sequence<T[size]> : public std::true_type {};
 
-template <typename T, std::size_t size>
-struct is_contiguous_sequence<std::array<T, size>> : public std::true_type {};
-
-template <typename T, typename Allocator>
-struct is_contiguous_sequence<std::vector<T, Allocator>>
-    : public std::true_type {};
-
-template <typename CharT, typename Traits, typename Allocator>
-struct is_contiguous_sequence<std::basic_string<CharT, Traits, Allocator>>
-    : public std::true_type {};
-
-template <typename CharT, typename Traits>
-struct is_contiguous_sequence<std::basic_string_view<CharT, Traits>>
+template <typename T>
+struct is_contiguous_sequence<
+    T, std::enable_if_t<std::is_same_v<
+           decltype(std::declval<T>().data()),
+           std::remove_reference_t<decltype(*(std::declval<T>().begin()))>*>>>
     : public std::true_type {};
 
 }  // namespace detail
@@ -188,6 +180,12 @@ struct has_static_size : public std::false_type {};
 
 template <typename T, std::size_t size>
 struct has_static_size<std::array<T, size>> : public std::true_type {};
+
+template <typename U, typename V>
+struct has_static_size<std::pair<U, V>> : public std::true_type {};
+
+template <typename... T>
+struct has_static_size<std::tuple<T...>> : public std::true_type {};
 
 template <typename T, std::size_t size>
 struct has_static_size<T[size]> : public std::true_type {};
