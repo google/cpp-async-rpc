@@ -81,13 +81,13 @@ TRANSFORMS = (
 
 def process_file(path, header_prefix, description_prefix, header):
     text = [l.rstrip('\n') for l in open(path, 'rt').readlines()]
-    
+
     if len(text) > 0 and text[0].startswith('#!'):
         prefix = text[0] + '\n'
         text = text[1:]
     else:
         prefix = ""
-    
+
     description = "NEEDS_DESCRIPTION"
     i = 0
     while i < len(text) and text[i].startswith(header_prefix):
@@ -95,7 +95,8 @@ def process_file(path, header_prefix, description_prefix, header):
             description = text[i][len(description_prefix):]
         i += 1
 
-    result = prefix + header.format(description=description) + '\n'.join(text[i:]) + '\n'
+    result = prefix + header.format(
+        description=description) + '\n'.join(text[i:]) + '\n'
     open(path, 'wt').write(result)
 
 
@@ -103,7 +104,6 @@ for pattern, header_prefix, description_prefix, header in TRANSFORMS:
     for path in glob.iglob(pattern, recursive=True):
         for exclude in EXCLUDES:
             if path.startswith(exclude):
-                break           
+                break
         else:
             process_file(path, header_prefix, description_prefix, header)
-        
