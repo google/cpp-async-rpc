@@ -27,6 +27,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include "arpc/traits/type_traits.h"
 
 namespace arpc {
 
@@ -397,9 +398,8 @@ constexpr auto as_pack(pack<T...> t) {
 /// \param T The type from which to obtain the size.
 template <typename T>
 struct size
-    : std::integral_constant<
-          std::size_t,
-          detail::size<std::remove_cv_t<std::remove_reference_t<T>>>::value> {};
+    : std::integral_constant<std::size_t,
+                             detail::size<traits::remove_cvref_t<T>>::value> {};
 
 template <typename T>
 inline constexpr std::size_t size_v = size<T>::value;
@@ -413,9 +413,8 @@ inline constexpr std::size_t size_v = size<T>::value;
 template <std::size_t i, typename T>
 struct element_type {
   /// Type of the `i`th element.
-  using type =
-      std::tuple_element_t<i, std::remove_cv_t<std::remove_reference_t<decltype(
-                                  as_tuple(std::declval<T>()))>>>;
+  using type = std::tuple_element_t<
+      i, traits::remove_cvref_t<decltype(as_tuple(std::declval<T>()))>>;
 };
 
 /// \brief Get the type of the `i`th element of a sequence-like type.
@@ -707,24 +706,23 @@ struct is_integer_sequence<integer_sequence<T, ints...>>
 }  // namespace detail
 
 template <typename T>
-using is_tuple = detail::is_tuple<std::remove_cv_t<std::remove_reference_t<T>>>;
+using is_tuple = detail::is_tuple<traits::remove_cvref_t<T>>;
 template <typename T>
 static constexpr bool is_tuple_v = is_tuple<T>::value;
 
 template <typename T>
-using is_pack = detail::is_pack<std::remove_cv_t<std::remove_reference_t<T>>>;
+using is_pack = detail::is_pack<traits::remove_cvref_t<T>>;
 template <typename T>
 static constexpr bool is_pack_v = is_pack<T>::value;
 
 template <typename T>
-using is_value_pack =
-    detail::is_value_pack<std::remove_cv_t<std::remove_reference_t<T>>>;
+using is_value_pack = detail::is_value_pack<traits::remove_cvref_t<T>>;
 template <typename T>
 static constexpr bool is_value_pack_v = is_value_pack<T>::value;
 
 template <typename T>
 using is_integer_sequence =
-    detail::is_integer_sequence<std::remove_cv_t<std::remove_reference_t<T>>>;
+    detail::is_integer_sequence<traits::remove_cvref_t<T>>;
 template <typename T>
 static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
 
@@ -766,18 +764,17 @@ struct value_pack_cat_helper<T1> {
 };
 
 template <typename... Args>
-static constexpr bool all_tuples =
-    (... && is_tuple_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+static constexpr bool all_tuples = (... &&
+                                    is_tuple_v<traits::remove_cvref_t<Args>>);
 template <typename... Args>
-static constexpr bool all_packs =
-    (... && is_pack_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+static constexpr bool all_packs = (... &&
+                                   is_pack_v<traits::remove_cvref_t<Args>>);
 template <typename... Args>
 static constexpr bool all_value_packs =
-    (... && is_value_pack_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+    (... && is_value_pack_v<traits::remove_cvref_t<Args>>);
 template <typename... Args>
 static constexpr bool all_integer_sequences =
-    (... &&
-     is_integer_sequence_v<std::remove_cv_t<std::remove_reference_t<Args>>>);
+    (... && is_integer_sequence_v<traits::remove_cvref_t<Args>>);
 
 }  // namespace detail
 

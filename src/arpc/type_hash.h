@@ -103,7 +103,7 @@ inline constexpr type_hash_t type_hash_v = type_hash<T, Seen>::value;
 template <typename T, typename Seen>
 struct type_hash {
   static constexpr type_hash_t hash() {
-    using CT = std::remove_cv_t<std::remove_reference_t<T>>;
+    using CT = traits::remove_cvref_t<T>;
     if constexpr (mpt::is_type_in_v<CT, Seen>) {
       return type_hash_leaf(
           type_family::SEEN_TYPE_BACKREFERENCE, false,

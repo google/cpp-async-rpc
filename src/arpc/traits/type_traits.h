@@ -58,20 +58,28 @@ template <typename T>
 static inline constexpr bool is_bit_transferrable_scalar_v =
     is_bit_transferrable_scalar<T>::value;
 
+template <typename T>
+struct remove_cvref {
+  using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+
 namespace detail {
 template <typename T>
 struct writable_value_type {
-  using type = typename std::remove_cv_t<T>;
+  using type = remove_cvref_t<T>;
 };
 
 template <typename U, typename V>
 struct writable_value_type<std::pair<U, V>> {
-  using type = std::pair<std::remove_cv_t<U>, std::remove_cv_t<V>>;
+  using type = std::pair<remove_cvref_t<U>, remove_cvref_t<V>>;
 };
 
 template <typename... U>
 struct writable_value_type<std::tuple<U...>> {
-  using type = std::tuple<std::remove_cv_t<U>...>;
+  using type = std::tuple<remove_cvref_t<U>...>;
 };
 }  // namespace detail
 /// \brief Create a type derived of `T` suitable to create a temporary onto
@@ -81,8 +89,7 @@ struct writable_value_type<std::tuple<U...>> {
 /// `const`-qualified) but the serialization format is compatible to the one for
 /// the original type `T`.
 template <typename T>
-using writable_value_type =
-    detail::writable_value_type<std::remove_cv_t<std::remove_reference_t<T>>>;
+using writable_value_type = detail::writable_value_type<remove_cvref_t<T>>;
 
 template <typename T>
 using writable_value_type_t = typename writable_value_type<T>::type;
@@ -109,10 +116,8 @@ struct member_function_pointer_traits<mptr> {
   using method_type = R(A...);
   using return_type = R;
   using class_type = C;
-  using args_ref_tuple_type =
-      std::tuple<const std::remove_cv_t<std::remove_reference_t<A>>&...>;
-  using args_tuple_type =
-      std::tuple<std::remove_cv_t<std::remove_reference_t<A>>...>;
+  using args_ref_tuple_type = std::tuple<const remove_cvref_t<A>&...>;
+  using args_tuple_type = std::tuple<remove_cvref_t<A>...>;
   using return_tuple_type =
       typename std::conditional<std::is_same_v<void, R>, std::tuple<>,
                                 std::tuple<R>>::type;
@@ -126,10 +131,8 @@ struct member_function_pointer_traits<mptr> {
   using method_type = R(A...) const;
   using return_type = R;
   using class_type = C;
-  using args_ref_tuple_type =
-      std::tuple<const std::remove_cv_t<std::remove_reference_t<A>>&...>;
-  using args_tuple_type =
-      std::tuple<std::remove_cv_t<std::remove_reference_t<A>>...>;
+  using args_ref_tuple_type = std::tuple<const remove_cvref_t<A>&...>;
+  using args_tuple_type = std::tuple<remove_cvref_t<A>...>;
   using return_tuple_type =
       typename std::conditional<std::is_same_v<void, R>, std::tuple<>,
                                 std::tuple<R>>::type;

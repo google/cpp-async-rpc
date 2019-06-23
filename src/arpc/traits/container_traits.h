@@ -128,8 +128,8 @@ struct is_contiguous_sequence<
 
 /// \brief Check if `T` is a container storing elements contiguously in memory.
 template <typename T>
-using is_contiguous_sequence = detail::is_contiguous_sequence<
-    std::remove_cv_t<std::remove_reference_t<T>>>;
+using is_contiguous_sequence =
+    detail::is_contiguous_sequence<remove_cvref_t<T>>;
 
 template <typename T>
 inline constexpr bool is_contiguous_sequence_v =
@@ -192,8 +192,7 @@ struct has_static_size<T[size]> : public std::true_type {};
 
 /// \brief Check whether a container has a size known at compile time.
 template <typename T>
-using has_static_size =
-    detail::has_static_size<std::remove_cv_t<std::remove_reference_t<T>>>;
+using has_static_size = detail::has_static_size<remove_cvref_t<T>>;
 
 template <typename T>
 inline constexpr bool has_static_size_v = has_static_size<T>::value;
@@ -210,8 +209,7 @@ struct static_size<T[size]> : public std::integral_constant<std::size_t, size> {
 
 /// \brief Get a container's static size at compile time.
 template <typename T>
-using static_size =
-    detail::static_size<std::remove_cv_t<std::remove_reference_t<T>>>;
+using static_size = detail::static_size<remove_cvref_t<T>>;
 
 template <typename T>
 inline constexpr std::size_t static_size_v = static_size<T>::value;

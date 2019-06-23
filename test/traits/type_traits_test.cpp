@@ -55,9 +55,21 @@ TEST_CASE("is_bit_transferrable_scalar") {
 }
 
 template <typename T1, typename T2>
+using check_remove_cvref =
+    arpc::testing::check_type<arpc::traits::remove_cvref_t<T1>, T2>;
+
+TEST_CASE("remove_cvref") {
+  check_remove_cvref<const int&, int>();
+  check_remove_cvref<const std::pair<const int, const char>,
+                     std::pair<const int, const char>>();
+  check_remove_cvref<
+      const std::tuple<const int, const char, const std::string>&,
+      std::tuple<const int, const char, const std::string>>();
+}
+
+template <typename T1, typename T2>
 using check_writable_value_type =
-    arpc::testing::check_type<typename arpc::traits::writable_value_type_t<T1>,
-                              T2>;
+    arpc::testing::check_type<arpc::traits::writable_value_type_t<T1>, T2>;
 
 TEST_CASE("writable_value_type") {
   check_writable_value_type<const int&, int>();

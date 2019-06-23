@@ -160,7 +160,7 @@ struct select_input_helper<std::vector<awaitable<T>>> {
 };
 
 template <typename T>
-using select_input = select_input_helper<std::remove_cv_t<std::remove_reference_t<T>>>;
+using select_input = select_input_helper<traits::remove_cvref_t<T>>;
 
 template <typename T>
 struct select_output_helper;
@@ -183,7 +183,7 @@ struct select_output_helper<std::vector<result_holder<T>>> {
 };
 
 template <typename T>
-using select_output = select_output_helper<std::remove_cv_t<std::remove_reference_t<T>>>;
+using select_output = select_output_helper<traits::remove_cvref_t<T>>;
 
 template <typename... Args, std::size_t... ints>
 constexpr std::size_t pollfds_index_helper(const std::tuple<Args...>& awaitables,
