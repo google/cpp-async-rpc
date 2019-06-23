@@ -42,18 +42,6 @@ inline constexpr bool target_is_big_endian =
 static_assert(target_is_little_endian ^ target_is_big_endian,
               "Target endianness isn't either big or little endian.");
 
-/// Enable type `R` if `T` evaluates to a type.
-///
-/// \param T the expression to check.
-template <typename T, typename R = void>
-struct enable_if_type {
-  /// The resulting replacement type.
-  using type = R;
-};
-
-template <typename T, typename R = void>
-using enable_if_type_t = typename enable_if_type<T, R>::type;
-
 /// \brief Check whether `T` is a POD scalar that can be transferred as-is
 /// between memory and a file.
 ///

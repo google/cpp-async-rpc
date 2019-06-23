@@ -141,6 +141,42 @@ struct new_type_hash {
       return type_hash_leaf(type_family::ENUM,
                             std::is_signed_v<std::underlying_type_t<T>>,
                             sizeof(std::underlying_type_t<T>));
+    } else if constexpr (is_map_v<T>) {
+      return type_hash_add(
+          type_hash_leaf(detail::type_family::MAP,
+                         is_multi_key_associative_v<T>, 0),
+          type_hash_v<writable_value_type_t<typename T::value_type>>);
+    } else if constexpr (is_set_v<T>) {
+      return type_hash_add(
+          type_hash_leaf(detail::type_family::SET,
+                         is_multi_key_associative_v<T>, 0),
+          type_hash_v<writable_value_type_t<typename T::value_type>>);
+    } else if constexpr (is_const_iterable_v<T>) {
+      if constexpr (has_static_size_v<T>) {
+        return type_hash_add(
+            type_hash_leaf(detail::type_family::ARRAY, false, static_size_v<T>),
+            type_hash_v<typename std::iterator_traits<decltype(
+                std::begin(std::declval<T&>()))>::value_type>);
+      } else if constexpr (!is_associative_v<T>) {
+        return type_hash_add(
+            type_hash_leaf(detail::type_family::SEQUENCE, false, 0),
+            type_hash_v<writable_value_type_t<typename T::value_type>>);
+      }
+    } else if constexpr (can_be_serialized_v<T>) {
+      return type_hash_add(
+          type_hash_leaf(
+              type_family::CLASS, false,
+              static_cast<std::size_t>(mpt::size_v<get_base_classes_t<T>> +
+                                       mpt::size_v<get_field_descriptors_t<T>> +
+                                       get_custom_serialization_version_v<T>)),
+          type_hash_leaf(type_family::BASE_CLASS, false,
+                         mpt::size_v<get_base_classes_t<T>>),
+          type_hash_v<get_base_classes_t<T>, Seen>,
+          type_hash_leaf(type_family::FIELD, false,
+                         mpt::size_v<get_field_descriptors_t<T>>),
+          type_hash_v<get_field_descriptors_t<T>, Seen>,
+          type_hash_leaf(type_family::CUSTOM_SERIALIZATION, false,
+                         get_custom_serialization_version_v<T>));
     } else {
       return unknown_hash<T>();
     }
@@ -166,41 +202,6 @@ struct new_type_hash<std::tuple<T...>, Seen> {
   static constexpr type_hash_t value =
       type_hash_add(type_hash_leaf(type_family::TUPLE, false, sizeof...(T)),
                     type_hash_v<T, Seen>...);
-};
-
-template <typename T, typename Seen>
-struct new_type_hash<
-    T, Seen, std::enable_if_t<is_const_iterable_v<T> && has_static_size_v<T>>> {
-  static constexpr type_hash_t value = type_hash_add(
-      type_hash_leaf(detail::type_family::ARRAY, false, static_size_v<T>),
-      type_hash_v<typename std::iterator_traits<decltype(
-          std::begin(std::declval<T&>()))>::value_type>);
-};
-
-template <typename T, typename Seen>
-struct new_type_hash<
-    T, Seen,
-    std::enable_if_t<is_const_iterable_v<T> && !has_static_size_v<T> &&
-                     !is_associative_v<T>>> {
-  static constexpr type_hash_t value =
-      type_hash_add(type_hash_leaf(detail::type_family::SEQUENCE, false, 0),
-                    type_hash_v<writable_value_type_t<typename T::value_type>>);
-};
-
-template <typename T, typename Seen>
-struct new_type_hash<T, Seen, std::enable_if_t<is_map_v<T>>> {
-  static constexpr type_hash_t value =
-      type_hash_add(type_hash_leaf(detail::type_family::MAP,
-                                   is_multi_key_associative_v<T>, 0),
-                    type_hash_v<writable_value_type_t<typename T::value_type>>);
-};
-
-template <typename T, typename Seen>
-struct new_type_hash<T, Seen, std::enable_if_t<is_set_v<T>>> {
-  static constexpr type_hash_t value =
-      type_hash_add(type_hash_leaf(detail::type_family::SET,
-                                   is_multi_key_associative_v<T>, 0),
-                    type_hash_v<writable_value_type_t<typename T::value_type>>);
 };
 
 template <typename T, typename Seen>
@@ -248,24 +249,6 @@ template <auto mptr, typename Seen>
 struct new_type_hash<::arpc::field_descriptor<mptr>, Seen> {
   static constexpr type_hash_t value =
       type_hash_v<typename ::arpc::field_descriptor<mptr>::data_type, Seen>;
-};
-
-template <typename T, typename Seen>
-struct new_type_hash<T, Seen, std::enable_if_t<can_be_serialized_v<T>>> {
-  static constexpr type_hash_t value = type_hash_add(
-      type_hash_leaf(
-          type_family::CLASS, false,
-          static_cast<std::size_t>(mpt::size_v<get_base_classes_t<T>> +
-                                   mpt::size_v<get_field_descriptors_t<T>> +
-                                   get_custom_serialization_version_v<T>)),
-      type_hash_leaf(type_family::BASE_CLASS, false,
-                     mpt::size_v<get_base_classes_t<T>>),
-      type_hash_v<get_base_classes_t<T>, Seen>,
-      type_hash_leaf(type_family::FIELD, false,
-                     mpt::size_v<get_field_descriptors_t<T>>),
-      type_hash_v<get_field_descriptors_t<T>, Seen>,
-      type_hash_leaf(type_family::CUSTOM_SERIALIZATION, false,
-                     get_custom_serialization_version_v<T>));
 };
 
 template <typename R, typename... A, typename Seen>

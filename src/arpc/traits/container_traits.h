@@ -45,8 +45,7 @@ struct is_iterable : public std::false_type {};
 
 /// \copydoc is_iterable
 template <typename T>
-struct is_iterable<T,
-                   enable_if_type_t<decltype(std::begin(std::declval<T&>()))>>
+struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T&>()))>>
     : public std::true_type {};
 
 template <typename T>
@@ -62,7 +61,7 @@ struct is_const_iterable : public std::false_type {};
 /// \copydoc is_const_iterable
 template <typename T>
 struct is_const_iterable<
-    T, enable_if_type_t<decltype(std::begin(std::declval<const T&>()))>>
+    T, std::void_t<decltype(std::begin(std::declval<const T&>()))>>
     : public std::true_type {};
 
 template <typename T>
@@ -103,7 +102,7 @@ struct is_multi_key_associative
 
 template <typename T>
 struct is_multi_key_associative<
-    T, enable_if_type_t<typename decltype(std::declval<T>().insert(
+    T, std::void_t<typename decltype(std::declval<T>().insert(
            std::declval<typename T::value_type>()))::second_type>>
     : public std::false_type {};
 
@@ -148,7 +147,7 @@ struct can_reserve_capacity : public std::false_type {};
 
 /// \copydoc can_reserve_capacity
 template <typename T>
-struct can_reserve_capacity<T, enable_if_type_t<typename T::size_type>>
+struct can_reserve_capacity<T, std::void_t<typename T::size_type>>
     : public std::integral_constant<
           bool, detail::has_reserve_v<T, void(typename T::size_type)>> {};
 
@@ -167,7 +166,7 @@ struct can_be_resized : public std::false_type {};
 
 /// \copydoc can_be_resized
 template <typename T>
-struct can_be_resized<T, enable_if_type_t<typename T::size_type>>
+struct can_be_resized<T, std::void_t<typename T::size_type>>
     : public std::integral_constant<
           bool, detail::has_resize_v<T, void(typename T::size_type)>> {};
 
