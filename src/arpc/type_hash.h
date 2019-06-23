@@ -157,7 +157,7 @@ struct new_type_hash {
             type_hash_leaf(detail::type_family::ARRAY, false, static_size_v<T>),
             type_hash_v<typename std::iterator_traits<decltype(
                 std::begin(std::declval<T&>()))>::value_type>);
-      } else if constexpr (!is_associative_v<T>) {
+      } else {
         return type_hash_add(
             type_hash_leaf(detail::type_family::SEQUENCE, false, 0),
             type_hash_v<writable_value_type_t<typename T::value_type>>);
