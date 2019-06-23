@@ -277,9 +277,61 @@ struct pack {};
 template <auto... v>
 struct value_pack {};
 
+// Helpers to determine if a type is a pack / tuple / integer_sequence.
+namespace detail {
+template <typename T>
+struct is_tuple : public std::false_type {};
+
+template <typename... T>
+struct is_tuple<std::tuple<T...>> : public std::true_type {};
+
+template <typename U, typename V>
+struct is_tuple<std::pair<U, V>> : public std::true_type {};
+
+template <typename T>
+struct is_pack : public std::false_type {};
+
+template <typename... T>
+struct is_pack<pack<T...>> : public std::true_type {};
+
+template <typename T>
+struct is_value_pack : public std::false_type {};
+
+template <auto... v>
+struct is_value_pack<value_pack<v...>> : public std::true_type {};
+
+template <typename T>
+struct is_integer_sequence : public std::false_type {};
+
+template <typename T, T... ints>
+struct is_integer_sequence<integer_sequence<T, ints...>>
+    : public std::true_type {};
+}  // namespace detail
+
+template <typename T>
+using is_tuple = detail::is_tuple<traits::remove_cvref_t<T>>;
+template <typename T>
+static constexpr bool is_tuple_v = is_tuple<T>::value;
+
+template <typename T>
+using is_pack = detail::is_pack<traits::remove_cvref_t<T>>;
+template <typename T>
+static constexpr bool is_pack_v = is_pack<T>::value;
+
+template <typename T>
+using is_value_pack = detail::is_value_pack<traits::remove_cvref_t<T>>;
+template <typename T>
+static constexpr bool is_value_pack_v = is_value_pack<T>::value;
+
+template <typename T>
+using is_integer_sequence =
+    detail::is_integer_sequence<traits::remove_cvref_t<T>>;
+template <typename T>
+static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
+
 namespace detail {
 // Get the number of types.
-template <typename T>
+template <typename T, typename Enable = void>
 struct size;
 
 template <typename... T>
@@ -292,9 +344,9 @@ struct size<value_pack<v...>> {
   static constexpr std::size_t value = sizeof...(v);
 };
 
-template <typename... T>
-struct size<std::tuple<T...>> {
-  static constexpr std::size_t value = sizeof...(T);
+template <typename T>
+struct size<T, std::enable_if_t<is_tuple_v<T>>> {
+  static constexpr std::size_t value = std::tuple_size_v<T>;
 };
 
 template <typename T, T... ints>
@@ -352,6 +404,27 @@ constexpr decltype(auto) as_tuple(std::tuple<T...>&& t) {
   return t;
 }
 
+/// \brief Convert a a pair value into a tuple value.
+/// The result is the input.
+///
+/// \return The input, as-is.
+template <typename U, typename V>
+constexpr decltype(auto) as_tuple(const std::pair<U, V>& t) {
+  return t;
+}
+template <typename U, typename V>
+constexpr decltype(auto) as_tuple(std::pair<U, V>& t) {
+  return t;
+}
+template <typename U, typename V>
+constexpr decltype(auto) as_tuple(const std::pair<U, V>&& t) {
+  return t;
+}
+template <typename U, typename V>
+constexpr decltype(auto) as_tuple(std::pair<U, V>&& t) {
+  return t;
+}
+
 /// \brief Convert a tuple value into a `pack` value.
 /// The result is a `pack` with as many elements as the input `std::tuple`,
 /// every one of the unwrapped type of the same-index element of the
@@ -359,6 +432,15 @@ constexpr decltype(auto) as_tuple(std::tuple<T...>&& t) {
 /// tuple.
 template <typename... T>
 constexpr pack<typename T::type...> as_pack(std::tuple<T...>) {
+  return {};
+}
+/// \brief Convert a pair value into a `pack` value.
+/// The result is a `pack` with as many elements as the input `std::pair`,
+/// every one of the unwrapped type of the same-index element of the
+/// `std::tuple`. \return An appropriate `pack` type with the types in the
+/// tuple.
+template <typename U, typename V>
+constexpr pack<U, V> as_pack(std::pair<U, V>) {
   return {};
 }
 
@@ -440,6 +522,23 @@ constexpr decltype(auto) at(const std::tuple<T...>&& t) {
 }
 template <std::size_t i, typename... T>
 constexpr decltype(auto) at(std::tuple<T...>&& t) {
+  return std::get<i>(std::move(t));
+}
+
+template <std::size_t i, typename U, typename V>
+constexpr decltype(auto) at(const std::pair<U, V>& t) {
+  return std::get<i>(t);
+}
+template <std::size_t i, typename U, typename V>
+constexpr decltype(auto) at(std::pair<U, V>& t) {
+  return std::get<i>(t);
+}
+template <std::size_t i, typename U, typename V>
+constexpr decltype(auto) at(const std::pair<U, V>&& t) {
+  return std::get<i>(t);
+}
+template <std::size_t i, typename U, typename V>
+constexpr decltype(auto) at(std::pair<U, V>&& t) {
   return std::get<i>(std::move(t));
 }
 
@@ -573,6 +672,48 @@ template <typename... T, std::size_t... idxs>
 constexpr auto subset(const std::tuple<T...>&& t, index_sequence<idxs...>) {
   return std::forward_as_tuple(at<idxs>(t)...);
 }
+
+/// Return a new tuple containing a subset of the fields as determined by the
+/// passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...idxs The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the
+/// indices.
+template <typename U, typename V, std::size_t... idxs>
+constexpr auto subset(std::pair<U, V>& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
+}
+/// Return a new tuple containing a subset of the fields as determined by the
+/// passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...ints The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the
+/// indices.
+template <typename U, typename V, std::size_t... idxs>
+constexpr auto subset(const std::pair<U, V>& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
+}
+/// Return a new tuple containing a subset of the fields as determined by the
+/// passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...ints The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the
+/// indices.
+template <typename U, typename V, std::size_t... idxs>
+constexpr auto subset(std::pair<U, V>&& t, index_sequence<idxs...>) {
+  return std::make_tuple(std::move(at<idxs>(t))...);
+}
+/// Return a new tuple containing a subset of the fields as determined by the
+/// passed index sequence.
+/// \param t The sequence to subset.
+/// \param ...ints The indices to extract.
+/// \return A sliced sequence containing just the elements specified by the
+/// indices.
+template <typename U, typename V, std::size_t... idxs>
+constexpr auto subset(const std::pair<U, V>&& t, index_sequence<idxs...>) {
+  return std::forward_as_tuple(at<idxs>(t)...);
+}
+
 /// Return a new pack containing a subset of the types as determined by the
 /// passed index sequence.
 /// \param t The sequence to subset.
@@ -676,55 +817,6 @@ template <typename... T>
 constexpr pack<T...> unwrap(pack<wrap_type<T>...>) {
   return {};
 }
-
-// Helpers to determine if a type is a pack / tuple / integer_sequence.
-namespace detail {
-template <typename T>
-struct is_tuple : public std::false_type {};
-
-template <typename... T>
-struct is_tuple<std::tuple<T...>> : public std::true_type {};
-
-template <typename T>
-struct is_pack : public std::false_type {};
-
-template <typename... T>
-struct is_pack<pack<T...>> : public std::true_type {};
-
-template <typename T>
-struct is_value_pack : public std::false_type {};
-
-template <auto... v>
-struct is_value_pack<value_pack<v...>> : public std::true_type {};
-
-template <typename T>
-struct is_integer_sequence : public std::false_type {};
-
-template <typename T, T... ints>
-struct is_integer_sequence<integer_sequence<T, ints...>>
-    : public std::true_type {};
-}  // namespace detail
-
-template <typename T>
-using is_tuple = detail::is_tuple<traits::remove_cvref_t<T>>;
-template <typename T>
-static constexpr bool is_tuple_v = is_tuple<T>::value;
-
-template <typename T>
-using is_pack = detail::is_pack<traits::remove_cvref_t<T>>;
-template <typename T>
-static constexpr bool is_pack_v = is_pack<T>::value;
-
-template <typename T>
-using is_value_pack = detail::is_value_pack<traits::remove_cvref_t<T>>;
-template <typename T>
-static constexpr bool is_value_pack_v = is_value_pack<T>::value;
-
-template <typename T>
-using is_integer_sequence =
-    detail::is_integer_sequence<traits::remove_cvref_t<T>>;
-template <typename T>
-static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
 
 namespace detail {
 template <typename... TN>

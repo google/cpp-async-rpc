@@ -99,16 +99,9 @@ class binary_encoder {
     }
   }
 
-  // Pairs.
-  template <typename U, typename V>
-  void operator()(const std::pair<U, V>& p) {
-    (*this)(p.first);
-    (*this)(p.second);
-  }
-
-  // Tuples.
-  template <typename... T>
-  void operator()(const std::tuple<T...>& t) {
+  // Tuples and pairs.
+  template <typename T>
+  std::enable_if_t<mpt::is_tuple_v<T>, void> operator()(T& t) {
     mpt::for_each(t, tuple_element_saver(), *this);
   }
 
@@ -466,16 +459,9 @@ class binary_decoder {
     }
   }
 
-  // Pairs.
-  template <typename U, typename V>
-  void operator()(std::pair<U, V>& p) {
-    (*this)(p.first);
-    (*this)(p.second);
-  }
-
-  // Tuples.
-  template <typename... T>
-  void operator()(std::tuple<T...>& t) {
+  // Tuples and pairs.
+  template <typename T>
+  std::enable_if_t<mpt::is_tuple_v<T>, void> operator()(T& t) {
     mpt::for_each(t, tuple_element_loader(), *this);
   }
 
