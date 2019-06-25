@@ -159,10 +159,23 @@ TEST_CASE("associative type hashing") {
   check_type_hash<std::unordered_map<std::string, bool>, 1259888882>();
 }
 
+struct T2 {
+  double a;
+  bool b;
+};
+
+struct T3 {
+  double a;
+  bool b;
+  char c;
+};
+
 TEST_CASE("tuple type hashing") {
   check_type_hash<std::pair<double, bool>, 2333312786>();
   check_type_hash<std::tuple<double, bool>, 2333312786>();
+  check_type_hash<T2, 2333312786>();
   check_type_hash<std::tuple<double, bool, char>, 3899508564>();
+  check_type_hash<T3, 3899508564>();
 }
 
 TEST_CASE("optional type hashing") {

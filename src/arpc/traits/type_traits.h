@@ -59,6 +59,13 @@ static inline constexpr bool is_bit_transferrable_scalar_v =
     is_bit_transferrable_scalar<T>::value;
 
 template <typename T>
+struct is_bindable_aggregate
+    : std::bool_constant<std::is_aggregate_v<T> && std::is_class_v<T> &&
+                         std::is_standard_layout_v<T>> {};
+template <typename T>
+inline constexpr bool is_bindable_aggregate_v = is_bindable_aggregate<T>::value;
+
+template <typename T>
 struct remove_cvref {
   using type = std::remove_cv_t<std::remove_reference_t<T>>;
 };

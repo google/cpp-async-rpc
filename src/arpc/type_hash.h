@@ -120,7 +120,7 @@ struct type_hash {
 template <typename T>
 constexpr type_hash_t unknown_hash() {
   static_assert(std::is_same_v<T, void>, "No hash defined for type");
-  return type_hash_t{0};
+  return 0;
 }
 
 template <typename T, typename Seen, typename Enable>
@@ -177,6 +177,9 @@ struct new_type_hash {
           type_hash_v<get_field_descriptors_t<T>, Seen>,
           type_hash_leaf(type_family::CUSTOM_SERIALIZATION, false,
                          get_custom_serialization_version_v<T>));
+    } else if constexpr (is_bindable_aggregate_v<T>) {
+      // Hash as a tuple.
+      return type_hash_v<decltype(mpt::as_tuple(std::declval<T>()))>;
     } else {
       return unknown_hash<T>();
     }

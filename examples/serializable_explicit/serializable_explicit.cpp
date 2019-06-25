@@ -1,5 +1,5 @@
 /// \file
-/// \brief Simple struct serialization demo.
+/// \brief Explicit struct serialization demo.
 ///
 /// \copyright
 ///   Copyright 2019 by Google LLC.
@@ -26,8 +26,9 @@
 #include "arpc/iostream_adapters.h"
 #include "arpc/serializable.h"
 
-// To be serializable, MyClass must inherit arpc::serializable<MyClass> or
-// arpc::dynamic<MyClass> if run-time polymorphism is required.
+// To be marked as serializable, MyClass can inherit from
+// arpc::serializable<MyClass>, or from arpc::dynamic<MyClass> if run-time
+// polymorphism is required.
 struct MyClass : arpc::serializable<MyClass> {
   int x;
   double y;

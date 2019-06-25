@@ -27,6 +27,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include "arpc/preprocessor.h"
 #include "arpc/traits/type_traits.h"
 
 namespace arpc {
@@ -42,26 +43,25 @@ namespace mpt {
 /// in terms of the `NAME` and the operation (`OP`).
 /// \param CREATE_BINARY_OPERATOR Macro to be used for defining a binary
 /// operator in terms of the `NAME` and the operation (`OP`).
-#define ARPC_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR,  \
-                                       CREATE_BINARY_OPERATOR) \
-  CREATE_UNARY_OPERATOR(negate, -);                            \
-  CREATE_UNARY_OPERATOR(logical_not, !);                       \
-  CREATE_UNARY_OPERATOR(bit_not, ~);                           \
-  CREATE_BINARY_OPERATOR(plus, +);                             \
-  CREATE_BINARY_OPERATOR(minus, -);                            \
-  CREATE_BINARY_OPERATOR(multiplies, *);                       \
-  CREATE_BINARY_OPERATOR(divides, /);                          \
-  CREATE_BINARY_OPERATOR(modulus, %);                          \
-  CREATE_BINARY_OPERATOR(equal_to, ==);                        \
-  CREATE_BINARY_OPERATOR(not_equal_to, !=);                    \
-  CREATE_BINARY_OPERATOR(greater, >);                          \
-  CREATE_BINARY_OPERATOR(less, <);                             \
-  CREATE_BINARY_OPERATOR(greater_equal, >=);                   \
-  CREATE_BINARY_OPERATOR(less_equal, <=);                      \
-  CREATE_BINARY_OPERATOR(logical_and, &&);                     \
-  CREATE_BINARY_OPERATOR(logical_or, ||);                      \
-  CREATE_BINARY_OPERATOR(bit_and, &);                          \
-  CREATE_BINARY_OPERATOR(bit_or, |);                           \
+#define ARPC_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR, CREATE_BINARY_OPERATOR) \
+  CREATE_UNARY_OPERATOR(negate, -);                                                   \
+  CREATE_UNARY_OPERATOR(logical_not, !);                                              \
+  CREATE_UNARY_OPERATOR(bit_not, ~);                                                  \
+  CREATE_BINARY_OPERATOR(plus, +);                                                    \
+  CREATE_BINARY_OPERATOR(minus, -);                                                   \
+  CREATE_BINARY_OPERATOR(multiplies, *);                                              \
+  CREATE_BINARY_OPERATOR(divides, /);                                                 \
+  CREATE_BINARY_OPERATOR(modulus, %);                                                 \
+  CREATE_BINARY_OPERATOR(equal_to, ==);                                               \
+  CREATE_BINARY_OPERATOR(not_equal_to, !=);                                           \
+  CREATE_BINARY_OPERATOR(greater, >);                                                 \
+  CREATE_BINARY_OPERATOR(less, <);                                                    \
+  CREATE_BINARY_OPERATOR(greater_equal, >=);                                          \
+  CREATE_BINARY_OPERATOR(less_equal, <=);                                             \
+  CREATE_BINARY_OPERATOR(logical_and, &&);                                            \
+  CREATE_BINARY_OPERATOR(logical_or, ||);                                             \
+  CREATE_BINARY_OPERATOR(bit_and, &);                                                 \
+  CREATE_BINARY_OPERATOR(bit_or, |);                                                  \
   CREATE_BINARY_OPERATOR(bit_xor, ^);
 
 /// \brief Define a whole set of arithmetic operators plus the identity.
@@ -78,10 +78,9 @@ namespace mpt {
 /// in terms of the `NAME` and the operation (`OP`).
 /// \param CREATE_BINARY_OPERATOR Macro to be used for defining a binary
 /// operator in terms of the `NAME` and the operation (`OP`).
-#define ARPC_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(CREATE_UNARY_OPERATOR,  \
-                                                     CREATE_BINARY_OPERATOR) \
-  ARPC_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR,                      \
-                                 CREATE_BINARY_OPERATOR)                     \
+#define ARPC_CREATE_OPERATOR_HIERARCHY_WITH_IDENTITY(CREATE_UNARY_OPERATOR,     \
+                                                     CREATE_BINARY_OPERATOR)    \
+  ARPC_CREATE_OPERATOR_HIERARCHY(CREATE_UNARY_OPERATOR, CREATE_BINARY_OPERATOR) \
   CREATE_UNARY_OPERATOR(identity, /**/);
 
 /// Define unary arithmetic operation functors on arbitrary types.
@@ -162,8 +161,7 @@ struct integer_sequence {
     return {};                                 \
   }
   // Value-based operator hierarchy.
-  ARPC_CREATE_OPERATOR_HIERARCHY(ARPC_INT_SEQ_VALUE_UNARY_OP,
-                                 ARPC_INT_SEQ_VALUE_BINARY_OP);
+  ARPC_CREATE_OPERATOR_HIERARCHY(ARPC_INT_SEQ_VALUE_UNARY_OP, ARPC_INT_SEQ_VALUE_BINARY_OP);
 };
 
 namespace detail {
@@ -172,17 +170,15 @@ template <typename Is, typename Js, bool adjust_values = false>
 struct join_integer_sequences;
 
 template <typename T, T... is, T... js, bool adjust_values>
-struct join_integer_sequences<integer_sequence<T, is...>,
-                              integer_sequence<T, js...>, adjust_values> {
-  using type =
-      integer_sequence<T, is..., ((adjust_values ? sizeof...(is) : 0) + js)...>;
+struct join_integer_sequences<integer_sequence<T, is...>, integer_sequence<T, js...>,
+                              adjust_values> {
+  using type = integer_sequence<T, is..., ((adjust_values ? sizeof...(is) : 0) + js)...>;
 };
 
 template <typename T, std::size_t n>
 struct make_integer_sequence
     : join_integer_sequences<typename make_integer_sequence<T, n / 2>::type,
-                             typename make_integer_sequence<T, n - n / 2>::type,
-                             true> {};
+                             typename make_integer_sequence<T, n - n / 2>::type, true> {};
 
 template <typename T>
 struct make_integer_sequence<T, 1> {
@@ -196,9 +192,8 @@ struct make_integer_sequence<T, 0> {
 
 template <typename T, std::size_t n, T v>
 struct make_constant_integer_sequence
-    : join_integer_sequences<
-          typename make_constant_integer_sequence<T, n / 2, v>::type,
-          typename make_constant_integer_sequence<T, n - n / 2, v>::type> {};
+    : join_integer_sequences<typename make_constant_integer_sequence<T, n / 2, v>::type,
+                             typename make_constant_integer_sequence<T, n - n / 2, v>::type> {};
 
 template <typename T, T v>
 struct make_constant_integer_sequence<T, 1, v> {
@@ -217,8 +212,7 @@ struct make_constant_integer_sequence<T, 0, v> {
 /// \param T The type of the integers.
 /// \param n The total number of integers the sequence will have.
 template <typename T, std::size_t n>
-using make_integer_sequence =
-    typename detail::make_integer_sequence<T, n>::type;
+using make_integer_sequence = typename detail::make_integer_sequence<T, n>::type;
 
 /// \brief Generate a repeated sequence of the same integer.
 /// This will generate `n` integers with the value `v` of type `T`.
@@ -248,8 +242,46 @@ using make_index_sequence = make_integer_sequence<std::size_t, n>;
 /// \param n The total number of indices the sequence will have.
 /// \param v The value of the indices.
 template <std::size_t n, std::size_t v>
-using make_constant_index_sequence =
-    make_constant_integer_sequence<std::size_t, n, v>;
+using make_constant_index_sequence = make_constant_integer_sequence<std::size_t, n, v>;
+
+// Technique for detecting the number of fields from an aggregate adapted from
+// https://github.com/felixguendling/cista
+//
+// Credits: Implementation by Anatoliy V. Tomilov (@tomilov),
+//          based on gist by Rafal T. Janik (@ChemiaAion)
+//
+// Resources:
+// https://playfulprogramming.blogspot.com/2016/12/serializing-structs-with-c17-structured.html
+// https://codereview.stackexchange.com/questions/142804/get-n-th-data-member-of-a-struct
+// https://stackoverflow.com/questions/39768517/structured-bindings-width
+// https://stackoverflow.com/questions/35463646/arity-of-aggregate-in-logarithmic-time
+// https://stackoverflow.com/questions/38393302/returning-variadic-aggregates-struct-and-syntax-for-c17-variadic-template-c
+namespace detail {
+
+struct wildcard_type {
+  template <typename T>
+  operator T() const;
+};
+
+template <typename Aggregate, typename IndexSequence = index_sequence<>, typename = void>
+struct aggregate_arity_impl : IndexSequence {};
+
+template <typename Aggregate, std::size_t... Indices>
+struct aggregate_arity_impl<
+    Aggregate, index_sequence<Indices...>,
+    std::void_t<decltype(Aggregate{(static_cast<void>(Indices), std::declval<wildcard_type>())...,
+                                   std::declval<wildcard_type>()})>>
+    : aggregate_arity_impl<Aggregate, index_sequence<Indices..., sizeof...(Indices)>> {};
+
+}  // namespace detail
+
+template <typename T>
+struct aggregate_arity
+    : std::integral_constant<std::size_t,
+                             detail::aggregate_arity_impl<traits::remove_cvref_t<T>>::size> {};
+
+template <typename T>
+inline constexpr std::size_t aggregate_arity_v = aggregate_arity<T>::value;
 
 /// \brief Wrap one type so that it can be passed around without constructing
 /// any instance of it.
@@ -304,8 +336,7 @@ template <typename T>
 struct is_integer_sequence : public std::false_type {};
 
 template <typename T, T... ints>
-struct is_integer_sequence<integer_sequence<T, ints...>>
-    : public std::true_type {};
+struct is_integer_sequence<integer_sequence<T, ints...>> : public std::true_type {};
 }  // namespace detail
 
 template <typename T>
@@ -324,8 +355,7 @@ template <typename T>
 static constexpr bool is_value_pack_v = is_value_pack<T>::value;
 
 template <typename T>
-using is_integer_sequence =
-    detail::is_integer_sequence<traits::remove_cvref_t<T>>;
+using is_integer_sequence = detail::is_integer_sequence<traits::remove_cvref_t<T>>;
 template <typename T>
 static constexpr bool is_integer_sequence_v = is_integer_sequence<T>::value;
 
@@ -354,6 +384,44 @@ struct size<integer_sequence<T, ints...>> {
   static constexpr std::size_t value = sizeof...(ints);
 };
 }  // namespace detail
+
+/// \brief Convert a bindable aggregate value into a tuple value.
+/// The result is a `std::tuple` with as many elements as the aggregate with
+/// every element being a reference to each field.
+/// \return An appropriate tuple type, containing references to the aggregate
+/// fields.
+namespace detail {
+template <std::size_t arity>
+auto unsupported_arity() {
+  static_assert(!(arity >= 0), "Unsupported arity");
+  return std::forward_as_tuple();
+}
+}  // namespace detail
+
+#define ARPC_MAKE_BINDER_BINDING(field, ...) f##field
+#define ARPC_MAKE_BINDER_BINDING_SEP() ,
+#define ARPC_MAKE_BINDER_BINDING_LIST(lastfield) \
+  ARPC_DEFER_2(ARPC_FOR_AGAIN)                   \
+  ()(lastfield, ARPC_MAKE_BINDER_BINDING, ARPC_MAKE_BINDER_BINDING_SEP)
+#define ARPC_MAKE_BINDER_CASE(lastfield, ...)                               \
+  if constexpr (aggregate_arity_v<T> == lastfield) {                        \
+    auto& [ARPC_MAKE_BINDER_BINDING_LIST(lastfield)] = t;                   \
+    return std::forward_as_tuple(ARPC_MAKE_BINDER_BINDING_LIST(lastfield)); \
+  }
+#define ARPC_MAKE_BINDER_CASE_SEP() else
+
+template <typename T>
+constexpr auto as_tuple(
+    T&& t,
+    std::enable_if_t<traits::is_bindable_aggregate_v<traits::remove_cvref_t<T>>>* dummy = nullptr) {
+  ARPC_EXPAND(ARPC_FOR(32, ARPC_MAKE_BINDER_CASE, ARPC_MAKE_BINDER_CASE_SEP))
+  else if constexpr (aggregate_arity_v<T> == 0) {
+    return std::forward_as_tuple();
+  }
+  else {
+    return detail::unsupported_arity<aggregate_arity_v<T>>();
+  }
+}
 
 /// \brief Convert an integer sequence value into a tuple value.
 /// The result is a `std::tuple` with as many elements as the input sequence,
@@ -479,9 +547,8 @@ constexpr auto as_pack(pack<T...> t) {
 /// in any of the sequence types supported by `arpc::mpt`.
 /// \param T The type from which to obtain the size.
 template <typename T>
-struct size
-    : std::integral_constant<std::size_t,
-                             detail::size<traits::remove_cvref_t<T>>::value> {};
+struct size : std::integral_constant<std::size_t, detail::size<traits::remove_cvref_t<T>>::value> {
+};
 
 template <typename T>
 inline constexpr std::size_t size_v = size<T>::value;
@@ -495,8 +562,8 @@ inline constexpr std::size_t size_v = size<T>::value;
 template <std::size_t i, typename T>
 struct element_type {
   /// Type of the `i`th element.
-  using type = std::tuple_element_t<
-      i, traits::remove_cvref_t<decltype(as_tuple(std::declval<T>()))>>;
+  using type =
+      std::tuple_element_t<i, traits::remove_cvref_t<decltype(as_tuple(std::declval<T>()))>>;
 };
 
 /// \brief Get the type of the `i`th element of a sequence-like type.
@@ -600,8 +667,8 @@ constexpr auto transform(T&& v, index_sequence<ints...>, F f, Args&&... a) {
 /// \param args... Further arguments to forward to the functor call.
 template <typename T, typename F, typename... Args>
 constexpr void for_each(T&& v, F&& f, Args&&... args) {
-  detail::for_each(std::forward<T>(v), make_index_sequence<size_v<T>>{},
-                   std::forward<F>(f), std::forward<Args>(args)...);
+  detail::for_each(std::forward<T>(v), make_index_sequence<size_v<T>>{}, std::forward<F>(f),
+                   std::forward<Args>(args)...);
 }
 
 /// \brief Run a functor for each element in a sequence type and return the
@@ -628,8 +695,8 @@ constexpr void for_each(T&& v, F&& f, Args&&... args) {
 /// call.
 template <typename T, typename F, typename... Args>
 constexpr auto transform(T&& v, F&& f, Args&&... args) {
-  return detail::transform(std::forward<T>(v), make_index_sequence<size_v<T>>{},
-                           std::forward<F>(f), std::forward<Args>(args)...);
+  return detail::transform(std::forward<T>(v), make_index_sequence<size_v<T>>{}, std::forward<F>(f),
+                           std::forward<Args>(args)...);
 }
 
 /// Return a new tuple containing a subset of the fields as determined by the
@@ -721,8 +788,8 @@ constexpr auto subset(const std::pair<U, V>&& t, index_sequence<idxs...>) {
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <typename... T, std::size_t... idxs>
-constexpr pack<typename element_type_t<idxs, pack<T...>>::type...> subset(
-    pack<T...>, index_sequence<idxs...>) {
+constexpr pack<typename element_type_t<idxs, pack<T...>>::type...> subset(pack<T...>,
+                                                                          index_sequence<idxs...>) {
   return {};
 }
 /// Return a new value pack containing a subset of the types as determined by
@@ -732,8 +799,8 @@ constexpr pack<typename element_type_t<idxs, pack<T...>>::type...> subset(
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <auto... v, std::size_t... idxs>
-constexpr value_pack<at<idxs>(value_pack<v...>{})...> subset(
-    value_pack<v...>, index_sequence<idxs...>) {
+constexpr value_pack<at<idxs>(value_pack<v...>{})...> subset(value_pack<v...>,
+                                                             index_sequence<idxs...>) {
   return {};
 }
 /// Return a new integer sequence containing a subset of the integers determined
@@ -743,8 +810,8 @@ constexpr value_pack<at<idxs>(value_pack<v...>{})...> subset(
 /// \return A sliced sequence containing just the elements specified by the
 /// indices.
 template <typename T, T... ints, std::size_t... idxs>
-constexpr integer_sequence<T, at<idxs>(integer_sequence<T, ints...>{})...>
-subset(integer_sequence<T, ints...>, index_sequence<idxs...>) {
+constexpr integer_sequence<T, at<idxs>(integer_sequence<T, ints...>{})...> subset(
+    integer_sequence<T, ints...>, index_sequence<idxs...>) {
   return {};
 }
 
@@ -756,9 +823,8 @@ subset(integer_sequence<T, ints...>, index_sequence<idxs...>) {
 /// .. end`.
 template <std::size_t begin, std::size_t end, typename T>
 constexpr auto range(T&& t) {
-  return subset(std::forward<T>(t),
-                make_index_sequence<(end - begin)>{} +
-                    make_constant_index_sequence<(end - begin), begin>{});
+  return subset(std::forward<T>(t), make_index_sequence<(end - begin)>{} +
+                                        make_constant_index_sequence<(end - begin), begin>{});
 }
 
 /// Return the head element of a sequence.
@@ -785,8 +851,7 @@ template <std::size_t n>
 struct accumulate_helper {
   template <typename I, typename T, typename O, typename... Args>
   static constexpr auto accumulate_internal(I&& a, T&& t, O o, Args&&... args) {
-    return accumulate(o(std::forward<I>(a), head(std::forward<T>(t)),
-                        std::forward<Args>(args)...),
+    return accumulate(o(std::forward<I>(a), head(std::forward<T>(t)), std::forward<Args>(args)...),
                       tail(std::forward<T>(t)), o, std::forward<Args>(args)...);
   }
 };
@@ -856,28 +921,23 @@ struct value_pack_cat_helper<T1> {
 };
 
 template <typename... Args>
-static constexpr bool all_tuples = (... &&
-                                    is_tuple_v<traits::remove_cvref_t<Args>>);
+static constexpr bool all_tuples = (... && is_tuple_v<traits::remove_cvref_t<Args>>);
 template <typename... Args>
-static constexpr bool all_packs = (... &&
-                                   is_pack_v<traits::remove_cvref_t<Args>>);
+static constexpr bool all_packs = (... && is_pack_v<traits::remove_cvref_t<Args>>);
 template <typename... Args>
-static constexpr bool all_value_packs =
-    (... && is_value_pack_v<traits::remove_cvref_t<Args>>);
+static constexpr bool all_value_packs = (... && is_value_pack_v<traits::remove_cvref_t<Args>>);
 template <typename... Args>
-static constexpr bool all_integer_sequences =
-    (... && is_integer_sequence_v<traits::remove_cvref_t<Args>>);
+static constexpr bool all_integer_sequences = (... &&
+                                               is_integer_sequence_v<traits::remove_cvref_t<Args>>);
 
 }  // namespace detail
 
 // Concatenate one or more sequence types of the same kind.
 template <typename... Args>
 constexpr auto cat(Args&&... args) {
-  static_assert(sizeof...(Args) > 0,
-                "arpc::mpt::cat requires at least one argument");
+  static_assert(sizeof...(Args) > 0, "arpc::mpt::cat requires at least one argument");
   static_assert(detail::all_tuples<Args...> || detail::all_packs<Args...> ||
-                    detail::all_value_packs<Args...> ||
-                    detail::all_integer_sequences<Args...>,
+                    detail::all_value_packs<Args...> || detail::all_integer_sequences<Args...>,
                 "arpc::mpt::cat requires all arguments to be of the same "
                 "supported sequence type");
 
@@ -926,8 +986,7 @@ struct index_if<index_sequence<idx>, false> {
   using type = index_sequence<>;
 };
 
-template <std::size_t idx1, std::size_t... idx, bool selected1,
-          bool... selected>
+template <std::size_t idx1, std::size_t... idx, bool selected1, bool... selected>
 struct index_if<index_sequence<idx1, idx...>, selected1, selected...> {
   using type = decltype(cat(index_if_t<index_sequence<idx1>, selected1>{},
                             index_if_t<index_sequence<idx...>, selected...>{}));
@@ -944,9 +1003,7 @@ struct find_if_helper<T, O, index_sequence<ints...>> {
 
 template <typename T, typename O>
 struct find_if {
-  using type =
-      typename detail::find_if_helper<T, O,
-                                      make_index_sequence<size_v<T>>>::type;
+  using type = typename detail::find_if_helper<T, O, make_index_sequence<size_v<T>>>::type;
 };
 
 template <typename T, typename O>
@@ -997,8 +1054,7 @@ static constexpr bool is_type_in_v = is_type_in<T, S>::value;
 
 template <typename T, typename S>
 struct insert_type_into {
-  using type =
-      std::conditional_t<is_type_in_v<T, S>, S, decltype(cat(S{}, pack<T>{}))>;
+  using type = std::conditional_t<is_type_in_v<T, S>, S, decltype(cat(S{}, pack<T>{}))>;
 };
 
 template <typename T, typename S>
@@ -1006,8 +1062,7 @@ using insert_type_into_t = typename insert_type_into<T, S>::type;
 
 template <auto v, typename S>
 struct insert_value_into {
-  using type = std::conditional_t<is_value_in_v<v, S>, S,
-                                  decltype(cat(S{}, value_pack<v>{}))>;
+  using type = std::conditional_t<is_value_in_v<v, S>, S, decltype(cat(S{}, value_pack<v>{}))>;
 };
 
 template <auto v, typename S>

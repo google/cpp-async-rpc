@@ -14,8 +14,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-rpc_basic = executable('serializable_basic',
-                       'serializable_basic.cpp',
+rpc_basic = executable('serializable_aggregate_is_tuple',
+                       'serializable_aggregate_is_tuple.cpp',
                        include_directories : all_examples_includes,
                        link_args : '-lpthread',
                        link_with : arpc_library)

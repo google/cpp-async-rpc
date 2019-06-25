@@ -99,10 +99,14 @@ class binary_encoder {
     }
   }
 
-  // Tuples and pairs.
+  // Tuples, pairs and bindable aggregates.
   template <typename T>
-  std::enable_if_t<mpt::is_tuple_v<T>, void> operator()(T& t) {
-    mpt::for_each(t, tuple_element_saver(), *this);
+  std::enable_if_t<
+      (mpt::is_tuple_v<T> ||
+       traits::is_bindable_aggregate_v<T>)&&!traits::can_be_serialized_v<T>,
+      void>
+  operator()(T& t) {
+    mpt::for_each(mpt::as_tuple(t), tuple_element_saver(), *this);
   }
 
   // Saveable objects.
@@ -459,10 +463,14 @@ class binary_decoder {
     }
   }
 
-  // Tuples and pairs.
+  // Tuples, pairs and bindable aggregates.
   template <typename T>
-  std::enable_if_t<mpt::is_tuple_v<T>, void> operator()(T& t) {
-    mpt::for_each(t, tuple_element_loader(), *this);
+  std::enable_if_t<
+      (mpt::is_tuple_v<T> ||
+       traits::is_bindable_aggregate_v<T>)&&!traits::can_be_serialized_v<T>,
+      void>
+  operator()(T& t) {
+    mpt::for_each(mpt::as_tuple(t), tuple_element_loader(), *this);
   }
 
   // Loadable objects.

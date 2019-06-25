@@ -215,56 +215,6 @@ using static_size = detail::static_size<remove_cvref_t<T>>;
 template <typename T>
 inline constexpr std::size_t static_size_v = static_size<T>::value;
 
-// Technique for detecting the number of fields from an aggregate adapted from
-// https://github.com/felixguendling/cista
-//
-// Credits: Implementation by Anatoliy V. Tomilov (@tomilov),
-//          based on gist by Rafal T. Janik (@ChemiaAion)
-//
-// Resources:
-// https://playfulprogramming.blogspot.com/2016/12/serializing-structs-with-c17-structured.html
-// https://codereview.stackexchange.com/questions/142804/get-n-th-data-member-of-a-struct
-// https://stackoverflow.com/questions/39768517/structured-bindings-width
-// https://stackoverflow.com/questions/35463646/arity-of-aggregate-in-logarithmic-time
-// https://stackoverflow.com/questions/38393302/returning-variadic-aggregates-struct-and-syntax-for-c17-variadic-template-c
-namespace detail {
-
-struct wildcard_type {
-  template <typename T>
-  operator T() const;
-};
-
-template <typename Aggregate, typename IndexSequence = mpt::index_sequence<>,
-          typename = void>
-struct aggregate_arity_impl : IndexSequence {};
-
-template <typename Aggregate, std::size_t... Indices>
-struct aggregate_arity_impl<
-    Aggregate, mpt::index_sequence<Indices...>,
-    std::void_t<decltype(Aggregate{
-        (static_cast<void>(Indices), std::declval<wildcard_type>())...,
-        std::declval<wildcard_type>()})>>
-    : aggregate_arity_impl<
-          Aggregate, mpt::index_sequence<Indices..., sizeof...(Indices)>> {};
-
-}  // namespace detail
-
-template <typename T>
-struct aggregate_arity
-    : std::integral_constant<
-          std::size_t, detail::aggregate_arity_impl<remove_cvref_t<T>>::size> {
-};
-
-template <typename T>
-inline constexpr std::size_t aggregate_arity_v = aggregate_arity<T>::value;
-
-template <typename T>
-struct is_bindable_aggregate
-    : std::bool_constant<std::is_aggregate_v<T> && std::is_class_v<T> &&
-                         std::is_standard_layout_v<T>> {};
-template <typename T>
-inline constexpr bool is_bindable_aggregate_v = is_bindable_aggregate<T>::value;
-
 };  // namespace traits
 
 }  // namespace arpc

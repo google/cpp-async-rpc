@@ -206,7 +206,42 @@ struct WriterImpl : public Writer {
   }
 };
 
+#define TREE_DOT(i, ...) "*"
+#define TREE_LINE_SEP() "\n"
+#define TREE_LINE(i, ...) \
+  ARPC_DEFER_2(ARPC_FOR_AGAIN)()(i, TREE_DOT, ARPC_EMPTY)
+
+const char* tree = ARPC_EXPAND(ARPC_FOR(10, TREE_LINE, TREE_LINE_SEP));
 int main() {
+  {
+    std::cerr << tree << std::endl;
+    struct XXX {};
+    struct YYY {
+      char c;
+      char j;
+    };
+    struct ZZZ {
+      YYY y;
+      XXX x;
+      std::unique_ptr<ZZZ> z;
+    };
+
+    YYY y;
+    auto q = arpc::mpt::as_tuple(y);
+    f<decltype(q)>();
+
+    ZZZ z;
+    auto r = arpc::mpt::as_tuple(z);
+    f<decltype(r)>();
+
+    std::cerr << arpc::mpt::aggregate_arity_v<XXX> << std::endl;
+    std::cerr << arpc::mpt::aggregate_arity_v<YYY> << std::endl;
+    std::cerr << arpc::mpt::aggregate_arity_v<ZZZ> << std::endl;
+
+    std::cerr << arpc::traits::is_bindable_aggregate_v<XXX> << std::endl;
+    std::cerr << arpc::traits::is_bindable_aggregate_v<YYY> << std::endl;
+    std::cerr << arpc::traits::is_bindable_aggregate_v<ZZZ> << std::endl;
+  }
   {
     char x[3];
     const auto& y(x);
