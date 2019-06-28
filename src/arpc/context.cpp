@@ -60,10 +60,10 @@ context::context(root)
       deadline_(std::nullopt) {}
 
 context::~context() {
+  cancel();
+
   if (parent_) parent_->remove_child(this);
   if (set_current_) current_ = previous_;
-
-  cancel();
 
   std::unique_lock lock(children_mu_);
   child_detached_.wait(lock, [this]() { return children_.empty(); });

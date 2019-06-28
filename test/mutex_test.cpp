@@ -50,6 +50,32 @@ TEST_CASE("mutex locking") {
       auto [async_lock] = arpc::select(mu.async_lock());
       REQUIRE(async_lock);
     }
+    SECTION("a scoped_lock gets dropped from a timed out context") {
+      try {
+        arpc::context ctx;
+        ctx.set_timeout(std::chrono::milliseconds(10));
+        {
+          std::scoped_lock lock(mu);
+          std::scoped_lock lock2(mu);
+          FAIL("no second lock should be acquired");
+        }
+      } catch (const arpc::errors::deadline_exceeded&) {
+      }
+      REQUIRE_NOTHROW(mu.lock());
+    }
+    SECTION("a scoped_lock gets dropped from a cancelled context") {
+      try {
+        {
+          arpc::context ctx;
+          std::scoped_lock lock(mu);
+          ctx.cancel();
+          std::scoped_lock lock2(mu);
+          FAIL("no second lock should be acquired");
+        }
+      } catch (const arpc::errors::cancelled&) {
+      }
+      REQUIRE_NOTHROW(mu.lock());
+    }
   }
   SECTION("with a locked mutex") {
     REQUIRE_NOTHROW(mu.lock());
@@ -69,6 +95,10 @@ TEST_CASE("mutex locking") {
       }
       SECTION("async_lock times out") {
         REQUIRE_THROWS_AS(arpc::select(mu.async_lock()),
+                          arpc::errors::deadline_exceeded);
+      }
+      SECTION("std::scoped_lock times out") {
+        REQUIRE_THROWS_AS(std::scoped_lock(mu),
                           arpc::errors::deadline_exceeded);
       }
     }
