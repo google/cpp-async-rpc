@@ -25,6 +25,7 @@
 #include <array>
 #include <cstdint>
 #include <type_traits>
+
 #include "arpc/dynamic_base_class.h"
 #include "arpc/errors.h"
 #include "arpc/mpt.h"
@@ -67,8 +68,6 @@ struct serializable_mixin<true, OwnType, Bases...>
   // Implement the virtual function that returns the name of our type.
   std::string_view portable_class_name_internal() const override {
     using Descriptor = arpc::detail::dynamic_class_descriptor<OwnType>;
-    if (Descriptor::class_name == nullptr)
-      throw errors::invalid_state("Dynamic class had no name set");
     return Descriptor::class_name;
   }
 };

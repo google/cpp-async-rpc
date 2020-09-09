@@ -28,6 +28,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+
 #include "arpc/container/flat_map.h"
 #include "arpc/singleton.h"
 
@@ -45,8 +46,6 @@
    private:                                                                  \
     std::string_view portable_error_class_name_internal() const override {   \
       using Descriptor = arpc::errors::detail::error_class_descriptor<NAME>; \
-      if (Descriptor::error_class_name == nullptr)                           \
-        throw std::runtime_error("Error class had no name set");             \
       return Descriptor::error_class_name;                                   \
     }                                                                        \
   }
